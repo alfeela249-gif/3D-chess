@@ -33,3 +33,10 @@ RLS is enabled on the feature tables. The app must use only the Supabase publish
 3. Add friend search, requests, accepted-friends list, and online status.
 4. Add online room create/join, private Realtime move events, authoritative turn validation, reconnect/snapshot recovery, and match history.
 5. Test all three modes on physical devices and publish a release-signed APK.
+
+## Current Android work (2026-11-20)
+- Added a local 3-ply alpha-beta chess opponent with a material/positional evaluation. The selected default is **medium** and it runs on-device without internet.
+- Added an account dialog with email/password sign-up and sign-in against Supabase Auth.
+- Added a Google OAuth launch and Android deep-link callback handler. Google login requires the owner to enable Google in Supabase Auth, configure the Google OAuth client ID/secret, and add `com.alfeela.chess3d://auth-callback` to the Supabase Auth URL redirect allow list. Until that dashboard configuration is complete, Google sign-in cannot complete.
+- Session tokens are stored in Android app-private preferences. The current REST auth implementation does not yet refresh expired sessions automatically; add refresh/re-auth handling before production release.
+- Friend discovery/request screens and online room synchronization are still pending Android integration. The Supabase tables are backend groundwork and do not mean these user-facing features are already working.
