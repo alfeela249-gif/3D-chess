@@ -6,6 +6,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.InetSocketAddress
 import kotlin.concurrent.thread
 
 /**
@@ -25,7 +26,10 @@ class LanConnection(
         close()
         thread(name = "chess-lan-host") {
             try {
-                val listener = ServerSocket(PORT)
+                val listener = ServerSocket().apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress(PORT))
+                }
                 server = listener
                 onState("Waiting for opponent on port $PORT")
                 val peer = listener.accept()
@@ -42,7 +46,10 @@ class LanConnection(
         close()
         thread(name = "chess-lan-join") {
             try {
-                val peer = Socket(hostIp.trim(), PORT)
+                val peer = Socket()
+                peer.tcpNoDelay = true
+                peer.keepAlive = true
+                peer.connect(InetSocketAddress(hostIp.trim(), PORT), 10_000)
                 attach(peer)
                 onState("Connected to $hostIp")
                 readLoop(peer)
@@ -59,6 +66,8 @@ class LanConnection(
     }
 
     private fun attach(peer: Socket) {
+        peer.tcpNoDelay = true
+        peer.keepAlive = true
         socket = peer
         writer = BufferedWriter(OutputStreamWriter(peer.getOutputStream(), Charsets.UTF_8))
     }
