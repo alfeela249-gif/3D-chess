@@ -340,11 +340,27 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             var x = file-3.5f
             var z = rank-3.5f
             val moving = animatedMove
-            if (moving != null && moving.toFile == file && moving.toRank == rank) {
+            if (moving != null) {
                 val progress = ((android.os.SystemClock.uptimeMillis()-animationStart).toFloat()/animationDuration).coerceIn(0f,1f)
                 val eased = progress*progress*(3f-2f*progress)
-                x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
-                z = (moving.fromRank-3.5f) + ((moving.toRank-moving.fromRank)*eased)
+                // Animate the moved piece from its source square to its destination.
+                if (moving.toFile == file && moving.toRank == rank) {
+                    x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
+                    z = (moving.fromRank-3.5f) + ((moving.toRank-moving.fromRank)*eased)
+                }
+                // Castling moves two pieces: animate the rook as well, rather than
+                // teleporting it to the adjacent square while the king is moving.
+                val isCastle = game.pieceAt(moving.toFile, moving.toRank)?.type == PieceType.KING &&
+                    kotlin.math.abs(moving.toFile-moving.fromFile) == 2
+                if (isCastle && piece.type == PieceType.ROOK) {
+                    val homeRank = moving.toRank
+                    val rookFrom = if (moving.toFile == 6) 7 else 0
+                    val rookTo = if (moving.toFile == 6) 5 else 3
+                    if (file == rookTo && rank == homeRank) {
+                        x = (rookFrom-3.5f) + ((rookTo-rookFrom)*eased)
+                        z = homeRank-3.5f
+                    }
+                }
                 if (progress >= 1f) animatedMove = null
             }
             // Rounded, stacked chess-piece silhouettes in polished gold and black.
