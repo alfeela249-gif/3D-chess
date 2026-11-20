@@ -61,6 +61,54 @@ class AuthManager(context: Context) {
 
     fun accessToken() = prefs.getString("access_token", null)
 
+    fun sendFriendRequest(username: String): Result {
+        return try {
+            val userId = currentUserId() ?: return Result(false, "انتهت الجلسة. سجّل الدخول مجدداً.")
+            val safeName = URLEncoder.encode(username.trim(), "UTF-8")
+            val found = authorizedRequest("GET", "/rest/v1/player_profiles?select=user_id&username=eq.$safeName", null)
+            val players = org.json.JSONArray(found.first)
+            if (found.second !in 200..299 || players.length() == 0) return Result(false, "لم يتم العثور على لاعب بهذا الاسم.")
+            val targetId = players.getJSONObject(0).optString("user_id")
+            if (targetId == userId) return Result(false, "لا يمكنك إضافة نفسك.")
+            val payload = JSONObject().put("user_low", minOf(userId, targetId)).put("user_high", maxOf(userId, targetId)).put("requested_by", userId).put("status", "pending")
+            val sent = authorizedRequest("POST", "/rest/v1/friendships", payload.toString(), "return=minimal")
+            if (sent.second in 200..299) Result(true, "تم إرسال طلب الصداقة.") else Result(false, "تعذر الإرسال. ربما يوجد طلب سابق أو أنكما صديقان بالفعل.")
+        } catch (e: Exception) { Result(false, e.message ?: "تعذر إرسال طلب الصداقة") }
+    }
+
+    fun savePlayerProfile(username: String, nickname: String): Result {
+        return try {
+            val userId = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.")
+            val body = JSONObject().put("user_id", userId).put("username", username.trim()).put("nickname", nickname.trim())
+            val response = authorizedRequest("POST", "/rest/v1/player_profiles?on_conflict=user_id", body.toString(), "resolution=merge-duplicates,return=minimal")
+            if (response.second in 200..299) Result(true, "تم حفظ الملف الشخصي.") else Result(false, "تعذر حفظ الاسم. يجب أن يكون فريداً ومن 3 إلى 20 حرفاً.")
+        } catch (e: Exception) { Result(false, e.message ?: "تعذر حفظ الملف الشخصي") }
+    }
+
+    private fun currentUserId(): String? {
+        val response = authorizedRequest("GET", "/auth/v1/user", null)
+        if (response.second !in 200..299) return null
+        return JSONObject(response.first).optString("id").takeIf { it.isNotBlank() }
+    }
+
+    private fun authorizedRequest(method: String, path: String, body: String?, prefer: String? = null): Pair<String, Int> {
+        val connection = (URL(base + path).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 12000
+            readTimeout = 12000
+            setRequestProperty("apikey", apiKey)
+            setRequestProperty("Authorization", "Bearer " + (accessToken() ?: apiKey))
+            setRequestProperty("Content-Type", "application/json")
+            if (prefer != null) setRequestProperty("Prefer", prefer)
+            body?.let { doOutput = true }
+        }
+        if (body != null) connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+        val code = connection.responseCode
+        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+        val text = stream?.bufferedReader()?.use { it.readText() } ?: "{}"
+        connection.disconnect()
+        return text to code
+    }
     private fun saveSession(json: JSONObject) {
         val token = json.optString("access_token")
         if (token.isNotBlank()) {
