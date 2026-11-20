@@ -20,6 +20,7 @@ class MainActivity : Activity() {
     private lateinit var lan: LanConnection
     private lateinit var mode2d: Button
     private lateinit var mode3d: Button
+    private var playVsComputer = false
 
     private val wood = Color.rgb(65, 20, 13)
     private val gold = Color.rgb(224, 190, 120)
@@ -38,8 +39,18 @@ class MainActivity : Activity() {
         )
         board = ChessBoardView(this)
         board.onMove = { move ->
-            lan.send("MOVE|${move.fromFile}|${move.fromRank}|${move.toFile}|${move.toRank}|${move.promotion?.name ?: "-"}")
-            updateGameStatus()
+            if (playVsComputer) {
+                updateGameStatus()
+                Thread {
+                    val computerMove = board.game.chooseComputerMove(3)
+                    runOnUiThread {
+                        if (computerMove != null && board.applyComputerMove(computerMove)) updateGameStatus()
+                    }
+                }.start()
+            } else {
+                lan.send("MOVE|${move.fromFile}|${move.fromRank}|${move.toFile}|${move.toRank}|${move.promotion?.name ?: "-"}")
+                updateGameStatus()
+            }
         }
 
         val root = LinearLayout(this).apply {
@@ -89,9 +100,22 @@ class MainActivity : Activity() {
         }
         root.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
+        val aiButton = makeButton("اللعب ضد الكمبيوتر • متوسط", true).apply {
+            setOnClickListener {
+                playVsComputer = true
+                board.localSide = Side.WHITE
+                board.resetBoard()
+                lan.close()
+                status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط • يعمل دون إنترنت"
+            }
+        }
+        root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
+            setMargins(dp(2), dp(2), dp(2), dp(5))
+        })
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
         val host = makeButton("HOST • الأبيض", true).apply {
             setOnClickListener {
+                playVsComputer = false
                 board.localSide = Side.WHITE
                 board.resetBoard()
                 lan.host()
@@ -105,6 +129,7 @@ class MainActivity : Activity() {
                     .setView(ip).setPositiveButton("اتصال") { _, _ ->
                         val address = ip.text.toString().trim()
                         if (address.isNotEmpty()) {
+                            playVsComputer = false
                             board.localSide = Side.BLACK
                             board.resetBoard()
                             status.text = "جارٍ الاتصال بـ $address"
