@@ -122,6 +122,12 @@ class MainActivity : Activity() {
         root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
+        val friendsButton = makeButton("إعداد اسم اللاعب • إضافة صديق", false).apply {
+            setOnClickListener { showFriendsDialog() }
+        }
+        root.addView(friendsButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
+            setMargins(dp(2), 0, dp(2), dp(4))
+        })
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
         val host = makeButton("HOST • الأبيض", true).apply {
             setOnClickListener {
@@ -181,6 +187,21 @@ class MainActivity : Activity() {
             }.show()
     }
 
+    private fun showFriendsDialog() {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
+        val username = EditText(this).apply { hint = "اسم المستخدم (3-20 حرفاً)" }
+        val nickname = EditText(this).apply { hint = "الاسم الظاهر" }
+        panel.addView(username)
+        panel.addView(nickname)
+        AlertDialog.Builder(this).setTitle("الملف الشخصي والأصدقاء").setView(panel)
+            .setPositiveButton("حفظ اسمي") { _, _ ->
+                runAuth { auth.savePlayerProfile(username.text.toString(), nickname.text.toString().ifBlank { username.text.toString() }) }
+            }
+            .setNeutralButton("إرسال طلب صداقة") { _, _ ->
+                runAuth { auth.sendFriendRequest(username.text.toString()) }
+            }
+            .setNegativeButton("إغلاق", null).show()
+    }
     private fun runAuth(action: () -> AuthManager.Result) {
         val emailStatus = status
         emailStatus.text = "جارٍ الاتصال بخدمة الحسابات..."
