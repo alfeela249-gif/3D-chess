@@ -175,6 +175,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private var positionHandle = 0
     private var mvpHandle = 0
     private var colorHandle = 0
+    private var normalHandle = 0
     @Volatile private var selected: Pair<Int, Int>? = null
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
     @Volatile private var animatedMove: ChessMove? = null
@@ -191,12 +192,31 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val vertexShader = """
         uniform mat4 uMvp;
         attribute vec3 aPosition;
-        void main(){ gl_Position = uMvp * vec4(aPosition,1.0); }
+        attribute vec3 aNormal;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main(){
+            vNormal = normalize(aNormal);
+            vPosition = aPosition;
+            gl_Position = uMvp * vec4(aPosition,1.0);
+        }
     """
     private val fragmentShader = """
         precision mediump float;
         uniform vec4 uColor;
-        void main(){ gl_FragColor = uColor; }
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main(){
+            vec3 n = normalize(vNormal);
+            vec3 lightDir = normalize(vec3(-0.45, 0.85, 0.55));
+            float diffuse = max(dot(n, lightDir), 0.0);
+            vec3 viewDir = normalize(vec3(0.0, 1.2, 2.0) - vPosition);
+            vec3 halfDir = normalize(lightDir + viewDir);
+            float specular = pow(max(dot(n, halfDir), 0.0), 42.0);
+            float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0) * 0.16;
+            vec3 lit = uColor.rgb * (0.28 + diffuse * 0.78 + rim) + vec3(1.0,0.83,0.55) * specular * 0.52;
+            gl_FragColor = vec4(lit, uColor.a);
+        }
     """
     private val cube = floatArrayOf(
         -0.5f,-0.5f,-0.5f, 0.5f,-0.5f,-0.5f, 0.5f,0.5f,-0.5f, -0.5f,0.5f,-0.5f,
@@ -227,6 +247,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         positionHandle = GLES20.glGetAttribLocation(program,"aPosition")
         mvpHandle = GLES20.glGetUniformLocation(program,"uMvp")
         colorHandle = GLES20.glGetUniformLocation(program,"uColor")
+        normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
+        GLES20.glEnable(GLES20.GL_CULL_FACE)
+        GLES20.glCullFace(GLES20.GL_BACK)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -237,21 +260,19 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     }
 
     private fun updateProjection() {
-        val angle = boardRotation
-        val half = 4f * (kotlin.math.abs(kotlin.math.cos(angle)) + kotlin.math.abs(kotlin.math.sin(angle))) + 0.18f
         val aspect = viewportWidth.toFloat() / viewportHeight.coerceAtLeast(1)
-        val halfHeight = if (aspect < 1f) half / aspect else half
-        val halfWidth = if (aspect < 1f) half else half * aspect
-        Matrix.orthoM(projection,0,-halfWidth,halfWidth,-halfHeight,halfHeight,-30f,30f)
+        Matrix.perspectiveM(projection, 0, 52f, aspect, 0.1f, 60f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
         updateProjection()
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        Matrix.setLookAtM(view,0,0f,14f,0f,0f,0f,0f,0f,0f,-1f)
+        Matrix.setLookAtM(view,0,0f,9.2f,11.8f,0f,0.25f,0f,0f,1f,0f)
         Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
-        drawCube(0f,-0.22f,0f,8.55f,0.38f,8.55f,0.035f,0.035f,0.04f)
+        // Thick polished black plinth gives the board a real raised edge.
+        drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,0.025f,0.028f,0.032f)
+        drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,0.11f,0.105f,0.10f)
         val previousMove = game.lastMove
         val checkedKing = if (game.isInCheck(game.sideToMove)) {
             (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
@@ -332,17 +353,35 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawCylinder(x:Float,y:Float,z:Float,radius:Float,height:Float,r:Float,g:Float,b:Float) {
         val vertices = ArrayList<Float>()
-        val segments = 24
-        for(i in 0 until segments) {
-            val a = i * 2.0 * Math.PI / segments
-            val c = (i+1) * 2.0 * Math.PI / segments
-            val ax = kotlin.math.cos(a).toFloat()*radius
-            val az = kotlin.math.sin(a).toFloat()*radius
-            val bx = kotlin.math.cos(c).toFloat()*radius
-            val bz = kotlin.math.sin(c).toFloat()*radius
-            val bottom = -height/2f
-            val top = height/2f
-            floatArrayOf(ax,bottom,az,bx,bottom,bz,bx,top,bz,ax,bottom,az,bx,top,bz,ax,top,az,0f,bottom,0f,bx,bottom,bz,ax,bottom,az,0f,top,0f,ax,top,az,bx,top,bz).forEach { vertices.add(it) }
+        val segments = 40
+        // Turned, multi-ring profile: beveled foot, narrow neck and rounded crown.
+        val profile = listOf(
+            0.00f to -0.50f, 0.78f to -0.50f, 0.94f to -0.40f,
+            1.00f to -0.27f, 0.94f to -0.16f, 0.78f to -0.10f,
+            0.72f to 0.02f, 0.82f to 0.12f, 0.76f to 0.20f,
+            0.62f to 0.25f, 0.58f to 0.34f, 0.72f to 0.43f,
+            0.66f to 0.50f, 0.00f to 0.50f
+        )
+        for (p in 0 until profile.size-1) {
+            val (ra, ya) = profile[p]
+            val (rb, yb) = profile[p+1]
+            for (i in 0 until segments) {
+                val a = i * 2.0 * Math.PI / segments
+                val c = (i+1) * 2.0 * Math.PI / segments
+                val ax = kotlin.math.cos(a).toFloat()
+                val az = kotlin.math.sin(a).toFloat()
+                val bx = kotlin.math.cos(c).toFloat()
+                val bz = kotlin.math.sin(c).toFloat()
+                val v = floatArrayOf(
+                    ax*ra*radius, ya*height, az*ra*radius,
+                    bx*ra*radius, ya*height, bz*ra*radius,
+                    bx*rb*radius, yb*height, bz*rb*radius,
+                    ax*ra*radius, ya*height, az*ra*radius,
+                    bx*rb*radius, yb*height, bz*rb*radius,
+                    ax*rb*radius, yb*height, az*rb*radius
+                )
+                v.forEach { vertices.add(it) }
+            }
         }
         drawTriangles(vertices.toFloatArray(),x,y,z,r,g,b)
     }
@@ -368,6 +407,20 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private fun drawTriangles(vertices:FloatArray,x:Float,y:Float,z:Float,r:Float,g:Float,b:Float) {
         val buffer = ByteBuffer.allocateDirect(vertices.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         buffer.put(vertices); buffer.position(0)
+        val normals = FloatArray(vertices.size)
+        var ni = 0
+        while (ni < vertices.size) {
+            val nx = vertices[ni]
+            val ny = vertices[ni+1]
+            val nz = vertices[ni+2]
+            val length = kotlin.math.sqrt(nx*nx + ny*ny + nz*nz).coerceAtLeast(0.0001f)
+            normals[ni] = nx/length
+            normals[ni+1] = ny/length
+            normals[ni+2] = nz/length
+            ni += 3
+        }
+        val normalBuffer = ByteBuffer.allocateDirect(normals.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        normalBuffer.put(normals); normalBuffer.position(0)
         Matrix.setIdentityM(model,0)
         Matrix.translateM(model,0,x,y,z)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
@@ -376,6 +429,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         GLES20.glUniform4f(colorHandle,r,g,b,1f)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,buffer)
+        GLES20.glEnableVertexAttribArray(normalHandle)
+        GLES20.glVertexAttribPointer(normalHandle,3,GLES20.GL_FLOAT,false,12,normalBuffer)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertices.size/3)
     }
 
@@ -388,6 +443,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         GLES20.glUniform4f(colorHandle,r,g,b,1f)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
+        GLES20.glEnableVertexAttribArray(normalHandle)
+        GLES20.glVertexAttribPointer(normalHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
         GLES20.glDrawElements(GLES20.GL_TRIANGLES,indices.size,GLES20.GL_UNSIGNED_SHORT,indexBuffer)
     }
 
