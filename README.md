@@ -43,3 +43,9 @@ Do not commit Supabase service-role keys or other secrets. Android clients may o
 - Promotion currently defaults to a queen.
 - Supabase tables are ready, but optional sign-in/profile/history UI is not yet connected in Android.
 - Device testing and a successful CI APK build are required before calling this release-ready.
+
+
+## Game modes roadmap
+See [Online multiplayer and friends](docs/ONLINE_MULTIPLAYER_AND_FRIENDS.md) for the implementation plan covering offline computer opponents, local Wi-Fi games, online rooms, and friend requests.
+
+The Supabase backend now includes friend request and online room tables with RLS. These cloud features are backend groundwork only; Android sign-in, friend screens, online synchronization, and computer AI are not yet integrated into the APK.
