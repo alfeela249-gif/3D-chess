@@ -18,6 +18,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     var onMove: ((ChessMove) -> Unit)? = null
     private var selected: Pair<Int, Int>? = null
 
+    private fun refreshSelection() {
+        val moves = selected?.let { game.legalMovesFrom(it.first, it.second) }
+            ?.map { it.toFile to it.toRank }?.toSet() ?: emptySet()
+        boardRenderer.setSelection(selected, moves)
+    }
+
     init {
         setEGLContextClientVersion(2)
         setRenderer(boardRenderer)
@@ -27,27 +33,27 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun resetBoard() {
         game.reset()
         selected = null
-        boardRenderer.setSelection(null)
+        boardRenderer.setSelection(null, emptySet())
         requestRender()
     }
 
     fun applySyncedMove(move: ChessMove): Boolean {
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
         return applied
     }
 
     fun applyComputerMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
         return applied
     }
 
     fun applyRemoteMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
         return applied
     }
 
@@ -75,7 +81,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 selected = null
             }
         }
-        boardRenderer.setSelection(selected)
+        refreshSelection()
         requestRender()
         return true
     }
@@ -92,6 +98,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private var mvpHandle = 0
     private var colorHandle = 0
     @Volatile private var selected: Pair<Int, Int>? = null
+    @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
 
     private val vertexShader = """
         uniform mat4 uMvp;
@@ -116,7 +123,10 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val indexBuffer = ByteBuffer.allocateDirect(indices.size*2)
         .order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(indices); position(0) }
 
-    fun setSelection(value: Pair<Int, Int>?) { selected = value }
+    fun setSelection(value: Pair<Int, Int>?, targets: Set<Pair<Int, Int>>) {
+        selected = value
+        legalTargets = targets
+    }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.055f,0.07f,0.09f,1f)
@@ -143,11 +153,16 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         drawCube(0f,-0.22f,0f,8.35f,0.35f,8.35f,0.12f,0.14f,0.17f)
         for (rank in 0..7) for (file in 0..7) {
             val light = (file+rank)%2==0
-            val isSelected = selected == (file to rank)
+            val square = file to rank
+            val isSelected = selected == square
+            val isTarget = legalTargets.contains(square)
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isSelected) 0.25f else if(light) 0.78f else 0.19f,
-                if (isSelected) 0.78f else if(light) 0.69f else 0.25f,
-                if (isSelected) 0.30f else if(light) 0.52f else 0.31f)
+                if (isSelected) 0.25f else if (isTarget) 0.58f else if(light) 0.78f else 0.19f,
+                if (isSelected) 0.78f else if (isTarget) 0.72f else if(light) 0.69f else 0.25f,
+                if (isSelected) 0.30f else if (isTarget) 0.28f else if(light) 0.52f else 0.31f)
+            if (isTarget && game.pieceAt(file, rank) == null) {
+                drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.76f,0.28f)
+            }
             val piece = game.pieceAt(file, rank) ?: continue
             val white = piece.side == Side.WHITE
             val r = if (white) 0.90f else 0.08f
