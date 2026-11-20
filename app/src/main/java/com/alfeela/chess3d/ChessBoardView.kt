@@ -446,8 +446,11 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             }
             // Rounded, stacked chess-piece silhouettes in polished gold and black.
             drawCylinder(x,0.13f,z,0.34f,0.14f,r*0.68f,g*0.68f,b*0.68f)
+            drawCylinder(x,0.205f,z,0.305f,0.035f,r*0.92f,g*0.78f,b*0.58f)
             drawCylinder(x,0.23f,z,0.27f,0.12f,r,g,b)
+            drawCylinder(x,0.315f,z,0.235f,0.035f,r*0.92f,g*0.78f,b*0.58f)
             drawCylinder(x,0.36f,z,0.17f,0.20f,r*0.94f,g*0.94f,b*0.94f)
+            drawCylinder(x,0.455f,z,0.185f,0.035f,r*0.96f,g*0.80f,b*0.60f)
             when(piece.type) {
                 PieceType.PAWN -> {
                     drawCylinder(x,0.51f,z,0.13f,0.12f,r,g,b)
@@ -459,9 +462,15 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     for(k in -2..2) drawCube(x+k*0.09f,0.84f,z,0.075f,0.12f,0.075f,r,g,b)
                 }
                 PieceType.KNIGHT -> {
-                    drawCylinder(x,0.59f,z,0.21f,0.24f,r,g,b)
-                    drawSphere(x,0.81f,z,0.20f,r,g,b)
-                    drawCube(x+0.10f,0.94f,z,0.17f,0.23f,0.14f,r,g,b)
+                    // A recognisable horse profile: raised neck, forward muzzle,
+                    // swept mane and a small pointed ear rather than a plain sphere.
+                    drawCylinder(x,0.59f,z,0.205f,0.25f,r,g,b)
+                    drawSphere(x,0.79f,z-0.015f,0.175f,r,g,b)
+                    drawSphere(x+0.105f,0.88f,z-0.035f,0.135f,r*0.96f,g*0.96f,b*0.96f)
+                    drawSphere(x+0.205f,0.84f,z-0.045f,0.085f,r*0.88f,g*0.88f,b*0.88f)
+                    drawCube(x+0.085f,1.015f,z-0.02f,0.075f,0.17f,0.07f,r,g,b)
+                    drawCube(x-0.055f,0.91f,z-0.12f,0.12f,0.22f,0.075f,r*0.72f,g*0.72f,b*0.72f)
+                    drawSphere(x+0.245f,0.87f,z-0.095f,0.027f,0.98f,0.82f,0.48f)
                 }
                 PieceType.BISHOP -> {
                     drawCylinder(x,0.62f,z,0.20f,0.30f,r,g,b)
