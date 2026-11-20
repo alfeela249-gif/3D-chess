@@ -310,6 +310,31 @@ class MainActivity : Activity() {
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
         gameRoot.addView(boardFrame, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
+        val cameraControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        fun cameraButton(label: String, action: () -> Unit) {
+            val button = makeButton(label, false).apply {
+                textSize = 17f
+                setOnClickListener { action() }
+            }
+            cameraControls.addView(button, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                setMargins(dp(2), 0, dp(2), 0)
+            })
+        }
+        cameraButton("↶") { board.rotateCamera(-0.30f) }
+        cameraButton("↷") { board.rotateCamera(0.30f) }
+        cameraButton("＋") { board.zoomCamera(-1.2f) }
+        cameraButton("－") { board.zoomCamera(1.2f) }
+        cameraButton("⟲") { board.resetCamera() }
+        gameRoot.addView(cameraControls, LinearLayout.LayoutParams(-1, dp(48)))
+        gameRoot.addView(TextView(this).apply {
+            text = "اسحب بإصبع واحد فوق مربع فارغ • إصبعان للتدوير والتكبير"
+            setTextColor(Color.rgb(205, 181, 139))
+            textSize = 10f
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         val history = makeButton("📜 سجل النقلات", false).apply { setOnClickListener { showMoveHistory() } }
         val reset = makeButton("مباراة جديدة", true).apply {
