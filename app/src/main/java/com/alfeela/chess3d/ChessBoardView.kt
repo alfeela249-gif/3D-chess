@@ -24,6 +24,13 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var rotateGesture = false
     private var lastRotateX = 0f
     private var lastPointerSpan = 0f
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private var oneFingerCameraDrag = false
+
+    fun rotateCamera(delta: Float) { boardRenderer.rotateBy(delta); requestRender() }
+    fun zoomCamera(delta: Float) { boardRenderer.zoomBy(delta); requestRender() }
+    fun resetCamera() { boardRenderer.resetCamera(); requestRender() }
 
     private fun squareAt(x: Float, y: Float): Pair<Int, Int>? =
         boardRenderer.squareAt(x, y, width, height)
@@ -102,11 +109,15 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 downSquare = squareAt(event.x, event.y)
                 downX = event.x
                 downY = event.y
+                lastTouchX = event.x
+                lastTouchY = event.y
                 rotateGesture = false
+                oneFingerCameraDrag = false
                 return true
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 rotateGesture = true
+                oneFingerCameraDrag = false
                 lastRotateX = event.getX(0)
                 lastPointerSpan = pointerSpan(event)
                 return true
@@ -115,19 +126,39 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 if (rotateGesture && event.pointerCount >= 2) {
                     val currentX = event.getX(0)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy((currentX-lastRotateX)*0.008f)
+                    boardRenderer.rotateBy((currentX-lastRotateX)*0.010f)
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.012f)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.014f)
                     }
                     lastRotateX = currentX
                     lastPointerSpan = currentSpan
                     requestRender()
+                } else if (event.pointerCount == 1) {
+                    val dx = event.x - lastTouchX
+                    val dy = event.y - lastTouchY
+                    val moved = kotlin.math.abs(event.x-downX) > 18f || kotlin.math.abs(event.y-downY) > 18f
+                    // Dragging on an empty square rotates the camera; dragging a piece still moves it.
+                    if (moved && downSquare != null && game.pieceAt(downSquare!!.first, downSquare!!.second) == null) {
+                        oneFingerCameraDrag = true
+                        boardRenderer.rotateBy(dx * 0.012f)
+                        requestRender()
+                    }
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                return true
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (event.pointerCount <= 2) {
+                    rotateGesture = false
+                    downSquare = null
                 }
                 return true
             }
             MotionEvent.ACTION_UP -> {
-                if (rotateGesture) {
+                if (rotateGesture || oneFingerCameraDrag) {
                     rotateGesture = false
+                    oneFingerCameraDrag = false
                     downSquare = null
                     return true
                 }
@@ -258,6 +289,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     }
     fun rotateBy(delta: Float) { boardRotation += delta }
     fun zoomBy(delta: Float) { cameraDistance = (cameraDistance + delta).coerceIn(9.5f, 22f) }
+    fun resetCamera() { boardRotation = 0f; cameraDistance = 15.0f }
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
     fun isAnimating(): Boolean = animatedMove != null
