@@ -28,9 +28,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         val left = (width - size) / 2f
         val top = (height - size) / 2f
         if (x < left || x >= left + size || y < top || y >= top + size) return null
-        val screenX = ((x-left)/size-0.5f)*12f
-        val screenZ = ((y-top)/size-0.5f)*12f
         val angle = boardRenderer.rotationRadians()
+        val extent = 4f * (kotlin.math.abs(kotlin.math.cos(angle)) + kotlin.math.abs(kotlin.math.sin(angle)))
+        val screenX = ((x-left)/size-0.5f)*(2f*extent)
+        val screenZ = ((y-top)/size-0.5f)*(2f*extent)
         val c = kotlin.math.cos(angle)
         val si = kotlin.math.sin(angle)
         val boardX = screenX*c - screenZ*si
@@ -168,6 +169,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val vp = FloatArray(16)
     private val model = FloatArray(16)
     private val mvp = FloatArray(16)
+    private var viewportWidth = 1
+    private var viewportHeight = 1
     private var program = 0
     private var positionHandle = 0
     private var mvpHandle = 0
@@ -228,14 +231,22 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0,0,width,height)
-        val half = 4.48f
-        val aspect = width.toFloat() / height.coerceAtLeast(1)
+        viewportWidth = width
+        viewportHeight = height
+        updateProjection()
+    }
+
+    private fun updateProjection() {
+        val angle = boardRotation
+        val half = 4f * (kotlin.math.abs(kotlin.math.cos(angle)) + kotlin.math.abs(kotlin.math.sin(angle))) + 0.18f
+        val aspect = viewportWidth.toFloat() / viewportHeight.coerceAtLeast(1)
         val halfHeight = if (aspect < 1f) half / aspect else half
         val halfWidth = if (aspect < 1f) half else half * aspect
         Matrix.orthoM(projection,0,-halfWidth,halfWidth,-halfHeight,halfHeight,-30f,30f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        updateProjection()
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         Matrix.setLookAtM(view,0,0f,14f,0f,0f,0f,0f,0f,0f,-1f)
         Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
