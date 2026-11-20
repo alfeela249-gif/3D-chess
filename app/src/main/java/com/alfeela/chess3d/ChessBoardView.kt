@@ -23,21 +23,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var rotateGesture = false
     private var lastRotateX = 0f
 
-    private fun squareAt(x: Float, y: Float): Pair<Int, Int>? {
-        val size = minOf(width, height).toFloat().coerceAtLeast(1f)
-        val left = (width - size) / 2f
-        val top = (height - size) / 2f
-        if (x < left || x >= left + size || y < top || y >= top + size) return null
-        val angle = boardRenderer.rotationRadians()
-        val extent = 4f * (kotlin.math.abs(kotlin.math.cos(angle)) + kotlin.math.abs(kotlin.math.sin(angle)))
-        val screenX = ((x-left)/size-0.5f)*(2f*extent)
-        val screenZ = ((y-top)/size-0.5f)*(2f*extent)
-        val c = kotlin.math.cos(angle)
-        val si = kotlin.math.sin(angle)
-        val boardX = screenX*c - screenZ*si
-        val boardZ = screenX*si + screenZ*c
-        return ((boardX+4f)/8f*8f).toInt().coerceIn(0,7) to ((boardZ+4f)/8f*8f).toInt().coerceIn(0,7)
-    }
+    private fun squareAt(x: Float, y: Float): Pair<Int, Int>? =
+        boardRenderer.squareAt(x, y, width, height)
 
     private fun animate(move: ChessMove) {
         boardRenderer.animateMove(move)
@@ -184,6 +171,57 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val animationDuration = 420L
 
     fun rotationRadians(): Float = boardRotation
+
+    /**
+     * Convert a screen touch to a board square using the exact perspective camera.
+     * The old screen-space approximation ignored perspective foreshortening and
+     * drifted badly near the far edge, especially after rotating the board.
+     */
+    fun squareAt(screenX: Float, screenY: Float, screenWidth: Int, screenHeight: Int): Pair<Int, Int>? {
+        if (screenWidth <= 0 || screenHeight <= 0 ||
+            screenX < 0f || screenX >= screenWidth || screenY < 0f || screenY >= screenHeight) return null
+
+        val p = FloatArray(16)
+        val v = FloatArray(16)
+        val viewProjection = FloatArray(16)
+        val inverse = FloatArray(16)
+        val aspect = screenWidth.toFloat() / screenHeight.toFloat()
+        Matrix.perspectiveM(p, 0, 52f, aspect, 0.1f, 60f)
+        Matrix.setLookAtM(v, 0, 0f, 9.2f, 11.8f, 0f, 0.25f, 0f, 0f, 1f, 0f)
+        Matrix.rotateM(v, 0, Math.toDegrees(boardRotation.toDouble()).toFloat(), 0f, 1f, 0f)
+        Matrix.multiplyMM(viewProjection, 0, p, 0, v, 0)
+        if (!Matrix.invertM(inverse, 0, viewProjection, 0)) return null
+
+        val ndcX = 2f * screenX / screenWidth.toFloat() - 1f
+        val ndcY = 1f - 2f * screenY / screenHeight.toFloat()
+        val near = floatArrayOf(ndcX, ndcY, -1f, 1f)
+        val far = floatArrayOf(ndcX, ndcY, 1f, 1f)
+        val worldNear = FloatArray(4)
+        val worldFar = FloatArray(4)
+        Matrix.multiplyMV(worldNear, 0, inverse, 0, near, 0)
+        Matrix.multiplyMV(worldFar, 0, inverse, 0, far, 0)
+        if (kotlin.math.abs(worldNear[3]) < 0.000001f || kotlin.math.abs(worldFar[3]) < 0.000001f) return null
+
+        val nx = worldNear[0] / worldNear[3]
+        val ny = worldNear[1] / worldNear[3]
+        val nz = worldNear[2] / worldNear[3]
+        val fx = worldFar[0] / worldFar[3]
+        val fy = worldFar[1] / worldFar[3]
+        val fz = worldFar[2] / worldFar[3]
+        val dy = fy - ny
+        if (kotlin.math.abs(dy) < 0.000001f) return null
+
+        // Top face of the playable squares is at y = 0.06 in the renderer.
+        val t = (0.06f - ny) / dy
+        if (t < 0f) return null
+        val boardX = nx + (fx - nx) * t
+        val boardZ = nz + (fz - nz) * t
+        if (boardX < -4f || boardX >= 4f || boardZ < -4f || boardZ >= 4f) return null
+
+        val file = kotlin.math.floor(boardX + 4f).toInt()
+        val rank = kotlin.math.floor(boardZ + 4f).toInt()
+        return if (file in 0..7 && rank in 0..7) file to rank else null
+    }
     fun rotateBy(delta: Float) { boardRotation += delta }
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
