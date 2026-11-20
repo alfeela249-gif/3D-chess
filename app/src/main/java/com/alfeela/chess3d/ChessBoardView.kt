@@ -5,8 +5,6 @@ import android.opengl.GLSurfaceView
 import android.opengl.GLES20
 import android.opengl.Matrix
 import android.view.MotionEvent
-import android.view.Surface
-import android.os.Build
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -110,9 +108,6 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         // Keep the scene rendering continuously so camera motion and piece
         // animation can use the display's refresh cadence instead of sparse redraws.
         renderMode = RENDERMODE_CONTINUOUSLY
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            setFrameRate(60f, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-        }
     }
 
     fun resetBoard() {
