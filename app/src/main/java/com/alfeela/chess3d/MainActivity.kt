@@ -103,7 +103,7 @@ class MainActivity : Activity() {
         root.addView(subtitle, LinearLayout.LayoutParams(-1, dp(26)))
 
         val sectionTitle = TextView(this).apply {
-            text = "اختر طريقة اللعب"
+            text = "طريقة اللعب"
             setTextColor(cream)
             textSize = 15f
             gravity = Gravity.CENTER
@@ -121,7 +121,7 @@ class MainActivity : Activity() {
         })
 
         status = TextView(this).apply {
-            text = "اختر Host أو Join لبدء اللعب عبر Wi-Fi"
+            text = "اختر طريقة اللعب للبدء"
             setTextColor(cream)
             textSize = 14f
             gravity = Gravity.CENTER
@@ -129,7 +129,7 @@ class MainActivity : Activity() {
         }
         root.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
-        val aiButton = makeButton("♟  اللعب ضد الكمبيوتر  •  متوسط", true).apply {
+        val aiButton = makeButton("♟  اللعب ضد الكمبيوتر  •  مستوى متوسط", true).apply {
             setOnClickListener {
                 stopOnlinePolling()
                 playVsComputer = true
@@ -142,7 +142,7 @@ class MainActivity : Activity() {
         root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
             setMargins(dp(2), dp(2), dp(2), dp(5))
         })
-        val onlineButton = makeButton("♟  اللعب عبر الإنترنت مع الأصدقاء", true).apply {
+        val onlineButton = makeButton("♟  اللعب مع الأصدقاء عبر الإنترنت", true).apply {
             setOnClickListener { showOnlineDialog() }
         }
         root.addView(onlineButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
@@ -154,14 +154,14 @@ class MainActivity : Activity() {
         root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
-        val friendsButton = makeButton("الأصدقاء • إضافة صديق", false).apply {
+        val friendsButton = makeButton("♙  قائمة الأصدقاء • إضافة صديق", false).apply {
             setOnClickListener { showFriendsDialog() }
         }
         root.addView(friendsButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
-        val host = makeButton("إنشاء Wi-Fi • الأبيض", true).apply {
+        val host = makeButton("إنشاء مباراة بدون إنترنت", true).apply {
             setOnClickListener {
                 stopOnlinePolling()
                 playVsComputer = false
@@ -171,7 +171,7 @@ class MainActivity : Activity() {
                 status.text = "أنت الأبيض • بانتظار اللاعب الثاني على نفس Wi-Fi"
             }
         }
-        val join = makeButton("انضمام • الأسود", true).apply {
+        val join = makeButton("انضمام عبر Wi-Fi", true).apply {
             setOnClickListener {
                 val ip = EditText(this@MainActivity).apply { hint = "192.168.1.10" }
                 AlertDialog.Builder(this@MainActivity).setTitle("الاتصال باللاعب المضيف")
@@ -207,6 +207,25 @@ class MainActivity : Activity() {
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
         }
+    }
+
+    private fun showSettingsDialog() {
+        val options = arrayOf("الحساب وتسجيل الدخول", "مستوى الكمبيوتر: متوسط", "معلومات التطبيق")
+        AlertDialog.Builder(this)
+            .setTitle("إعدادات 3D Chess")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showAccountDialog()
+                    1 -> AlertDialog.Builder(this).setTitle("مستوى الكمبيوتر")
+                        .setMessage("المستوى الحالي: متوسط")
+                        .setPositiveButton("حسناً", null).show()
+                    2 -> AlertDialog.Builder(this).setTitle("3D Chess")
+                        .setMessage("لعبة شطرنج ثلاثية الأبعاد • العب ضد الكمبيوتر أو تحدَّ أصدقاءك محلياً وعبر الإنترنت.")
+                        .setPositiveButton("حسناً", null).show()
+                }
+            }
+            .setNegativeButton("إغلاق", null)
+            .show()
     }
 
     private fun showOnlineDialog() {
