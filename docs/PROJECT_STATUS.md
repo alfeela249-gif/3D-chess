@@ -24,6 +24,11 @@ Native Android application (application ID: `com.alfeela.chess3d`) with a 3D che
 - The Android app is intended to use only the Supabase publishable key and the signed-in user's access token. Never put a service-role key in the APK.
 - Online moves are currently submitted as a move history from the client. Server-side replay and full legal-chess validation are still needed before production use.
 
+## Approved visual direction (2026-11-20)
+- The fantasy-medieval sculptural chess set reference is approved as the canonical piece style: antique gold/bronze versus aged silver/dark steel, ornate tiered pedestals, and distinct royal, cleric, horse-knight, tower-rook, and soldier-pawn silhouettes.
+- Detailed production requirements and GLB integration acceptance criteria are recorded in `docs/APPROVED_PIECE_ART_DIRECTION.md`.
+- Approval is for the art direction only; the current renderer still uses procedural placeholder geometry. The individual GLB models are not yet integrated.
+
 ## Known limitations / remaining work
 - The 3D pieces are geometric placeholders rather than detailed chess-piece meshes.
 - The 2D display toggle is not implemented; the board remains 3D.
