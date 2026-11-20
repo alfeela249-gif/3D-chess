@@ -16,6 +16,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private val boardRenderer = BoardRenderer(game)
     var localSide: Side = Side.WHITE
     var onMove: ((ChessMove) -> Unit)? = null
+    var onPromotionRequested: ((Side, (PieceType) -> Unit) -> Unit)? = null
     private var selected: Pair<Int, Int>? = null
     private var downSquare: Pair<Int, Int>? = null
     private var downX = 0f
@@ -37,6 +38,15 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 }
             }
         }, 16L)
+    }
+
+    private fun completeMove(move: ChessMove) {
+        if (game.makeMove(move)) {
+            selected = null
+            boardRenderer.setSelection(null, emptySet())
+            animate(move)
+            onMove?.invoke(move)
+        }
     }
 
     private fun refreshSelection() {
@@ -116,13 +126,20 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 val isDrag = kotlin.math.abs(event.x-downX) > 12f || kotlin.math.abs(event.y-downY) > 12f
                 val source = if (isDrag) dragged else selected
                 if (source != null) {
-                    val candidate = game.legalMovesFrom(source.first, source.second)
-                        .firstOrNull { it.toFile == destination.first && it.toRank == destination.second }
-                    if (candidate != null && game.makeMove(candidate)) {
-                        selected = null
-                        boardRenderer.setSelection(null, emptySet())
-                        animate(candidate)
-                        onMove?.invoke(candidate)
+                    val candidates = game.legalMovesFrom(source.first, source.second)
+                        .filter { it.toFile == destination.first && it.toRank == destination.second }
+                    val candidate = candidates.firstOrNull()
+                    if (candidate != null) {
+                        val promotionOptions = candidates.mapNotNull { it.promotion }.distinct()
+                        if (promotionOptions.isNotEmpty()) {
+                            val chooser = onPromotionRequested
+                            if (chooser != null) {
+                                chooser(localSide) { choice ->
+                                    val selectedMove = candidates.firstOrNull { it.promotion == choice } ?: candidate
+                                    completeMove(selectedMove)
+                                }
+                            } else completeMove(candidate)
+                        } else completeMove(candidate)
                     } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
                         selected = destination
                         refreshSelection()
