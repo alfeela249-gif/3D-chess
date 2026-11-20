@@ -238,8 +238,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             val az = kotlin.math.sin(a).toFloat()*radius
             val bx = kotlin.math.cos(c).toFloat()*radius
             val bz = kotlin.math.sin(c).toFloat()*radius
-            val bottom = y-height/2f
-            val top = y+height/2f
+            val bottom = -height/2f
+            val top = height/2f
             floatArrayOf(ax,bottom,az,bx,bottom,bz,bx,top,bz,ax,bottom,az,bx,top,bz,ax,top,az,0f,bottom,0f,bx,bottom,bz,ax,bottom,az,0f,top,0f,ax,top,az,bx,top,bz).forEach { vertices.add(it) }
         }
         drawTriangles(vertices.toFloatArray(),x,y,z,r,g,b)
