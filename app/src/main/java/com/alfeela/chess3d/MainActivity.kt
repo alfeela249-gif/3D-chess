@@ -175,6 +175,13 @@ class MainActivity : Activity() {
             setMargins(dp(2), 0, dp(2), dp(3))
         })
 
+        val helpButton = makeButton("❔  طريقة اللعب والقواعد", false).apply {
+            setOnClickListener { showHowToPlay() }
+        }
+        root.addView(helpButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+            setMargins(dp(2), 0, dp(2), dp(3))
+        })
+
         val reset = makeButton("مباراة جديدة", false).apply {
             setOnClickListener {
                 if (onlineMode) {
@@ -193,6 +200,22 @@ class MainActivity : Activity() {
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
         }
+    }
+
+    private fun showHowToPlay() {
+        AlertDialog.Builder(this)
+            .setTitle("طريقة اللعب والقواعد")
+            .setMessage(
+                "• اضغط على القطعة التي تريد تحريكها، ثم اختر مربعاً ذهبياً لإتمام النقلة.\n\n" +
+                "• الأبيض يبدأ أولاً، ويتناوب اللاعبان في تحريك قطعة واحدة في كل دور.\n\n" +
+                "• الهدف هو محاصرة ملك الخصم (كش مات). لا يجوز ترك ملكك تحت التهديد.\n\n" +
+                "• اضغط «سجل النقلات» لمراجعة الحركات السابقة.\n\n" +
+                "• ضد الكمبيوتر: العب دون إنترنت بمستوى متوسط.\n\n" +
+                "• Wi-Fi: صِل الهاتفين بالشبكة نفسها، أنشئ مباراة على الأول، ثم أدخل عنوان IP والمنفذ 45454 على الهاتف الثاني.\n\n" +
+                "• الإنترنت: سجّل الدخول، أنشئ غرفة وشارك رمز الدعوة مع صديقك."
+            )
+            .setPositiveButton("فهمت", null)
+            .show()
     }
 
     private fun showMoveHistory() {
