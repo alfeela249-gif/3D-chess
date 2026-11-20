@@ -141,7 +141,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val dy = event.y - lastTouchY
                     val moved = kotlin.math.abs(event.x-downX) > 18f || kotlin.math.abs(event.y-downY) > 18f
                     // Dragging on an empty square rotates the camera; dragging a piece still moves it.
-                    if (moved && downSquare != null && game.pieceAt(downSquare!!.first, downSquare!!.second) == null) {
+                    if (moved && (downSquare == null || game.pieceAt(downSquare!!.first, downSquare!!.second) == null)) {
                         oneFingerCameraDrag = true
                         boardRenderer.rotateBy(dx * 0.012f)
                         requestRender()
