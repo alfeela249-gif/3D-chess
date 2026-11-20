@@ -229,6 +229,48 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showGameScreen() {
+        val gameRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(5, 6, 8), Color.rgb(19, 17, 14), Color.rgb(5, 6, 8)))
+        }
+        val topBar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val back = makeButton("‹  القائمة الرئيسية", false).apply {
+            textSize = 13f
+            setOnClickListener {
+                stopOnlinePolling()
+                lan.close()
+                setContentView(homeRoot)
+                status = homeStatus
+            }
+        }
+        topBar.addView(back, LinearLayout.LayoutParams(0, dp(48), 1f))
+        val title = TextView(this).apply { text = "♛  3D CHESS  ♚"; setTextColor(gold); textSize = 20f; gravity = Gravity.CENTER; typeface = Typeface.create("serif", Typeface.BOLD) }
+        topBar.addView(title, LinearLayout.LayoutParams(0, dp(48), 1f))
+        gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(52)))
+        val gameStatus = TextView(this).apply { setTextColor(cream); textSize = 14f; gravity = Gravity.CENTER; text = homeStatus.text; setPadding(dp(4), dp(8), dp(4), dp(8)) }
+        status = gameStatus
+        gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
+        val boardFrame = FrameLayout(this).apply { background = rounded(Color.rgb(10, 12, 15), gold, 2); clipToPadding = true }
+        (board.parent as? android.view.ViewGroup)?.removeView(board)
+        boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
+        gameRoot.addView(boardFrame, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        val history = makeButton("📜 سجل النقلات", false).apply { setOnClickListener { showMoveHistory() } }
+        val reset = makeButton("مباراة جديدة", true).apply {
+            setOnClickListener {
+                if (onlineMode) status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
+                else { board.resetBoard(); lan.send("RESET"); updateGameStatus() }
+            }
+        }
+        actions.addView(history, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
+        actions.addView(reset, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
+        gameRoot.addView(actions, LinearLayout.LayoutParams(-1, dp(56)))
+        val rules = makeButton("❔ طريقة اللعب والقواعد", false).apply { setOnClickListener { showHowToPlay() } }
+        gameRoot.addView(rules, LinearLayout.LayoutParams(-1, dp(48)))
+        setContentView(gameRoot)
+    }
     private fun showHowToPlay() {
         AlertDialog.Builder(this)
             .setTitle("طريقة اللعب والقواعد")
@@ -290,6 +332,7 @@ class MainActivity : Activity() {
                 board.localSide = Side.WHITE
                 board.resetBoard()
                 lan.host()
+                showGameScreen()
                 val address = localWifiAddress()
                 status.text = if (address != null)
                     "أنت الأبيض • أعطِ صديقك العنوان $address والمنفذ 45454"
@@ -310,6 +353,7 @@ class MainActivity : Activity() {
                             board.resetBoard()
                             status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
                             lan.join(address)
+                            showGameScreen()
                         } else {
                             status.text = "أدخل عنوان IP صحيحاً للاتصال"
                         }
@@ -342,6 +386,7 @@ class MainActivity : Activity() {
                 onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
                 status.text = "رمز الغرفة: ${result.code} • بانتظار انضمام صديقك..."
+                showGameScreen()
                 startOnlinePolling()
                 val inviteText = "دعوة للعب 3D Chess عبر الإنترنت${invitedFriend?.let { " مع $it" } ?: ""}. رمز الغرفة: ${result.code}"
                 val share = Intent(Intent.ACTION_SEND).apply {
@@ -364,6 +409,7 @@ class MainActivity : Activity() {
                 board.localSide = Side.BLACK; board.resetBoard(); board.isEnabled = true
                 applyRoomMoves(result.gameState?.optJSONArray("moves") ?: JSONArray())
                 status.text = "انضممت إلى الغرفة ${result.code} • أنت الأسود"
+                showGameScreen()
                 startOnlinePolling()
             }
         }.start()
