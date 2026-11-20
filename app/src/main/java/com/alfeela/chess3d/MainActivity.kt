@@ -1,6 +1,8 @@
 package com.alfeela.chess3d
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
@@ -18,6 +20,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var board: ChessBoardView
     private lateinit var lan: LanConnection
+    private lateinit var auth: AuthManager
     private lateinit var mode2d: Button
     private lateinit var mode3d: Button
     private var playVsComputer = false
@@ -33,6 +36,7 @@ class MainActivity : Activity() {
         window.statusBarColor = wood
         window.navigationBarColor = wood
 
+        auth = AuthManager(this)
         lan = LanConnection(
             onState = { message -> runOnUiThread { status.text = message } },
             onMessage = { message -> runOnUiThread { handleNetworkMessage(message) } }
@@ -112,6 +116,12 @@ class MainActivity : Activity() {
         root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
             setMargins(dp(2), dp(2), dp(2), dp(5))
         })
+        val accountButton = makeButton("الحساب والأصدقاء • تسجيل الدخول", false).apply {
+            setOnClickListener { showAccountDialog() }
+        }
+        root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
+            setMargins(dp(2), 0, dp(2), dp(4))
+        })
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
         val host = makeButton("HOST • الأبيض", true).apply {
             setOnClickListener {
@@ -152,6 +162,49 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
+    private fun showAccountDialog() {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
+        val email = EditText(this).apply { hint = "البريد الإلكتروني"; inputType = 33 }
+        val password = EditText(this).apply { hint = "كلمة المرور"; inputType = 129 }
+        panel.addView(email)
+        panel.addView(password)
+        val dialog = AlertDialog.Builder(this).setTitle("حساب 3D Chess").setView(panel)
+            .setNegativeButton("إغلاق", null).create()
+        dialog.setOnShowListener {
+            dialog.setButton(AlertDialog.BUTTON_POSITIVE, "تسجيل الدخول") { _, _ ->
+                runAuth { auth.signIn(email.text.toString().trim(), password.text.toString()) }
+            }
+            dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "إنشاء حساب") { _, _ ->
+                runAuth { auth.signUp(email.text.toString().trim(), password.text.toString()) }
+            }
+            dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Google") { _, _ ->
+                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(auth.startGoogleOAuth()))) }
+                catch (_: Exception) { status.text = "تعذر فتح صفحة Google" }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun runAuth(action: () -> AuthManager.Result) {
+        val emailStatus = status
+        emailStatus.text = "جارٍ الاتصال بخدمة الحسابات..."
+        Thread {
+            val result = action()
+            runOnUiThread {
+                emailStatus.text = result.message
+                if (result.ok && auth.hasSession()) emailStatus.text = "تم تسجيل الدخول • يمكنك متابعة اللعب عبر الإنترنت"
+            }
+        }.start()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.data?.scheme == "com.alfeela.chess3d") {
+            val result = auth.acceptOAuthCallback(intent.data!!)
+            status.text = result.message
+        }
+    }
     private fun selectMode(is3d: Boolean) {
         mode3d.background = rounded(if (is3d) Color.rgb(112, 76, 39) else Color.rgb(48, 28, 20), gold, 2)
         mode2d.background = rounded(if (!is3d) Color.rgb(112, 76, 39) else Color.rgb(48, 28, 20), gold, 2)
