@@ -40,3 +40,12 @@ RLS is enabled on the feature tables. The app must use only the Supabase publish
 - Added a Google OAuth launch and Android deep-link callback handler. Google login requires the owner to enable Google in Supabase Auth, configure the Google OAuth client ID/secret, and add `com.alfeela.chess3d://auth-callback` to the Supabase Auth URL redirect allow list. Until that dashboard configuration is complete, Google sign-in cannot complete.
 - Session tokens are stored in Android app-private preferences. The current REST auth implementation does not yet refresh expired sessions automatically; add refresh/re-auth handling before production release.
 - Friend discovery/request screens and online room synchronization are still pending Android integration. The Supabase tables are backend groundwork and do not mean these user-facing features are already working.
+
+## Latest Android integration
+- Added a medium-strength offline computer opponent (3-ply alpha-beta search).
+- Added email/password account creation and sign-in, Google OAuth browser launch/callback handling, and token refresh for stored sessions.
+- Added profile username/nickname setup and sending friend requests by username.
+- Added online room creation, 8-character invite codes, joining through a database RPC, and turn-checked game-state submission. The Android client polls the room snapshot and replays missing moves.
+- The online room join/state RPCs are SECURITY DEFINER functions with an explicit `auth.uid()` check; EXECUTE is revoked from `PUBLIC` and `anon`, and granted only to `authenticated`. Supabase's advisor still reports its expected warning because authenticated clients must call these RPCs.
+- Remaining: friend list and accept/reject request UI, friend-based invite picker, Realtime push (current client polls), disconnect/reconnect UX, robust validation of submitted chess move history on the server, and physical-device multiplayer testing.
+- Google sign-in also requires Google OAuth credentials to be configured in the Supabase dashboard. The app cannot complete Google login until that external provider setup is done.
