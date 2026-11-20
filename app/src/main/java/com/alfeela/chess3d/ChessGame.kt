@@ -207,7 +207,13 @@ class ChessGame {
 
     private fun addPawnMove(out: MutableList<ChessMove>, ff: Int, fr: Int, tf: Int, tr: Int, side: Side) {
         val lastRank = if (side == Side.WHITE) 0 else 7
-        out += ChessMove(ff, fr, tf, tr, if (tr == lastRank) PieceType.QUEEN else null)
+        if (tr == lastRank) {
+            // Promotion is a player choice; expose every legal promotion target.
+            listOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
+                .forEach { out += ChessMove(ff, fr, tf, tr, it) }
+        } else {
+            out += ChessMove(ff, fr, tf, tr)
+        }
     }
 
     private fun addRays(out: MutableList<ChessMove>, file: Int, rank: Int, side: Side, dirs: List<Pair<Int, Int>>) {
