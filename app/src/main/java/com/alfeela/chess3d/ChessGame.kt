@@ -26,6 +26,10 @@ class ChessGame {
     private var enPassant: Pair<Int, Int>? = null
     var lastMove: ChessMove? = null
         private set
+    private val history = mutableListOf<ChessMove>()
+
+    @Synchronized
+    fun moveHistory(): List<ChessMove> = history.toList()
 
     init { reset() }
 
@@ -45,6 +49,7 @@ class ChessGame {
         blackKingSide = true; blackQueenSide = true
         enPassant = null
         lastMove = null
+        history.clear()
     }
 
     @Synchronized
@@ -79,6 +84,7 @@ class ChessGame {
         applyUnchecked(move)
         sideToMove = sideToMove.opposite()
         lastMove = move
+        history += move
         return true
     }
 
