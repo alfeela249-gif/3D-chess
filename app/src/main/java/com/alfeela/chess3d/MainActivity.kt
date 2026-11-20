@@ -84,14 +84,23 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "Boards & Pieces"
+            text = "3D CHESS"
             setTextColor(cream)
-            textSize = 25f
+            textSize = 29f
+            letterSpacing = 0.12f
             typeface = Typeface.create("serif", Typeface.BOLD)
             gravity = Gravity.CENTER
             setShadowLayer(5f, 2f, 3f, Color.BLACK)
         }
         root.addView(title, LinearLayout.LayoutParams(-1, dp(48)))
+        val subtitle = TextView(this).apply {
+            text = "لعبة الشطرنج ثلاثية الأبعاد"
+            setTextColor(gold)
+            textSize = 13f
+            gravity = Gravity.CENTER
+            typeface = Typeface.create("serif", Typeface.NORMAL)
+        }
+        root.addView(subtitle, LinearLayout.LayoutParams(-1, dp(26)))
 
         val modes = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
         mode2d = makeButton("2D", false)
