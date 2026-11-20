@@ -52,7 +52,21 @@ class MainActivity : Activity() {
 
         auth = AuthManager(this)
         lan = LanConnection(
-            onState = { message -> runOnUiThread { status.text = message } },
+            onState = { message ->
+                runOnUiThread {
+                    status.text = when {
+                        message.startsWith("Waiting for opponent") ->
+                            "بانتظار الصديق • عنوانك ${localWifiAddress() ?: "غير متاح"} • المنفذ 45454"
+                        message == "Opponent connected" -> "تم اتصال الصديق بنجاح عبر Wi-Fi"
+                        message == "Connection closed by opponent" -> "انقطع اتصال الصديق • تحقق من الشبكة ثم أعد إنشاء المباراة"
+                        message.startsWith("Connection lost:") -> "انقطع اتصال Wi-Fi: ${message.substringAfter(":").trim()}"
+                        message.startsWith("Host error:") -> "تعذر إنشاء المباراة: ${message.substringAfter(":").trim()}"
+                        message.startsWith("Join error:") -> "تعذر الاتصال: ${message.substringAfter(":").trim()} • تأكد من العنوان والشبكة نفسها"
+                        message.startsWith("Send failed:") -> "تعذر إرسال النقلة: ${message.substringAfter(":").trim()}"
+                        else -> message
+                    }
+                }
+            },
             onMessage = { message -> runOnUiThread { handleNetworkMessage(message) } }
         )
         board = ChessBoardView(this)
