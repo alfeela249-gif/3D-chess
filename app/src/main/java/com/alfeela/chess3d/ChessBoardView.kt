@@ -23,6 +23,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var downY = 0f
     private var rotateGesture = false
     private var lastRotateX = 0f
+    private var lastPointerSpan = 0f
 
     private fun squareAt(x: Float, y: Float): Pair<Int, Int>? =
         boardRenderer.squareAt(x, y, width, height)
@@ -88,6 +89,13 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         return applied
     }
 
+    private fun pointerSpan(event: MotionEvent): Float {
+        if (event.pointerCount < 2) return 0f
+        val dx = event.getX(0) - event.getX(1)
+        val dy = event.getY(0) - event.getY(1)
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -100,13 +108,19 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
             MotionEvent.ACTION_POINTER_DOWN -> {
                 rotateGesture = true
                 lastRotateX = event.getX(0)
+                lastPointerSpan = pointerSpan(event)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (rotateGesture && event.pointerCount >= 2) {
                     val currentX = event.getX(0)
+                    val currentSpan = pointerSpan(event)
                     boardRenderer.rotateBy((currentX-lastRotateX)*0.008f)
+                    if (lastPointerSpan > 0f && currentSpan > 0f) {
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.012f)
+                    }
                     lastRotateX = currentX
+                    lastPointerSpan = currentSpan
                     requestRender()
                 }
                 return true
@@ -185,6 +199,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var animatedMove: ChessMove? = null
     @Volatile private var animationStart = 0L
     @Volatile private var boardRotation = 0f
+    @Volatile private var cameraDistance = 15.0f
     private val animationDuration = 420L
 
     fun rotationRadians(): Float = boardRotation
@@ -240,6 +255,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         return if (file in 0..7 && rank in 0..7) file to rank else null
     }
     fun rotateBy(delta: Float) { boardRotation += delta }
+    fun zoomBy(delta: Float) { cameraDistance = (cameraDistance + delta).coerceIn(9.5f, 22f) }
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
     fun isAnimating(): Boolean = animatedMove != null
@@ -322,7 +338,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     override fun onDrawFrame(gl: GL10?) {
         updateProjection()
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        Matrix.setLookAtM(view,0,0f,9.2f,11.8f,0f,0.25f,0f,0f,1f,0f)
+        val distance = cameraDistance
+        Matrix.setLookAtM(view,0,0f,distance*0.56f,distance*0.72f,0f,0.25f,0f,0f,1f,0f)
         Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
         // Thick polished black plinth gives the board a real raised edge.
