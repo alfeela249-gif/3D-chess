@@ -151,15 +151,24 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         Matrix.setLookAtM(view,0,0f,12f,2.0f,0f,0f,0f,0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
         drawCube(0f,-0.22f,0f,8.35f,0.35f,8.35f,0.12f,0.14f,0.17f)
+        val previousMove = game.lastMove
+        val checkedKing = if (game.isInCheck(game.sideToMove)) {
+            (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
+                .firstOrNull { (f, r) -> game.pieceAt(f, r) == ChessPiece(game.sideToMove, PieceType.KING) }
+        } else null
         for (rank in 0..7) for (file in 0..7) {
             val light = (file+rank)%2==0
             val square = file to rank
             val isSelected = selected == square
             val isTarget = legalTargets.contains(square)
+            val isLastMove = previousMove?.let {
+                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
+            } ?: false
+            val isCheckedKing = checkedKing == square
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isSelected) 0.25f else if (isTarget) 0.58f else if(light) 0.78f else 0.19f,
-                if (isSelected) 0.78f else if (isTarget) 0.72f else if(light) 0.69f else 0.25f,
-                if (isSelected) 0.30f else if (isTarget) 0.28f else if(light) 0.52f else 0.31f)
+                if (isCheckedKing) 0.82f else if (isSelected) 0.25f else if (isTarget) 0.58f else if (isLastMove) 0.66f else if(light) 0.78f else 0.19f,
+                if (isCheckedKing) 0.12f else if (isSelected) 0.78f else if (isTarget) 0.72f else if (isLastMove) 0.58f else if(light) 0.69f else 0.25f,
+                if (isCheckedKing) 0.12f else if (isSelected) 0.30f else if (isTarget) 0.28f else if (isLastMove) 0.24f else if(light) 0.52f else 0.31f)
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.76f,0.28f)
             }
