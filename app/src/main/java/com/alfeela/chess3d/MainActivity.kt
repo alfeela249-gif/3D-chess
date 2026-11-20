@@ -166,6 +166,9 @@ class MainActivity : Activity() {
         controls.addView(reset, LinearLayout.LayoutParams(dp(78), dp(48)))
         root.addView(controls, LinearLayout.LayoutParams(-1, dp(54)))
         setContentView(root)
+        if (intent.data?.scheme == "com.alfeela.chess3d") {
+            status.text = auth.acceptOAuthCallback(intent.data!!).message
+        }
     }
 
     private fun showAccountDialog() {
