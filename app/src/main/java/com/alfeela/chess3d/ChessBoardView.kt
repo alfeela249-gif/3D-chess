@@ -17,6 +17,30 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     var localSide: Side = Side.WHITE
     var onMove: ((ChessMove) -> Unit)? = null
     private var selected: Pair<Int, Int>? = null
+    private var downSquare: Pair<Int, Int>? = null
+    private var downX = 0f
+    private var downY = 0f
+
+    private fun squareAt(x: Float, y: Float): Pair<Int, Int>? {
+        val size = minOf(width, height).toFloat().coerceAtLeast(1f)
+        val left = (width - size) / 2f
+        val top = (height - size) / 2f
+        if (x < left || x >= left + size || y < top || y >= top + size) return null
+        return ((x-left)/size*8).toInt().coerceIn(0,7) to ((y-top)/size*8).toInt().coerceIn(0,7)
+    }
+
+    private fun animate(move: ChessMove) {
+        boardRenderer.animateMove(move)
+        requestRender()
+        postDelayed(object : Runnable {
+            override fun run() {
+                if (boardRenderer.isAnimating()) {
+                    requestRender()
+                    postDelayed(this, 16L)
+                }
+            }
+        }, 16L)
+    }
 
     private fun refreshSelection() {
         val moves = selected?.let { game.legalMovesFrom(it.first, it.second) }
@@ -39,7 +63,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
 
     fun applySyncedMove(move: ChessMove): Boolean {
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
         return applied
     }
 
@@ -58,34 +82,52 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_UP) return true
-        // Board occupies the central area. A near-overhead camera keeps square mapping intuitive.
-        val boardSize = minOf(width, height).toFloat().coerceAtLeast(1f)
-        val boardLeft = (width - boardSize) / 2f
-        val boardTop = (height - boardSize) / 2f
-        val nx = ((event.x - boardLeft) / boardSize).coerceIn(0f, 0.999f)
-        val ny = ((event.y - boardTop) / boardSize).coerceIn(0f, 0.999f)
-        val file = (nx * 8).toInt()
-        val rank = (ny * 8).toInt()
-        if (game.sideToMove != localSide) return true
-
-        val current = selected
-        if (current == null) {
-            if (game.pieceAt(file, rank)?.side == localSide) selected = file to rank
-        } else {
-            val candidate = game.legalMovesFrom(current.first, current.second)
-                .firstOrNull { it.toFile == file && it.toRank == rank }
-            if (candidate != null && game.makeMove(candidate)) {
-                selected = null
-                onMove?.invoke(candidate)
-            } else if (game.pieceAt(file, rank)?.side == localSide) {
-                selected = file to rank
-            } else {
-                selected = null
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                downSquare = squareAt(event.x, event.y)
+                downX = event.x
+                downY = event.y
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                val destination = squareAt(event.x, event.y) ?: run {
+                    downSquare = null
+                    return true
+                }
+                if (game.sideToMove != localSide) return true
+                val dragged = downSquare
+                val isDrag = kotlin.math.abs(event.x-downX) > 12f || kotlin.math.abs(event.y-downY) > 12f
+                val source = if (isDrag) dragged else selected
+                if (source != null) {
+                    val candidate = game.legalMovesFrom(source.first, source.second)
+                        .firstOrNull { it.toFile == destination.first && it.toRank == destination.second }
+                    if (candidate != null && game.makeMove(candidate)) {
+                        selected = null
+                        boardRenderer.setSelection(null, emptySet())
+                        animate(candidate)
+                        onMove?.invoke(candidate)
+                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
+                        selected = destination
+                        refreshSelection()
+                        requestRender()
+                    } else if (!isDrag) {
+                        selected = null
+                        refreshSelection()
+                        requestRender()
+                    }
+                } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
+                    selected = destination
+                    refreshSelection()
+                    requestRender()
+                }
+                downSquare = null
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                downSquare = null
+                return true
             }
         }
-        refreshSelection()
-        requestRender()
         return true
     }
 }
@@ -102,6 +144,12 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private var colorHandle = 0
     @Volatile private var selected: Pair<Int, Int>? = null
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
+    @Volatile private var animatedMove: ChessMove? = null
+    @Volatile private var animationStart = 0L
+    private val animationDuration = 260L
+
+    fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
+    fun isAnimating(): Boolean = animatedMove != null && android.os.SystemClock.uptimeMillis()-animationStart < animationDuration
 
     private val vertexShader = """
         uniform mat4 uMvp;
@@ -184,8 +232,16 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             val r = if (white) 0.92f else 0.10f
             val g = if (white) 0.62f else 0.11f
             val b = if (white) 0.28f else 0.13f
-            val x = file-3.5f
-            val z = rank-3.5f
+            var x = file-3.5f
+            var z = rank-3.5f
+            val moving = animatedMove
+            if (moving != null && moving.toFile == file && moving.toRank == rank) {
+                val progress = ((android.os.SystemClock.uptimeMillis()-animationStart).toFloat()/animationDuration).coerceIn(0f,1f)
+                val eased = progress*progress*(3f-2f*progress)
+                x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
+                z = (moving.fromRank-3.5f) + ((moving.toRank-moving.fromRank)*eased)
+                if (progress >= 1f) animatedMove = null
+            }
             // Rounded, stacked chess-piece silhouettes in polished gold and black.
             drawCylinder(x,0.13f,z,0.34f,0.14f,r*0.68f,g*0.68f,b*0.68f)
             drawCylinder(x,0.23f,z,0.27f,0.12f,r,g,b)
