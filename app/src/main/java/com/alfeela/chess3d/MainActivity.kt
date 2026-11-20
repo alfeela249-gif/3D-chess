@@ -181,9 +181,13 @@ class MainActivity : Activity() {
         }
         val reset = makeButton("جديدة", false).apply {
             setOnClickListener {
-                board.resetBoard()
-                lan.send("RESET")
-                updateGameStatus()
+                if (onlineMode) {
+                    status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
+                } else {
+                    board.resetBoard()
+                    lan.send("RESET")
+                    updateGameStatus()
+                }
             }
         }
         controls.addView(host, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(5) })
