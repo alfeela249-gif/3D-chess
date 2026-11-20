@@ -16,7 +16,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG immersiveStickyCompat())
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         board = ChessBoardView(this)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -38,6 +38,4 @@ class MainActivity : Activity() {
         root.addView(controls, LinearLayout.LayoutParams(-1, 58))
         setContentView(root)
     }
-
-    private fun Int.immersiveStickyCompat(): Int = View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 }
