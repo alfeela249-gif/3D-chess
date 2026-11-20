@@ -17,7 +17,7 @@ data class ChessMove(
 
 class ChessGame {
     private val squares = Array(8) { arrayOfNulls<ChessPiece>(8) }
-    var sideToMove: Side = Side.WHITE
+    @Volatile var sideToMove: Side = Side.WHITE
         private set
     private var whiteKingSide = true
     private var whiteQueenSide = true
@@ -29,6 +29,7 @@ class ChessGame {
 
     init { reset() }
 
+    @Synchronized
     fun reset() {
         for (rank in 0..7) for (file in 0..7) squares[rank][file] = null
         val back = listOf(PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP,
@@ -46,9 +47,11 @@ class ChessGame {
         lastMove = null
     }
 
+    @Synchronized
     fun pieceAt(file: Int, rank: Int): ChessPiece? =
         if (inside(file, rank)) squares[rank][file] else null
 
+    @Synchronized
     fun legalMovesFrom(file: Int, rank: Int): List<ChessMove> {
         if (!inside(file, rank)) return emptyList()
         val piece = squares[rank][file] ?: return emptyList()
@@ -56,6 +59,7 @@ class ChessGame {
         return legalMoves().filter { it.fromFile == file && it.fromRank == rank }
     }
 
+    @Synchronized
     fun legalMoves(): List<ChessMove> {
         val candidates = mutableListOf<ChessMove>()
         for (rank in 0..7) for (file in 0..7) {
@@ -69,6 +73,7 @@ class ChessGame {
         }
     }
 
+    @Synchronized
     fun makeMove(move: ChessMove): Boolean {
         if (move !in legalMoves()) return false
         applyUnchecked(move)
@@ -77,12 +82,15 @@ class ChessGame {
         return true
     }
 
+    @Synchronized
     fun isInCheck(side: Side): Boolean {
         val king = findKing(side) ?: return true
         return isAttacked(king.first, king.second, side.opposite())
     }
 
+    @Synchronized
     fun isCheckmate(): Boolean = isInCheck(sideToMove) && legalMoves().isEmpty()
+    @Synchronized
     fun isStalemate(): Boolean = !isInCheck(sideToMove) && legalMoves().isEmpty()
 
     private fun pseudoMoves(file: Int, rank: Int, piece: ChessPiece): List<ChessMove> {
