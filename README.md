@@ -49,3 +49,12 @@ Do not commit Supabase service-role keys or other secrets. Android clients may o
 See [Online multiplayer and friends](docs/ONLINE_MULTIPLAYER_AND_FRIENDS.md) for the implementation plan covering offline computer opponents, local Wi-Fi games, online rooms, and friend requests.
 
 The Supabase backend now includes friend request and online room tables with RLS. These cloud features are backend groundwork only; Android sign-in, friend screens, online synchronization, and computer AI are not yet integrated into the APK.
+
+
+## تنزيل تطبيق Android
+
+[**تنزيل أحدث إصدار APK مباشرة**](https://github.com/alfeela249-gif/3D-chess/releases/download/latest/app-debug.apk)
+
+[عرض صفحة الإصدارات والتنزيلات](https://github.com/alfeela249-gif/3D-chess/releases)
+
+يتم تحديث رابط التنزيل تلقائياً بعد نجاح بناء APK على الفرع `main`. النسخة الحالية نسخة Debug للاختبار وليست إصداراً نهائياً موقعاً للنشر العام.
