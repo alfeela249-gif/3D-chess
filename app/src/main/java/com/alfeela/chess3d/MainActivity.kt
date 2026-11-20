@@ -313,8 +313,38 @@ class MainActivity : Activity() {
             .setNeutralButton("إرسال طلب صداقة") { _, _ ->
                 runAuth { auth.sendFriendRequest(username.text.toString()) }
             }
-            .setNegativeButton("إغلاق", null).show()
+            .setNegativeButton("الأصدقاء والطلبات") { _, _ -> showFriendList() }.show()
     }
+
+    private fun showFriendList() {
+        status.text = "جارٍ تحميل الأصدقاء والطلبات..."
+        Thread {
+            val result = auth.loadFriends()
+            runOnUiThread {
+                if (!result.ok) { status.text = result.message; return@runOnUiThread }
+                if (result.entries.isEmpty()) {
+                    AlertDialog.Builder(this).setTitle("الأصدقاء").setMessage("لا توجد صداقات أو طلبات حالياً. أضف صديقاً باستخدام اسم المستخدم.").setPositiveButton("حسناً", null).show()
+                    return@runOnUiThread
+                }
+                val labels = result.entries.map { entry ->
+                    val state = when { entry.status == "accepted" -> "صديق"; entry.incoming -> "طلب وارد"; entry.status == "pending" -> "بانتظار الرد"; else -> entry.status }
+                    "${entry.nickname} (@${entry.username}) — $state"
+                }.toTypedArray()
+                AlertDialog.Builder(this).setTitle("الأصدقاء وطلبات الصداقة").setItems(labels) { _, index ->
+                    val entry = result.entries[index]
+                    if (entry.incoming) {
+                        AlertDialog.Builder(this).setTitle("طلب صداقة من ${entry.nickname}")
+                            .setPositiveButton("قبول") { _, _ -> runAuth { auth.respondFriendRequest(entry.userId, true) } }
+                            .setNegativeButton("رفض") { _, _ -> runAuth { auth.respondFriendRequest(entry.userId, false) } }
+                            .setNeutralButton("لاحقاً", null).show()
+                    } else {
+                        AlertDialog.Builder(this).setTitle(entry.nickname).setMessage(if (entry.status == "accepted") "هذا اللاعب ضمن قائمة أصدقائك." else "تم إرسال طلب الصداقة، وبانتظار موافقة اللاعب.").setPositiveButton("حسناً", null).show()
+                    }
+                }.setPositiveButton("إغلاق", null).show()
+            }
+        }.start()
+    }
+
     private fun runAuth(action: () -> AuthManager.Result) {
         val emailStatus = status
         emailStatus.text = "جارٍ الاتصال بخدمة الحسابات..."
