@@ -204,12 +204,12 @@ class MainActivity : Activity() {
         utilityButton("❔ القواعد") { showHowToPlay() }
         content.addView(utilityRow, LinearLayout.LayoutParams(-1, dp(54)))
 
-        menuButton("▶  متابعة اللعب", false, 46) {
-            if (!playVsComputer && !onlineMode && !lan.isConnected()) {
-                status.text = "اختر طريقة اللعب أولاً"
-            } else {
-                showGameScreen()
-            }
+        menuButton("▶  مباراة جديدة ضد الكمبيوتر", false, 46) {
+            stopOnlinePolling()
+            playVsComputer = true
+            board.localSide = Side.WHITE
+            board.resetBoard()
+            showGameScreen()
         }
         val footer = TextView(this).apply {
             text = "3D CHESS   •   BLACK & GOLD"
