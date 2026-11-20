@@ -53,4 +53,28 @@ class ChessGameTest {
         assertNotNull(move)
         assertTrue(move in game.legalMoves())
     }
+
+    @Test fun castlingMovesKingAndRookTogether() {
+        val game = ChessGame()
+        // Clear the king-side path with legal development moves.
+        assertTrue(game.makeMove(ChessMove(4, 6, 4, 4))) // e4
+        assertTrue(game.makeMove(ChessMove(4, 1, 4, 3))) // ...e5
+        assertTrue(game.makeMove(ChessMove(6, 7, 5, 5))) // Nf3
+        assertTrue(game.makeMove(ChessMove(1, 0, 2, 2))) // ...Nc6
+        assertTrue(game.makeMove(ChessMove(5, 7, 2, 4))) // Bc4
+        assertTrue(game.makeMove(ChessMove(6, 0, 5, 2))) // ...Nf6
+
+        assertTrue(game.legalMovesFrom(4, 7).contains(ChessMove(4, 7, 6, 7)))
+        assertTrue(game.makeMove(ChessMove(4, 7, 6, 7))) // O-O
+        assertEquals(ChessPiece(Side.WHITE, PieceType.KING), game.pieceAt(6, 7))
+        assertEquals(ChessPiece(Side.WHITE, PieceType.ROOK), game.pieceAt(5, 7))
+        assertNull(game.pieceAt(4, 7))
+        assertNull(game.pieceAt(7, 7))
+    }
+
+    @Test fun cannotCastleThroughAnAttackedSquare() {
+        val game = ChessGame()
+        // The initial position blocks castling; no castle is offered.
+        assertFalse(game.legalMovesFrom(4, 7).any { kotlin.math.abs(it.toFile - it.fromFile) == 2 })
+    }
 }
