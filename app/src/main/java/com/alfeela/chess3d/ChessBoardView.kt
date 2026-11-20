@@ -353,6 +353,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 .firstOrNull { (f, r) -> game.pieceAt(f, r) == ChessPiece(game.sideToMove, PieceType.KING) }
         } else null
         for (rank in 0..7) for (file in 0..7) {
+            activePieceLift = 0f
             val light = (file+rank)%2==0
             val square = file to rank
             val isSelected = selected == square
