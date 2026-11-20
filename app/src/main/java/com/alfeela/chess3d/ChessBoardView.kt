@@ -493,19 +493,21 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     drawSphere(x,1.14f,z,0.045f,ar,ag,ab)
                 }
                 PieceType.QUEEN -> {
-                    // Regal flared gown, narrow neck and open six-point crown.
-                    drawCylinder(x,0.57f,z,0.225f,0.25f,r,g,b)
-                    drawCylinder(x,0.76f,z,0.145f,0.20f,r*0.94f,g*0.94f,b*0.94f)
-                    drawCylinder(x,0.91f,z,0.19f,0.075f,ar,ag,ab)
-                    drawSphere(x,1.015f,z,0.105f,r,g,b)
-                    for(k in 0..5) {
-                        val angle=k*1.047f
-                        val cx=x+kotlin.math.cos(angle)*0.19f
-                        val cz=z+kotlin.math.sin(angle)*0.19f
-                        drawCube(cx,1.12f,cz,0.055f,0.20f,0.055f,ar,ag,ab)
-                        drawSphere(cx,1.235f,cz,0.045f,ar,ag,ab)
+                    // Queen: elegant royal diadem, deliberately unlike the king's cross.
+                    drawCylinder(x,0.56f,z,0.235f,0.25f,r,g,b)
+                    drawCylinder(x,0.75f,z,0.155f,0.22f,r*0.94f,g*0.94f,b*0.94f)
+                    drawCylinder(x,0.91f,z,0.205f,0.075f,ar,ag,ab)
+                    drawSphere(x,1.005f,z,0.105f,r,g,b)
+                    // Low coronet band with five rounded fleur-like pearls and a central jewel.
+                    drawCylinder(x,1.105f,z,0.205f,0.075f,ar,ag,ab)
+                    for(k in 0..4) {
+                        val angle=(k*1.256637f)-1.570796f
+                        val cx=x+kotlin.math.cos(angle)*0.17f
+                        val cz=z+kotlin.math.sin(angle)*0.17f
+                        drawSphere(cx,1.18f,cz,0.052f,ar,ag,ab)
                     }
-                    drawSphere(x,1.10f,z,0.055f,ar,ag,ab)
+                    drawSphere(x,1.205f,z,0.072f,0.98f,0.78f,0.38f)
+                    drawSphere(x,1.285f,z,0.035f,0.98f,0.90f,0.62f)
                 }
                 PieceType.KING -> {
                     // Taller royal mantle with a jewelled orb and unmistakable cross.
