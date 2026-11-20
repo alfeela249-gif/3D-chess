@@ -21,7 +21,7 @@ class ChessRenderScreenshotTest {
         val device = UiDevice.getInstance(instrumentation)
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         assertNotNull("Main activity launch intent missing", intent)
-        intent!!.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        intent!!.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
         val startButton = device.wait(Until.findObject(By.textContains("ابدأ اللعب")), 15_000)
         assertNotNull("Main menu did not appear", startButton)
