@@ -98,6 +98,53 @@ class AuthManager(context: Context) {
         } catch (e: Exception) { Result(false, e.message ?: "تعذر حفظ الملف الشخصي") }
     }
 
+    data class RoomResult(val ok: Boolean, val message: String, val id: String? = null, val code: String? = null, val gameState: JSONObject? = null, val currentTurn: String? = null, val status: String? = null)
+
+    fun createOnlineRoom(): RoomResult {
+        return try {
+            val userId = currentUserId() ?: return RoomResult(false, "سجّل الدخول أولاً.")
+            val code = java.util.UUID.randomUUID().toString().replace("-", "").take(8).uppercase()
+            val body = JSONObject().put("invite_code", code).put("host_id", userId).put("status", "waiting")
+                .put("game_state", JSONObject().put("moves", org.json.JSONArray())).put("current_turn", "white")
+            val response = authorizedRequest("POST", "/rest/v1/online_game_rooms?select=id,invite_code,game_state,current_turn,status", body.toString(), "return=representation")
+            val rows = org.json.JSONArray(response.first)
+            if (response.second !in 200..299 || rows.length() == 0) RoomResult(false, "تعذر إنشاء الغرفة عبر الإنترنت.") else {
+                val row = rows.getJSONObject(0)
+                RoomResult(true, "تم إنشاء الغرفة. أرسل الرمز إلى صديقك.", row.optString("id"), row.optString("invite_code"), row.optJSONObject("game_state"), row.optString("current_turn"), row.optString("status"))
+            }
+        } catch (e: Exception) { RoomResult(false, e.message ?: "تعذر إنشاء الغرفة") }
+    }
+
+    fun joinOnlineRoom(code: String): RoomResult {
+        return try {
+            val body = JSONObject().put("p_invite_code", code.trim().uppercase())
+            val response = authorizedRequest("POST", "/rest/v1/rpc/join_online_game_room", body.toString())
+            val rows = org.json.JSONArray(response.first)
+            if (response.second !in 200..299 || rows.length() == 0) RoomResult(false, "رمز الغرفة غير صحيح أو أن الغرفة ممتلئة.") else {
+                val row = rows.getJSONObject(0)
+                RoomResult(true, "انضممت إلى المباراة عبر الإنترنت.", row.optString("id"), row.optString("invite_code"), row.optJSONObject("game_state"), row.optString("current_turn"), row.optString("status"))
+            }
+        } catch (e: Exception) { RoomResult(false, e.message ?: "تعذر الانضمام إلى الغرفة") }
+    }
+
+    fun fetchOnlineRoom(roomId: String): RoomResult {
+        return try {
+            val response = authorizedRequest("GET", "/rest/v1/online_game_rooms?select=id,invite_code,game_state,current_turn,status&id=eq.$roomId", null)
+            val rows = org.json.JSONArray(response.first)
+            if (response.second !in 200..299 || rows.length() == 0) RoomResult(false, "تعذر تحديث المباراة.") else {
+                val row = rows.getJSONObject(0)
+                RoomResult(true, "تم تحديث المباراة.", row.optString("id"), row.optString("invite_code"), row.optJSONObject("game_state"), row.optString("current_turn"), row.optString("status"))
+            }
+        } catch (e: Exception) { RoomResult(false, e.message ?: "تعذر تحديث المباراة") }
+    }
+
+    fun submitOnlineMoves(roomId: String, moves: org.json.JSONArray, nextTurn: String): Result {
+        return try {
+            val body = JSONObject().put("p_room_id", roomId).put("p_game_state", JSONObject().put("moves", moves)).put("p_next_turn", nextTurn)
+            val response = authorizedRequest("POST", "/rest/v1/rpc/submit_online_game_state", body.toString())
+            if (response.second in 200..299) Result(true, "تم إرسال الحركة.") else Result(false, "تعذر مزامنة الحركة. تحقق من دورك والاتصال.")
+        } catch (e: Exception) { Result(false, e.message ?: "تعذر إرسال الحركة") }
+    }
     private fun currentUserId(): String? {
         val response = authorizedRequest("GET", "/auth/v1/user", null)
         if (response.second !in 200..299) return null
