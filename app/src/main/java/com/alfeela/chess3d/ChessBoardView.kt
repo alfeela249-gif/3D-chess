@@ -5,6 +5,8 @@ import android.opengl.GLSurfaceView
 import android.opengl.GLES20
 import android.opengl.Matrix
 import android.view.MotionEvent
+import android.view.Surface
+import android.os.Build
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -99,9 +101,18 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 
     init {
+        // Request a full 8-bit-per-channel framebuffer with a depth buffer.
+        // The actual drawable resolution remains the device's native surface size.
         setEGLContextClientVersion(2)
+        setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        setPreserveEGLContextOnPause(true)
         setRenderer(boardRenderer)
-        renderMode = RENDERMODE_WHEN_DIRTY
+        // Keep the scene rendering continuously so camera motion and piece
+        // animation can use the display's refresh cadence instead of sparse redraws.
+        renderMode = RENDERMODE_CONTINUOUSLY
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            setFrameRate(60f, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+        }
     }
 
     fun resetBoard() {
@@ -586,7 +597,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawCylinder(x:Float,y:Float,z:Float,radius:Float,height:Float,r:Float,g:Float,b:Float) {
         val vertices = ArrayList<Float>()
-        val segments = 40
+        val segments = 64
         // Turned, multi-ring profile: beveled foot, narrow neck and rounded crown.
         val profile = listOf(
             0.00f to -0.50f, 0.78f to -0.50f, 0.94f to -0.40f,
@@ -621,8 +632,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawSphere(x:Float,y:Float,z:Float,radius:Float,r:Float,g:Float,b:Float) {
         val vertices = ArrayList<Float>()
-        val rings = 10
-        val slices = 20
+        val rings = 16
+        val slices = 32
         for(i in 0 until rings) {
             val p1 = -Math.PI/2 + i*Math.PI/rings
             val p2 = -Math.PI/2 + (i+1)*Math.PI/rings
