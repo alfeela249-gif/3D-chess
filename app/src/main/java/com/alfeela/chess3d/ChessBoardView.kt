@@ -518,7 +518,6 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     drawSphere(x,1.30f,z,0.035f,ar,ag,ab)
                 }
             }
-            }
         }
     }
 
