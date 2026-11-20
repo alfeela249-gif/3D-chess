@@ -248,8 +248,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         mvpHandle = GLES20.glGetUniformLocation(program,"uMvp")
         colorHandle = GLES20.glGetUniformLocation(program,"uColor")
         normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
-        GLES20.glEnable(GLES20.GL_CULL_FACE)
-        GLES20.glCullFace(GLES20.GL_BACK)
+        // Keep both sides visible while generated procedural meshes use per-face normals.
+        GLES20.glDisable(GLES20.GL_CULL_FACE)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -407,17 +407,31 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private fun drawTriangles(vertices:FloatArray,x:Float,y:Float,z:Float,r:Float,g:Float,b:Float) {
         val buffer = ByteBuffer.allocateDirect(vertices.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         buffer.put(vertices); buffer.position(0)
+        // Calculate a real geometric normal for every triangle (rather than
+        // treating each vertex position as a normal, which caused incorrect lighting).
         val normals = FloatArray(vertices.size)
         var ni = 0
-        while (ni < vertices.size) {
-            val nx = vertices[ni]
-            val ny = vertices[ni+1]
-            val nz = vertices[ni+2]
+        while (ni + 8 < vertices.size) {
+            val ax = vertices[ni]; val ay = vertices[ni+1]; val az = vertices[ni+2]
+            val ux = vertices[ni+3]-ax; val uy = vertices[ni+4]-ay; val uz = vertices[ni+5]-az
+            val vx = vertices[ni+6]-ax; val vy = vertices[ni+7]-ay; val vz = vertices[ni+8]-az
+            var nx = uy*vz - uz*vy
+            var ny = uz*vx - ux*vz
+            var nz = ux*vy - uy*vx
             val length = kotlin.math.sqrt(nx*nx + ny*ny + nz*nz).coerceAtLeast(0.0001f)
-            normals[ni] = nx/length
-            normals[ni+1] = ny/length
-            normals[ni+2] = nz/length
-            ni += 3
+            nx /= length; ny /= length; nz /= length
+            // Orient curved procedural surfaces outward from their local origin.
+            val cx = (ax + vertices[ni+3] + vertices[ni+6]) / 3f
+            val cy = (ay + vertices[ni+4] + vertices[ni+7]) / 3f
+            val cz = (az + vertices[ni+5] + vertices[ni+8]) / 3f
+            if (nx*cx + ny*cy + nz*cz < 0f) { nx = -nx; ny = -ny; nz = -nz }
+            for (v in 0..2) {
+                val offset = ni + v*3
+                normals[offset] = nx
+                normals[offset+1] = ny
+                normals[offset+2] = nz
+            }
+            ni += 9
         }
         val normalBuffer = ByteBuffer.allocateDirect(normals.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         normalBuffer.put(normals); normalBuffer.position(0)
