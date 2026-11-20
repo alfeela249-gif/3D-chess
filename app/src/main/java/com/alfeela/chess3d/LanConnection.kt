@@ -75,9 +75,13 @@ class LanConnection(
     private fun readLoop(peer: Socket) {
         try {
             val reader = BufferedReader(InputStreamReader(peer.getInputStream(), Charsets.UTF_8))
-            while (true) onMessage(reader.readLine() ?: break)
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.length <= 256) onMessage(line)
+            }
+            onState("Connection closed by opponent")
         } catch (e: Exception) {
-            onState("Connection closed")
+            onState("Connection lost: ${e.message ?: "network error"}")
         } finally { close() }
     }
 
