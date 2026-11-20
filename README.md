@@ -3,7 +3,7 @@
 A native Kotlin Android chess app with a perspective 3D board and three game modes: offline computer opponent, local Wi-Fi multiplayer, and online private rooms.
 
 ## Implemented
-- OpenGL ES 2.0 3D board with selectable pieces and tap-to-move controls.
+- OpenGL ES 2.0 3D board with selectable pieces, legal-destination highlights, and tap-to-move controls.
 - Chess rules engine: legal moves, check, checkmate, stalemate, castling, en passant, and automatic queen promotion.
 - Offline computer opponent using medium-strength 3-ply alpha-beta search.
 - Local Wi-Fi host/join over TCP port `45454`; no internet or sign-in is required for LAN games.
@@ -24,11 +24,11 @@ APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 ## Play over local Wi-Fi
 1. Connect both Android devices to the same Wi-Fi network or one phone's hotspot. Internet access is not needed.
 2. On the first device, tap **HOST • الأبيض**.
-3. Find the host device's local IPv4 address in Android Wi-Fi settings.
+3. The host screen displays its local IPv4 address and port `45454`; share these with the second player.
 4. On the second device, tap **JOIN • الأسود** and enter the host IP.
 5. Select a piece, then tap its legal destination square.
 
-The joining player currently enters the host IP manually. Test on two physical Android devices before relying on it for a match.
+The joining player enters the displayed host IP manually. The client now uses a 10-second connection timeout and TCP keep-alive/no-delay options. Test on two physical Android devices before relying on it for a match.
 
 ## Online accounts and friends
 Sign in or create an account from the account screen. Google sign-in works only after enabling Google as an Auth provider and configuring its OAuth credentials and the `com.alfeela.chess3d://auth-callback` redirect URL in Supabase. Set a unique player username, send friend requests, and accept/reject incoming requests. Accepted friends can be invited by sharing a private room code.
