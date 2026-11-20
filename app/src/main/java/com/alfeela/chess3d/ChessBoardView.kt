@@ -129,7 +129,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.055f,0.07f,0.09f,1f)
+        GLES20.glClearColor(0.12f,0.045f,0.025f,1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         val vs = compile(GLES20.GL_VERTEX_SHADER, vertexShader)
         val fs = compile(GLES20.GL_FRAGMENT_SHADER, fragmentShader)
@@ -150,7 +150,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         Matrix.setLookAtM(view,0,0f,12f,2.0f,0f,0f,0f,0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
-        drawCube(0f,-0.22f,0f,8.35f,0.35f,8.35f,0.12f,0.14f,0.17f)
+        drawCube(0f,-0.22f,0f,8.55f,0.38f,8.55f,0.035f,0.035f,0.04f)
         val previousMove = game.lastMove
         val checkedKing = if (game.isInCheck(game.sideToMove)) {
             (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
@@ -166,39 +166,54 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             } ?: false
             val isCheckedKing = checkedKing == square
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isCheckedKing) 0.82f else if (isSelected) 0.25f else if (isTarget) 0.58f else if (isLastMove) 0.66f else if(light) 0.78f else 0.19f,
-                if (isCheckedKing) 0.12f else if (isSelected) 0.78f else if (isTarget) 0.72f else if (isLastMove) 0.58f else if(light) 0.69f else 0.25f,
-                if (isCheckedKing) 0.12f else if (isSelected) 0.30f else if (isTarget) 0.28f else if (isLastMove) 0.24f else if(light) 0.52f else 0.31f)
+                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.78f else 0.16f,
+                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.74f else 0.18f,
+                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.70f else 0.20f)
             if (isTarget && game.pieceAt(file, rank) == null) {
-                drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.76f,0.28f)
+                drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
             val piece = game.pieceAt(file, rank) ?: continue
             val white = piece.side == Side.WHITE
-            val r = if (white) 0.90f else 0.08f
-            val g = if (white) 0.88f else 0.11f
-            val b = if (white) 0.80f else 0.15f
+            val r = if (white) 0.92f else 0.10f
+            val g = if (white) 0.62f else 0.11f
+            val b = if (white) 0.28f else 0.13f
             val x = file-3.5f
             val z = rank-3.5f
-            // Layered geometric silhouettes distinguish piece classes while remaining lightweight.
-            drawCube(x,0.18f,z,0.62f,0.16f,0.62f,r*0.82f,g*0.82f,b*0.82f)
-            val height = when(piece.type) {
-                PieceType.PAWN -> 0.48f
-                PieceType.KNIGHT -> 0.68f
-                PieceType.BISHOP -> 0.76f
-                PieceType.ROOK -> 0.62f
-                PieceType.QUEEN -> 0.92f
-                PieceType.KING -> 1.02f
-            }
-            val width = when(piece.type) {
-                PieceType.PAWN -> 0.32f
-                PieceType.KNIGHT -> 0.40f
-                PieceType.BISHOP -> 0.36f
-                PieceType.ROOK -> 0.48f
-                PieceType.QUEEN, PieceType.KING -> 0.42f
-            }
-            drawCube(x,0.25f+height/2f,z,width,height,width,r,g,b)
-            if (piece.type == PieceType.KING || piece.type == PieceType.QUEEN) {
-                drawCube(x,0.25f+height+0.07f,z,0.20f,0.14f,0.20f,0.95f,0.72f,0.22f)
+            // Layered sculptural forms echo the reference's polished gold and black pieces.
+            drawCube(x,0.16f,z,0.58f,0.14f,0.58f,r*0.72f,g*0.72f,b*0.72f)
+            drawCube(x,0.25f,z,0.48f,0.12f,0.48f,r,g,b)
+            drawCube(x,0.38f,z,0.28f,0.20f,0.28f,r*0.92f,g*0.92f,b*0.92f)
+            when(piece.type) {
+                PieceType.PAWN -> {
+                    drawCube(x,0.53f,z,0.22f,0.12f,0.22f,r,g,b)
+                    drawCube(x,0.66f,z,0.22f,0.22f,0.22f,r,g,b)
+                }
+                PieceType.ROOK -> {
+                    drawCube(x,0.61f,z,0.42f,0.30f,0.42f,r,g,b)
+                    drawCube(x,0.80f,z,0.48f,0.10f,0.48f,r,g,b)
+                    for(k in -1..1) drawCube(x+k*0.14f,0.88f,z,0.09f,0.12f,0.09f,r,g,b)
+                }
+                PieceType.KNIGHT -> {
+                    drawCube(x,0.64f,z,0.30f,0.34f,0.28f,r,g,b)
+                    drawCube(x+0.08f,0.87f,z,0.24f,0.28f,0.24f,r,g,b)
+                    drawCube(x+0.16f,1.02f,z,0.20f,0.10f,0.20f,r,g,b)
+                }
+                PieceType.BISHOP -> {
+                    drawCube(x,0.68f,z,0.30f,0.40f,0.30f,r,g,b)
+                    drawCube(x,0.94f,z,0.20f,0.18f,0.20f,r,g,b)
+                    drawCube(x,1.06f,z,0.06f,0.20f,0.06f,0.98f,0.80f,0.48f)
+                }
+                PieceType.QUEEN -> {
+                    drawCube(x,0.68f,z,0.34f,0.42f,0.34f,r,g,b)
+                    drawCube(x,0.96f,z,0.30f,0.18f,0.30f,r,g,b)
+                    for(k in -2..2) drawCube(x+k*0.09f,1.10f,z,0.06f,0.14f,0.06f,0.98f,0.78f,0.42f)
+                }
+                PieceType.KING -> {
+                    drawCube(x,0.68f,z,0.34f,0.42f,0.34f,r,g,b)
+                    drawCube(x,0.96f,z,0.30f,0.18f,0.30f,r,g,b)
+                    drawCube(x,1.16f,z,0.07f,0.32f,0.07f,0.98f,0.80f,0.48f)
+                    drawCube(x,1.16f,z,0.28f,0.07f,0.07f,0.98f,0.80f,0.48f)
+                }
             }
         }
     }
