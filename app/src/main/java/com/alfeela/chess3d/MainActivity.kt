@@ -675,23 +675,27 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Resolve the IPv4 address from Android's active Wi-Fi network.
-     * WifiManager.connectionInfo.ipAddress is deprecated and can return 0
-     * on newer Android versions even while the phone is connected.
+     * Resolve the phone's Wi-Fi IPv4 address even when Android has selected
+     * mobile data as the default route (common when Wi-Fi has no internet).
      */
     private fun localWifiAddress(): String? {
         return try {
             val connectivity = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = connectivity.activeNetwork ?: return null
-            val capabilities = connectivity.getNetworkCapabilities(network) ?: return null
-            if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
-            val properties = connectivity.getLinkProperties(network) ?: return null
-            properties.linkAddresses
-                .asSequence()
-                .map { it.address }
-                .filterIsInstance<Inet4Address>()
-                .firstOrNull { !it.isLoopbackAddress && !it.isLinkLocalAddress }
-                ?.hostAddress
+            val networks = (listOfNotNull(connectivity.activeNetwork) +
+                connectivity.allNetworks.toList()).distinct()
+            for (network in networks) {
+                val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
+                if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
+                val properties = connectivity.getLinkProperties(network) ?: continue
+                val address = properties.linkAddresses
+                    .asSequence()
+                    .map { it.address }
+                    .filterIsInstance<Inet4Address>()
+                    .firstOrNull { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+                    ?.hostAddress
+                if (address != null) return address
+            }
+            null
         } catch (_: Exception) { null }
     }
 
