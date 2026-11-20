@@ -23,11 +23,14 @@ class ChessRenderScreenshotTest {
         assertNotNull("Main activity launch intent missing", intent)
         intent!!.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
-        val startButton = device.wait(Until.findObject(By.textContains("ابدأ اللعب")), 15_000)
-        assertNotNull("Main menu did not appear", startButton)
+
+        // Match the current home-screen label; the former "ابدأ اللعب" label no longer exists.
+        val startButton = device.wait(Until.findObject(By.textContains("العب ضد الكمبيوتر")), 15_000)
+        assertNotNull("Current computer-play button did not appear", startButton)
         startButton!!.click()
         device.waitForIdle(2_000)
-        Thread.sleep(4_000) // allow OpenGL ES to render several complete frames
+        Thread.sleep(4_000)
+
         val outputDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir
         if (!outputDir.exists()) outputDir.mkdirs()
         val screenshot = File(outputDir, "chess-3d-render.png")
