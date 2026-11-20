@@ -23,6 +23,8 @@ import android.widget.FrameLayout
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
+    private lateinit var homeStatus: TextView
+    private lateinit var homeRoot: LinearLayout
     private lateinit var board: ChessBoardView
     private lateinit var lan: LanConnection
     private lateinit var auth: AuthManager
@@ -145,14 +147,6 @@ class MainActivity : Activity() {
         }
         content.addView(subtitle, LinearLayout.LayoutParams(-1, dp(28)))
 
-        val preview = FrameLayout(this).apply {
-            background = rounded(Color.rgb(10, 12, 15), gold, 1)
-            clipToPadding = true
-        }
-        preview.addView(board, FrameLayout.LayoutParams(-1, -1))
-        content.addView(preview, LinearLayout.LayoutParams(-1, dp(226)).apply {
-            setMargins(dp(1), dp(10), dp(1), dp(8))
-        })
 
         status = TextView(this).apply {
             text = "اختر نمط اللعب وابدأ التحدي"
@@ -161,6 +155,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
+        homeStatus = status
         content.addView(status, LinearLayout.LayoutParams(-1, dp(30)))
 
         fun menuButton(label: String, highlighted: Boolean, height: Int = 52, action: () -> Unit): Button {
@@ -181,6 +176,7 @@ class MainActivity : Activity() {
             board.resetBoard()
             lan.close()
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط"
+            showGameScreen()
         }
         menuButton("♟  اللعب مع الأصدقاء بدون إنترنت • Wi-Fi", true) { showLanDialog() }
         menuButton("♟  اللعب مع الأصدقاء عبر الإنترنت", true) { showOnlineDialog() }
@@ -221,7 +217,8 @@ class MainActivity : Activity() {
         content.addView(footer, LinearLayout.LayoutParams(-1, dp(28)))
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        setContentView(root)
+        homeRoot = root
+        setContentView(homeRoot)
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
         }
@@ -331,6 +328,7 @@ class MainActivity : Activity() {
                 board.resetBoard()
                 lan.host()
                 showGameScreen()
+                showGameScreen()
                 val address = localWifiAddress()
                 status.text = if (address != null)
                     "أنت الأبيض • أعطِ صديقك العنوان $address والمنفذ 45454"
@@ -351,6 +349,7 @@ class MainActivity : Activity() {
                             board.resetBoard()
                             status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
                             lan.join(address)
+                            showGameScreen()
                             showGameScreen()
                         } else {
                             status.text = "أدخل عنوان IP صحيحاً للاتصال"
@@ -385,6 +384,7 @@ class MainActivity : Activity() {
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
                 status.text = "رمز الغرفة: ${result.code} • بانتظار انضمام صديقك..."
                 showGameScreen()
+                showGameScreen()
                 startOnlinePolling()
                 val inviteText = "دعوة للعب 3D Chess عبر الإنترنت${invitedFriend?.let { " مع $it" } ?: ""}. رمز الغرفة: ${result.code}"
                 val share = Intent(Intent.ACTION_SEND).apply {
@@ -407,6 +407,7 @@ class MainActivity : Activity() {
                 board.localSide = Side.BLACK; board.resetBoard(); board.isEnabled = true
                 applyRoomMoves(result.gameState?.optJSONArray("moves") ?: JSONArray())
                 status.text = "انضممت إلى الغرفة ${result.code} • أنت الأسود"
+                showGameScreen()
                 showGameScreen()
                 startOnlinePolling()
             }
