@@ -323,14 +323,14 @@ class MainActivity : Activity() {
                 setMargins(dp(2), 0, dp(2), 0)
             })
         }
-        cameraButton("↶") { board.rotateCamera(-0.30f) }
-        cameraButton("↷") { board.rotateCamera(0.30f) }
-        cameraButton("＋") { board.zoomCamera(-1.2f) }
-        cameraButton("－") { board.zoomCamera(1.2f) }
-        cameraButton("⟲") { board.resetCamera() }
+        cameraButton("يسار") { board.rotateCamera(-0.45f) }
+        cameraButton("يمين") { board.rotateCamera(0.45f) }
+        cameraButton("تقريب +") { board.zoomCamera(-1.4f) }
+        cameraButton("إبعاد −") { board.zoomCamera(1.4f) }
+        cameraButton("إعادة") { board.resetCamera() }
         gameRoot.addView(cameraControls, LinearLayout.LayoutParams(-1, dp(48)))
         gameRoot.addView(TextView(this).apply {
-            text = "اسحب بإصبع واحد فوق مربع فارغ • إصبعان للتدوير والتكبير"
+            text = "اسحب فوق مربع فارغ للتدوير • إصبعان للتدوير والتكبير • استخدم الأزرار أسفل اللوحة"
             setTextColor(Color.rgb(205, 181, 139))
             textSize = 10f
             gravity = Gravity.CENTER
@@ -421,7 +421,6 @@ class MainActivity : Activity() {
                 board.resetBoard()
                 lan.host()
                 showGameScreen()
-                showGameScreen()
                 val address = localWifiAddress()
                 status.text = if (address != null)
                     "أنت الأبيض • أعطِ صديقك العنوان $address والمنفذ 45454"
@@ -477,7 +476,6 @@ class MainActivity : Activity() {
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
                 status.text = "رمز الغرفة: ${result.code} • بانتظار انضمام صديقك..."
                 showGameScreen()
-                showGameScreen()
                 startOnlinePolling()
                 val inviteText = "دعوة للعب 3D Chess عبر الإنترنت${invitedFriend?.let { " مع $it" } ?: ""}. رمز الغرفة: ${result.code}"
                 val share = Intent(Intent.ACTION_SEND).apply {
@@ -500,7 +498,6 @@ class MainActivity : Activity() {
                 board.localSide = Side.BLACK; board.resetBoard(); board.isEnabled = true
                 applyRoomMoves(result.gameState?.optJSONArray("moves") ?: JSONArray())
                 status.text = "انضممت إلى الغرفة ${result.code} • أنت الأسود"
-                showGameScreen()
                 showGameScreen()
                 startOnlinePolling()
             }
