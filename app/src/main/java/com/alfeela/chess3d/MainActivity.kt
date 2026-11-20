@@ -108,79 +108,112 @@ class MainActivity : Activity() {
         val profileBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(Color.rgb(16, 16, 17), gold, 1)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
+            background = rounded(Color.rgb(20, 19, 17), Color.rgb(104, 82, 48), 1)
+            setPadding(dp(14), dp(5), dp(10), dp(5))
         }
         val profile = TextView(this).apply {
-            text = "♙  لاعب  •  المستوى 1"
+            text = "♙  ملف اللاعب"
             setTextColor(cream)
-            textSize = 13f
+            textSize = 14f
             typeface = Typeface.create("serif", Typeface.BOLD)
         }
-        profileBar.addView(profile, LinearLayout.LayoutParams(0, dp(38), 1f))
-        val friendsQuick = TextView(this).apply {
-            text = "♟"
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setTextColor(gold)
-            setPadding(dp(8), 0, dp(8), 0)
-            setOnClickListener { showFriendsDialog() }
+        profileBar.addView(profile, LinearLayout.LayoutParams(0, dp(40), 1f))
+        fun quickAction(symbol: String, action: () -> Unit) {
+            val item = TextView(this).apply {
+                text = symbol
+                textSize = 21f
+                gravity = Gravity.CENTER
+                setTextColor(gold)
+                setOnClickListener { action() }
+            }
+            profileBar.addView(item, LinearLayout.LayoutParams(dp(44), dp(42)))
         }
-        profileBar.addView(friendsQuick, LinearLayout.LayoutParams(dp(42), dp(42)))
-        val settingsQuick = TextView(this).apply {
-            text = "⚙"
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setTextColor(gold)
-            setOnClickListener { showSettingsDialog() }
-        }
-        profileBar.addView(settingsQuick, LinearLayout.LayoutParams(dp(42), dp(42)))
+        quickAction("♟") { showFriendsDialog() }
+        quickAction("⚙") { showSettingsDialog() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
 
-        val title = TextView(this).apply {
-            text = "♛  3D CHESS  ♚"
+        val hero = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(43, 32, 19), Color.rgb(18, 17, 16), Color.rgb(9, 10, 12))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(157, 117, 55))
+            }
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+        }
+        val crown = TextView(this).apply {
+            text = "♛     ♚"
             setTextColor(gold)
-            textSize = 31f
-            letterSpacing = 0.10f
+            textSize = 42f
+            gravity = Gravity.CENTER
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setShadowLayer(12f, 0f, 3f, Color.rgb(120, 75, 20))
+        }
+        hero.addView(crown, LinearLayout.LayoutParams(-1, dp(62)))
+        val title = TextView(this).apply {
+            text = "3D CHESS"
+            setTextColor(cream)
+            textSize = 29f
+            letterSpacing = 0.18f
             typeface = Typeface.create("serif", Typeface.BOLD)
             gravity = Gravity.CENTER
-            setShadowLayer(9f, 0f, 2f, Color.rgb(150, 94, 24))
         }
-        content.addView(title, LinearLayout.LayoutParams(-1, dp(66)).apply {
-            topMargin = dp(8)
-        })
+        hero.addView(title, LinearLayout.LayoutParams(-1, dp(42)))
         val subtitle = TextView(this).apply {
             text = "مملكة الشطرنج • تحدَّ أصدقاءك واصنع انتصارك"
-            setTextColor(gold)
-            textSize = 13f
+            setTextColor(Color.rgb(211, 178, 119))
+            textSize = 12f
             gravity = Gravity.CENTER
-            typeface = Typeface.create("serif", Typeface.NORMAL)
         }
-        content.addView(subtitle, LinearLayout.LayoutParams(-1, dp(28)))
-
+        hero.addView(subtitle, LinearLayout.LayoutParams(-1, dp(28)))
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(174)).apply {
+            topMargin = dp(12)
+            bottomMargin = dp(8)
+        })
 
         status = TextView(this).apply {
-            text = "اختر نمط اللعب وابدأ التحدي"
+            text = "اختر طريقة اللعب"
             setTextColor(cream)
             textSize = 13f
             gravity = Gravity.CENTER
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
         homeStatus = status
-        content.addView(status, LinearLayout.LayoutParams(-1, dp(30)))
+        content.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
-        fun menuButton(label: String, highlighted: Boolean, height: Int = 52, action: () -> Unit): Button {
-            return makeButton(label, highlighted).apply {
-                textSize = 14f
-                setPadding(dp(8), 0, dp(8), 0)
+        fun homeTile(label: String, detail: String, highlighted: Boolean = false, action: () -> Unit): LinearLayout {
+            val tile = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = rounded(
+                    if (highlighted) Color.rgb(73, 51, 24) else Color.rgb(24, 24, 24),
+                    if (highlighted) gold else Color.rgb(83, 73, 57), 1
+                )
+                isClickable = true
+                isFocusable = true
                 setOnClickListener { action() }
-                content.addView(this, LinearLayout.LayoutParams(-1, dp(height)).apply {
-                    setMargins(dp(2), dp(4), dp(2), dp(4))
-                })
             }
+            tile.addView(TextView(this).apply {
+                text = label
+                setTextColor(if (highlighted) Color.rgb(255, 224, 164) else cream)
+                textSize = 15f
+                gravity = Gravity.CENTER
+                typeface = Typeface.create("serif", Typeface.BOLD)
+            }, LinearLayout.LayoutParams(-1, dp(30)))
+            tile.addView(TextView(this).apply {
+                text = detail
+                setTextColor(Color.rgb(180, 165, 140))
+                textSize = 11f
+                gravity = Gravity.CENTER
+            }, LinearLayout.LayoutParams(-1, dp(24)))
+            return tile
         }
 
-        menuButton("▶  ابدأ اللعب • اللعب ضد الكمبيوتر (متوسط)", true, 54) {
+        val computerTile = homeTile("▶  العب ضد الكمبيوتر", "مستوى متوسط • دون إنترنت", true) {
             stopOnlinePolling()
             playVsComputer = true
             board.localSide = Side.WHITE
@@ -189,10 +222,32 @@ class MainActivity : Activity() {
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط"
             showGameScreen()
         }
-        menuButton("♟  اللعب مع الأصدقاء بدون إنترنت • Wi-Fi", true) { showLanDialog() }
-        menuButton("♟  اللعب مع الأصدقاء عبر الإنترنت", true) { showOnlineDialog() }
-        menuButton("♙  قائمة الأصدقاء • إضافة صديق", false) { showFriendsDialog() }
-        menuButton("⚙  الإعدادات والحساب", false) { showSettingsDialog() }
+        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(66)).apply {
+            topMargin = dp(4)
+            bottomMargin = dp(8)
+        })
+
+        fun tileRow(first: View, second: View) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            row.addView(first, LinearLayout.LayoutParams(0, dp(78), 1f).apply {
+                setMargins(dp(3), dp(3), dp(5), dp(3))
+            })
+            row.addView(second, LinearLayout.LayoutParams(0, dp(78), 1f).apply {
+                setMargins(dp(5), dp(3), dp(3), dp(3))
+            })
+            content.addView(row, LinearLayout.LayoutParams(-1, dp(84)))
+        }
+        tileRow(
+            homeTile("♟  أصدقاء • Wi-Fi", "اللعب محلياً بلا إنترنت") { showLanDialog() },
+            homeTile("♜  اللعب عبر الإنترنت", "اتصل بصديقك") { showOnlineDialog() }
+        )
+        tileRow(
+            homeTile("♙  قائمة الأصدقاء", "إضافة وإدارة الأصدقاء") { showFriendsDialog() },
+            homeTile("⚙  الإعدادات", "الحساب وتفضيلات اللعبة") { showSettingsDialog() }
+        )
 
         val utilityRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -203,29 +258,22 @@ class MainActivity : Activity() {
                 textSize = 12f
                 setOnClickListener { action() }
             }
-            utilityRow.addView(button, LinearLayout.LayoutParams(0, dp(46), 1f).apply {
-                setMargins(dp(2), dp(4), dp(2), dp(4))
+            utilityRow.addView(button, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                setMargins(dp(3), dp(5), dp(3), dp(5))
             })
         }
-        utilityButton("📜 سجل النقلات") { showMoveHistory() }
-        utilityButton("❔ القواعد") { showHowToPlay() }
+        utilityButton("📜  سجل النقلات") { showMoveHistory() }
+        utilityButton("❔  قواعد اللعب") { showHowToPlay() }
         content.addView(utilityRow, LinearLayout.LayoutParams(-1, dp(54)))
 
-        menuButton("▶  مباراة جديدة ضد الكمبيوتر", false, 46) {
-            stopOnlinePolling()
-            playVsComputer = true
-            board.localSide = Side.WHITE
-            board.resetBoard()
-            showGameScreen()
-        }
         val footer = TextView(this).apply {
-            text = "3D CHESS   •   BLACK & GOLD"
+            text = "BLACK  •  GOLD  •  STRATEGY"
             setTextColor(Color.rgb(145, 119, 76))
             textSize = 10f
             gravity = Gravity.CENTER
-            letterSpacing = 0.16f
+            letterSpacing = 0.18f
         }
-        content.addView(footer, LinearLayout.LayoutParams(-1, dp(28)))
+        content.addView(footer, LinearLayout.LayoutParams(-1, dp(30)))
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         homeRoot = root
