@@ -212,7 +212,7 @@ class MainActivity : Activity() {
             }.show()
     }
 
-    private fun createOnlineRoom() {
+    private fun createOnlineRoom(invitedFriend: String? = null) {
         status.text = "جارٍ إنشاء غرفة..."
         Thread {
             val result = auth.createOnlineRoom()
@@ -220,8 +220,15 @@ class MainActivity : Activity() {
                 if (!result.ok || result.id == null) { status.text = result.message; return@runOnUiThread }
                 onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
-                status.text = "رمز الغرفة: ${result.code} • أرسل الرمز لصديقك. بانتظار انضمامه..."
+                status.text = "رمز الغرفة: ${result.code} • بانتظار انضمام صديقك..."
                 startOnlinePolling()
+                val inviteText = "دعوة للعب 3D Chess عبر الإنترنت${invitedFriend?.let { " مع $it" } ?: ""}. رمز الغرفة: ${result.code}"
+                val share = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "دعوة للعب 3D Chess")
+                    putExtra(Intent.EXTRA_TEXT, inviteText)
+                }
+                startActivity(Intent.createChooser(share, "إرسال دعوة اللعب"))
             }
         }.start()
     }
@@ -337,8 +344,15 @@ class MainActivity : Activity() {
                             .setPositiveButton("قبول") { _, _ -> runAuth { auth.respondFriendRequest(entry.userId, true) } }
                             .setNegativeButton("رفض") { _, _ -> runAuth { auth.respondFriendRequest(entry.userId, false) } }
                             .setNeutralButton("لاحقاً", null).show()
+                    } else if (entry.status == "accepted") {
+                        AlertDialog.Builder(this).setTitle(entry.nickname)
+                            .setMessage("هذا اللاعب ضمن قائمة أصدقائك.")
+                            .setPositiveButton("دعوة للعب") { _, _ -> createOnlineRoom(entry.nickname) }
+                            .setNegativeButton("إغلاق", null).show()
                     } else {
-                        AlertDialog.Builder(this).setTitle(entry.nickname).setMessage(if (entry.status == "accepted") "هذا اللاعب ضمن قائمة أصدقائك." else "تم إرسال طلب الصداقة، وبانتظار موافقة اللاعب.").setPositiveButton("حسناً", null).show()
+                        AlertDialog.Builder(this).setTitle(entry.nickname)
+                            .setMessage("تم إرسال طلب الصداقة، وبانتظار موافقة اللاعب.")
+                            .setPositiveButton("حسناً", null).show()
                     }
                 }.setPositiveButton("إغلاق", null).show()
             }
