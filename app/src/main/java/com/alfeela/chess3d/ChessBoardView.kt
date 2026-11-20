@@ -21,7 +21,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     init {
         setEGLContextClientVersion(2)
         setRenderer(boardRenderer)
-        renderMode = RENDERMODE_CONTINUOUSLY
+        renderMode = RENDERMODE_WHEN_DIRTY
     }
 
     fun resetBoard() {
@@ -34,7 +34,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun applyRemoteMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
-        if (applied) { selected = null; requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }
         return applied
     }
 
