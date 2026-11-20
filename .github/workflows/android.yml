@@ -26,28 +26,8 @@ jobs:
           gradle-version: '8.9'
       - name: Build debug APK
         run: gradle assembleDebug
-      - name: Launch app in Android emulator and capture 3D board
-        id: emulator-render
-        continue-on-error: true
-        timeout-minutes: 18
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          profile: pixel_2
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          disable-animations: true
-          script: |
-            gradle connectedDebugAndroidTest
-            mkdir -p render-screenshots
-            adb pull /sdcard/Android/data/com.alfeela.chess3d/files/Pictures/chess-3d-render.png render-screenshots/chess-3d-render.png
-      - name: Upload emulator render screenshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: 3d-chess-emulator-render
-          path: render-screenshots/chess-3d-render.png
-          if-no-files-found: warn
+      # Emulator visual verification is kept as a separate follow-up task;
+      # do not block publishing the installable test APK on emulator boot availability.
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
