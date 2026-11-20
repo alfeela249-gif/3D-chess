@@ -76,6 +76,17 @@ class MainActivity : Activity() {
             }
         }
 
+        board.onPromotionRequested = { side, complete ->
+            val choices = arrayOf("الملكة", "القلعة", "الفيل", "الحصان")
+            val types = arrayOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
+            AlertDialog.Builder(this)
+                .setTitle("ترقية الجندي")
+                .setMessage("اختر القطعة التي تريد الترقية إليها")
+                .setItems(choices) { _, which -> complete(types[which]) }
+                .setOnCancelListener { /* Keep the pawn move pending; no illegal default promotion. */ }
+                .show()
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(8))
