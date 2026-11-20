@@ -168,6 +168,13 @@ class MainActivity : Activity() {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
 
+        val historyButton = makeButton("📜  سجل النقلات", false).apply {
+            setOnClickListener { showMoveHistory() }
+        }
+        root.addView(historyButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+            setMargins(dp(2), 0, dp(2), dp(3))
+        })
+
         val reset = makeButton("مباراة جديدة", false).apply {
             setOnClickListener {
                 if (onlineMode) {
@@ -186,6 +193,22 @@ class MainActivity : Activity() {
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
         }
+    }
+
+    private fun showMoveHistory() {
+        val moves = board.game.moveHistory()
+        val lines = moves.mapIndexed { index, move ->
+            val from = "${'a' + move.fromFile}${8 - move.fromRank}"
+            val to = "${'a' + move.toFile}${8 - move.toRank}"
+            val suffix = move.promotion?.let { "=${it.name.first()}" } ?: ""
+            val notation = "$from-$to$suffix"
+            if (index % 2 == 0) "${index / 2 + 1}. $notation" else notation
+        }
+        AlertDialog.Builder(this)
+            .setTitle("سجل النقلات")
+            .setMessage(if (lines.isEmpty()) "لم تبدأ أي نقلة بعد." else lines.chunked(2).joinToString("\n") { it.joinToString("     ") })
+            .setPositiveButton("إغلاق", null)
+            .show()
     }
 
     private fun showSettingsDialog() {
