@@ -149,7 +149,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val animationDuration = 260L
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
-    fun isAnimating(): Boolean = animatedMove != null && android.os.SystemClock.uptimeMillis()-animationStart < animationDuration
+    fun isAnimating(): Boolean = animatedMove != null
 
     private val vertexShader = """
         uniform mat4 uMvp;
