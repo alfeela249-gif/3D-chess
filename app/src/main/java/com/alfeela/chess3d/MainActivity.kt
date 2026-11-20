@@ -620,13 +620,16 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun sideName(side: Side): String =
+        if (side == Side.WHITE) "الأبيض" else "الأسود"
+
     private fun updateGameStatus() {
         val game = board.game
         status.text = when {
-            game.isCheckmate() -> "كش مات • الفائز: ${game.sideToMove.opposite()}"
-            game.isStalemate() -> "تعادل • خنق"
-            game.isInCheck(game.sideToMove) -> "كش • دور ${game.sideToMove}"
-            else -> "دور ${game.sideToMove} • اختر قطعة ثم مربع الوجهة"
+            game.isCheckmate() -> "كش مات • الفائز: ${sideName(game.sideToMove.opposite())}"
+            game.isStalemate() -> "تعادل • لا توجد نقلات قانونية"
+            game.isInCheck(game.sideToMove) -> "كش على الملك • دور ${sideName(game.sideToMove)}"
+            else -> "دور ${sideName(game.sideToMove)} • اختر قطعة ثم مربع الوجهة"
         }
     }
 
