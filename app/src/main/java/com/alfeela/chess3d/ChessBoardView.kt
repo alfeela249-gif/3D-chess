@@ -27,6 +27,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private var oneFingerCameraDrag = false
+    private var cameraGestureConsumed = false
 
     fun rotateCamera(delta: Float) { boardRenderer.rotateBy(delta); requestRender() }
     fun zoomCamera(delta: Float) { boardRenderer.zoomBy(delta); requestRender() }
@@ -113,10 +114,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 lastTouchY = event.y
                 rotateGesture = false
                 oneFingerCameraDrag = false
+                cameraGestureConsumed = false
                 return true
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 rotateGesture = true
+                cameraGestureConsumed = true
                 oneFingerCameraDrag = false
                 lastRotateX = event.getX(0)
                 lastPointerSpan = pointerSpan(event)
@@ -156,9 +159,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 return true
             }
             MotionEvent.ACTION_UP -> {
-                if (rotateGesture || oneFingerCameraDrag) {
+                if (cameraGestureConsumed || rotateGesture || oneFingerCameraDrag) {
                     rotateGesture = false
                     oneFingerCameraDrag = false
+                    cameraGestureConsumed = false
                     downSquare = null
                     return true
                 }
@@ -205,6 +209,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
             MotionEvent.ACTION_CANCEL -> {
                 downSquare = null
                 rotateGesture = false
+                oneFingerCameraDrag = false
+                cameraGestureConsumed = false
                 return true
             }
         }
