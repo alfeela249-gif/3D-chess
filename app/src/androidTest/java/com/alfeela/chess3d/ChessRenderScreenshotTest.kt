@@ -1,0 +1,37 @@
+package com.alfeela.chess3d
+
+import android.os.Environment
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.File
+
+@RunWith(AndroidJUnit4::class)
+class ChessRenderScreenshotTest {
+    @Test
+    fun launchGameAndCaptureRenderedBoard() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val device = UiDevice.getInstance(instrumentation)
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        assertNotNull("Main activity launch intent missing", intent)
+        intent!!.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(intent)
+        val startButton = device.wait(Until.findObject(By.textContains("ابدأ اللعب")), 15_000)
+        assertNotNull("Main menu did not appear", startButton)
+        startButton!!.click()
+        device.waitForIdle(2_000)
+        Thread.sleep(4_000) // allow OpenGL ES to render several complete frames
+        val outputDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir
+        if (!outputDir.exists()) outputDir.mkdirs()
+        val screenshot = File(outputDir, "chess-3d-render.png")
+        assertTrue("Screenshot capture failed", device.takeScreenshot(screenshot))
+        assertTrue("Screenshot file is empty", screenshot.exists() && screenshot.length() > 10_000)
+    }
+}
