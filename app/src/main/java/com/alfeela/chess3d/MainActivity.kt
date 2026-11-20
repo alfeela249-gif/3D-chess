@@ -3,7 +3,9 @@ package com.alfeela.chess3d
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.net.wifi.WifiManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import java.net.Inet4Address
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -442,7 +444,6 @@ class MainActivity : Activity() {
                             status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
                             lan.join(address)
                             showGameScreen()
-                            showGameScreen()
                         } else {
                             status.text = "أدخل عنوان IP صحيحاً للاتصال"
                         }
@@ -659,11 +660,24 @@ class MainActivity : Activity() {
         cornerRadius = dp(5).toFloat()
     }
 
+    /**
+     * Resolve the IPv4 address from Android's active Wi-Fi network.
+     * WifiManager.connectionInfo.ipAddress is deprecated and can return 0
+     * on newer Android versions even while the phone is connected.
+     */
     private fun localWifiAddress(): String? {
         return try {
-            val wifi = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-            val ip = wifi.connectionInfo.ipAddress
-            if (ip == 0) null else "${ip and 0xff}.${ip shr 8 and 0xff}.${ip shr 16 and 0xff}.${ip shr 24 and 0xff}"
+            val connectivity = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = connectivity.activeNetwork ?: return null
+            val capabilities = connectivity.getNetworkCapabilities(network) ?: return null
+            if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return null
+            val properties = connectivity.getLinkProperties(network) ?: return null
+            properties.linkAddresses
+                .asSequence()
+                .map { it.address }
+                .filterIsInstance<Inet4Address>()
+                .firstOrNull { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+                ?.hostAddress
         } catch (_: Exception) { null }
     }
 
