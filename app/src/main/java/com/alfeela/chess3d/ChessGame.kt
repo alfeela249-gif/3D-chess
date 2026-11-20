@@ -82,6 +82,65 @@ class ChessGame {
         return true
     }
 
+    /** Selects a medium-strength on-device move using 3-ply alpha-beta minimax. */
+    @Synchronized
+    fun chooseComputerMove(depth: Int = 3): ChessMove? {
+        val rootSide = sideToMove
+        val moves = legalMoves()
+        if (moves.isEmpty()) return null
+        var best: ChessMove? = null
+        var bestScore = Int.MIN_VALUE
+        for (move in moves) {
+            val next = copyPosition()
+            next.applyUnchecked(move)
+            next.sideToMove = rootSide.opposite()
+            val score = next.searchScore(depth - 1, rootSide, Int.MIN_VALUE + 1, Int.MAX_VALUE)
+            if (score > bestScore) { bestScore = score; best = move }
+        }
+        return best
+    }
+
+    private fun searchScore(depth: Int, maximizingSide: Side, alphaStart: Int, betaStart: Int): Int {
+        val moves = legalMoves()
+        if (moves.isEmpty()) return when {
+            isInCheck(sideToMove) && sideToMove == maximizingSide -> -100000 - depth
+            isInCheck(sideToMove) -> 100000 + depth
+            else -> 0
+        }
+        if (depth <= 0) return evaluate(maximizingSide)
+        var alpha = alphaStart
+        var beta = betaStart
+        val maximizing = sideToMove == maximizingSide
+        var best = if (maximizing) Int.MIN_VALUE + 1 else Int.MAX_VALUE
+        for (move in moves) {
+            val next = copyPosition()
+            next.applyUnchecked(move)
+            next.sideToMove = sideToMove.opposite()
+            val score = next.searchScore(depth - 1, maximizingSide, alpha, beta)
+            if (maximizing) {
+                if (score > best) best = score
+                if (best > alpha) alpha = best
+            } else {
+                if (score < best) best = score
+                if (best < beta) beta = best
+            }
+            if (beta <= alpha) break
+        }
+        return best
+    }
+
+    private fun evaluate(perspective: Side): Int {
+        val values = mapOf(PieceType.PAWN to 100, PieceType.KNIGHT to 320, PieceType.BISHOP to 330, PieceType.ROOK to 500, PieceType.QUEEN to 900, PieceType.KING to 20000)
+        var score = 0
+        for (rank in 0..7) for (file in 0..7) {
+            val piece = squares[rank][file] ?: continue
+            val center = 7 - (kotlin.math.abs(3.5f - file) + kotlin.math.abs(3.5f - rank)).toInt()
+            val positional = if (piece.type == PieceType.PAWN) center * 3 else if (piece.type == PieceType.KNIGHT || piece.type == PieceType.BISHOP) center * 5 else 0
+            val value = (values[piece.type] ?: 0) + positional
+            score += if (piece.side == perspective) value else -value
+        }
+        return score
+    }
     @Synchronized
     fun isInCheck(side: Side): Boolean {
         val king = findKing(side) ?: return true
