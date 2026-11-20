@@ -20,13 +20,22 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var downSquare: Pair<Int, Int>? = null
     private var downX = 0f
     private var downY = 0f
+    private var rotateGesture = false
+    private var lastRotateX = 0f
 
     private fun squareAt(x: Float, y: Float): Pair<Int, Int>? {
         val size = minOf(width, height).toFloat().coerceAtLeast(1f)
         val left = (width - size) / 2f
         val top = (height - size) / 2f
         if (x < left || x >= left + size || y < top || y >= top + size) return null
-        return ((x-left)/size*8).toInt().coerceIn(0,7) to ((y-top)/size*8).toInt().coerceIn(0,7)
+        val screenX = ((x-left)/size-0.5f)*12f
+        val screenZ = ((y-top)/size-0.5f)*12f
+        val angle = boardRenderer.rotationRadians()
+        val c = kotlin.math.cos(angle)
+        val si = kotlin.math.sin(angle)
+        val boardX = screenX*c - screenZ*si
+        val boardZ = screenX*si + screenZ*c
+        return ((boardX+4f)/8f*8f).toInt().coerceIn(0,7) to ((boardZ+4f)/8f*8f).toInt().coerceIn(0,7)
     }
 
     private fun animate(move: ChessMove) {
@@ -87,9 +96,29 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 downSquare = squareAt(event.x, event.y)
                 downX = event.x
                 downY = event.y
+                rotateGesture = false
+                return true
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                rotateGesture = true
+                lastRotateX = event.getX(0)
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (rotateGesture && event.pointerCount >= 2) {
+                    val currentX = event.getX(0)
+                    boardRenderer.rotateBy((currentX-lastRotateX)*0.008f)
+                    lastRotateX = currentX
+                    requestRender()
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {
+                if (rotateGesture) {
+                    rotateGesture = false
+                    downSquare = null
+                    return true
+                }
                 val destination = squareAt(event.x, event.y) ?: run {
                     downSquare = null
                     return true
@@ -125,6 +154,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
             }
             MotionEvent.ACTION_CANCEL -> {
                 downSquare = null
+                rotateGesture = false
                 return true
             }
         }
@@ -146,7 +176,11 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
     @Volatile private var animatedMove: ChessMove? = null
     @Volatile private var animationStart = 0L
-    private val animationDuration = 260L
+    @Volatile private var boardRotation = 0f
+    private val animationDuration = 420L
+
+    fun rotationRadians(): Float = boardRotation
+    fun rotateBy(delta: Float) { boardRotation += delta }
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
     fun isAnimating(): Boolean = animatedMove != null
@@ -204,6 +238,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         Matrix.setLookAtM(view,0,0f,14f,0f,0f,0f,0f,0f,0f,-1f)
+        Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
         drawCube(0f,-0.22f,0f,8.55f,0.38f,8.55f,0.035f,0.035f,0.04f)
         val previousMove = game.lastMove
