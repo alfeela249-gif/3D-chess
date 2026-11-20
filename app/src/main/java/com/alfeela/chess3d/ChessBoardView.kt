@@ -31,7 +31,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         requestRender()
     }
 
-    fun applyRemoteMove(move: ChessMove): Boolean {
+    fun applyComputerMove(move: ChessMove): Boolean {\n        if (game.sideToMove == localSide) return false\n        val applied = game.makeMove(move)\n        if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }\n        return applied\n    }\n\n    fun applyRemoteMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
         if (applied) { selected = null; boardRenderer.setSelection(null); requestRender() }
