@@ -10,14 +10,15 @@ import java.net.InetSocketAddress
 import kotlin.concurrent.thread
 
 /**
- * Small line-based TCP transport for devices on the same Wi-Fi LAN.
- * The host listens on port 45454; the joining device enters the host's LAN IP.
+ * Line-based TCP transport for two devices on the same Wi-Fi LAN.
+ * The host listens on port 45454; the joining device enters the host LAN IP.
  */
 class LanConnection(
     private val onState: (String) -> Unit,
     private val onMessage: (String) -> Unit
 ) {
     companion object { const val PORT = 45454 }
+
     @Volatile private var socket: Socket? = null
     @Volatile private var server: ServerSocket? = null
     @Volatile private var writer: BufferedWriter? = null
@@ -25,18 +26,24 @@ class LanConnection(
     fun host() {
         close()
         thread(name = "chess-lan-host") {
+            var listener: ServerSocket? = null
             try {
-                val listener = ServerSocket().apply {
+                listener = ServerSocket().apply {
                     reuseAddress = true
                     bind(InetSocketAddress(PORT))
                 }
                 server = listener
                 onState("Waiting for opponent on port $PORT")
                 val peer = listener.accept()
+                // The listening socket is no longer needed after the single peer joins.
+                runCatching { listener.close() }
+                if (server === listener) server = null
                 attach(peer)
                 onState("Opponent connected")
                 readLoop(peer)
             } catch (e: Exception) {
+                runCatching { listener?.close() }
+                if (server === listener) server = null
                 onState("Host error: ${e.message ?: "connection failed"}")
             }
         }
@@ -45,8 +52,8 @@ class LanConnection(
     fun join(hostIp: String) {
         close()
         thread(name = "chess-lan-join") {
+            val peer = Socket()
             try {
-                val peer = Socket()
                 peer.tcpNoDelay = true
                 peer.keepAlive = true
                 peer.connect(InetSocketAddress(hostIp.trim(), PORT), 10_000)
@@ -54,6 +61,7 @@ class LanConnection(
                 onState("Connected to $hostIp")
                 readLoop(peer)
             } catch (e: Exception) {
+                runCatching { peer.close() }
                 onState("Join error: ${e.message ?: "connection failed"}")
             }
         }
@@ -61,11 +69,20 @@ class LanConnection(
 
     @Synchronized fun send(message: String) {
         try {
-            writer?.apply { write(message.replace("\n", " ")); newLine(); flush() }
-        } catch (e: Exception) { onState("Send failed: ${e.message}") }
+            val activeWriter = writer ?: run {
+                onState("Send failed: no active Wi-Fi connection")
+                return
+            }
+            activeWriter.write(message.replace("\n", " "))
+            activeWriter.newLine()
+            activeWriter.flush()
+        } catch (e: Exception) {
+            onState("Send failed: ${e.message ?: "network error"}")
+            close()
+        }
     }
 
-    private fun attach(peer: Socket) {
+    @Synchronized private fun attach(peer: Socket) {
         peer.tcpNoDelay = true
         peer.keepAlive = true
         socket = peer
@@ -81,13 +98,24 @@ class LanConnection(
             }
             onState("Connection closed by opponent")
         } catch (e: Exception) {
-            onState("Connection lost: ${e.message ?: "network error"}")
-        } finally { close() }
+            if (!peer.isClosed) onState("Connection lost: ${e.message ?: "network error"}")
+        } finally {
+            // An old reader must never tear down a newer connection.
+            synchronized(this) {
+                if (socket === peer) {
+                    close()
+                } else {
+                    runCatching { peer.close() }
+                }
+            }
+        }
     }
 
     @Synchronized fun close() {
-        try { socket?.close() } catch (_: Exception) {}
-        try { server?.close() } catch (_: Exception) {}
-        socket = null; server = null; writer = null
+        runCatching { socket?.close() }
+        runCatching { server?.close() }
+        socket = null
+        server = null
+        writer = null
     }
 }
