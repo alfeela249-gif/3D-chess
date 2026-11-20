@@ -77,4 +77,23 @@ class ChessGameTest {
         // The initial position blocks castling; no castle is offered.
         assertFalse(game.legalMovesFrom(4, 7).any { kotlin.math.abs(it.toFile - it.fromFile) == 2 })
     }
+
+    @Test fun pawnPromotionOffersAllFourPieceChoices() {
+        val game = ChessGame()
+        assertTrue(game.makeMove(ChessMove(0, 6, 0, 4))) // a2-a4
+        assertTrue(game.makeMove(ChessMove(1, 1, 1, 3))) // ...b7-b5
+        assertTrue(game.makeMove(ChessMove(0, 4, 1, 3))) // axb5
+        assertTrue(game.makeMove(ChessMove(7, 1, 7, 2))) // ...h7-h6
+        assertTrue(game.makeMove(ChessMove(1, 3, 1, 2))) // b5-b6
+        assertTrue(game.makeMove(ChessMove(7, 2, 7, 3))) // ...h6-h5
+        assertTrue(game.makeMove(ChessMove(1, 2, 1, 1))) // b6-b7
+        assertTrue(game.makeMove(ChessMove(7, 3, 7, 4))) // ...h5-h4
+
+        val promotions = game.legalMovesFrom(1, 1)
+            .filter { it.toFile == 1 && it.toRank == 0 }
+            .mapNotNull { it.promotion }.toSet()
+        assertEquals(setOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT), promotions)
+        assertTrue(game.makeMove(ChessMove(1, 1, 1, 0, PieceType.KNIGHT)))
+        assertEquals(ChessPiece(Side.WHITE, PieceType.KNIGHT), game.pieceAt(1, 0))
+    }
 }
