@@ -49,3 +49,10 @@ RLS is enabled on the feature tables. The app must use only the Supabase publish
 - The online room join/state RPCs are SECURITY DEFINER functions with an explicit `auth.uid()` check; EXECUTE is revoked from `PUBLIC` and `anon`, and granted only to `authenticated`. Supabase's advisor still reports its expected warning because authenticated clients must call these RPCs.
 - Remaining: friend list and accept/reject request UI, friend-based invite picker, Realtime push (current client polls), disconnect/reconnect UX, robust validation of submitted chess move history on the server, and physical-device multiplayer testing.
 - Google sign-in also requires Google OAuth credentials to be configured in the Supabase dashboard. The app cannot complete Google login until that external provider setup is done.
+
+## Friends management and Data API permissions (20 Nov 2026)
+- Android now loads the signed-in user's friendship rows and the other player's public username/nickname, shows accepted friends, incoming requests, and outgoing pending requests, and lets the recipient accept or reject an incoming request.
+- Selecting an accepted friend offers an online-game invitation. The app creates a room and opens Android's share sheet with the room invite code, so the user can send it through a messaging app.
+- Verified hosted Supabase RLS is enabled on `player_profiles`, `friendships`, and `online_game_rooms`. Added explicit `SELECT, INSERT, UPDATE` grants to `authenticated` and revoked all table privileges from `anon` on these tables. This is needed because new public tables are no longer automatically exposed to the Data API.
+- Verified the online room RPC functions are SECURITY DEFINER, check `auth.uid()`, are not executable by `anon`, and are executable by `authenticated`.
+- The Android online match transport still polls room snapshots every ~1.8 seconds; it does not yet use Realtime push notifications. Online move history is client-submitted and needs server-side legal-move replay/validation before public production use.
