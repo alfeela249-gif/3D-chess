@@ -76,126 +76,153 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
             setPadding(dp(12), dp(8), dp(12), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(7, 8, 10), Color.rgb(25, 23, 20), Color.rgb(8, 9, 11))
+                intArrayOf(Color.rgb(5, 6, 8), Color.rgb(19, 17, 14), Color.rgb(5, 6, 8))
             )
         }
 
-        val title = TextView(this).apply {
-            text = "♔   3D CHESS   ♚"
+        val scroll = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
+        val profileBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(Color.rgb(16, 16, 17), gold, 1)
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+        }
+        val profile = TextView(this).apply {
+            text = "♙  لاعب  •  المستوى 1"
+            setTextColor(cream)
+            textSize = 13f
+            typeface = Typeface.create("serif", Typeface.BOLD)
+        }
+        profileBar.addView(profile, LinearLayout.LayoutParams(0, dp(38), 1f))
+        val friendsQuick = TextView(this).apply {
+            text = "♟"
+            textSize = 22f
+            gravity = Gravity.CENTER
             setTextColor(gold)
-            textSize = 27f
-            letterSpacing = 0.12f
+            setPadding(dp(8), 0, dp(8), 0)
+            setOnClickListener { showFriendsDialog() }
+        }
+        profileBar.addView(friendsQuick, LinearLayout.LayoutParams(dp(42), dp(42)))
+        val settingsQuick = TextView(this).apply {
+            text = "⚙"
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+            setOnClickListener { showSettingsDialog() }
+        }
+        profileBar.addView(settingsQuick, LinearLayout.LayoutParams(dp(42), dp(42)))
+        content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
+
+        val title = TextView(this).apply {
+            text = "♛  3D CHESS  ♚"
+            setTextColor(gold)
+            textSize = 31f
+            letterSpacing = 0.10f
             typeface = Typeface.create("serif", Typeface.BOLD)
             gravity = Gravity.CENTER
-            setShadowLayer(5f, 2f, 3f, Color.BLACK)
+            setShadowLayer(9f, 0f, 2f, Color.rgb(150, 94, 24))
         }
-        root.addView(title, LinearLayout.LayoutParams(-1, dp(48)))
+        content.addView(title, LinearLayout.LayoutParams(-1, dp(66)).apply {
+            topMargin = dp(8)
+        })
         val subtitle = TextView(this).apply {
-            text = "مملكة الشطرنج • العب وتحدَّ أصدقاءك"
+            text = "مملكة الشطرنج • تحدَّ أصدقاءك واصنع انتصارك"
             setTextColor(gold)
             textSize = 13f
             gravity = Gravity.CENTER
             typeface = Typeface.create("serif", Typeface.NORMAL)
         }
-        root.addView(subtitle, LinearLayout.LayoutParams(-1, dp(26)))
-
-        val sectionTitle = TextView(this).apply {
-            text = "طريقة اللعب"
-            setTextColor(cream)
-            textSize = 15f
-            gravity = Gravity.CENTER
-            typeface = Typeface.create("serif", Typeface.BOLD)
-        }
-        root.addView(sectionTitle, LinearLayout.LayoutParams(-1, dp(34)))
+        content.addView(subtitle, LinearLayout.LayoutParams(-1, dp(28)))
 
         val preview = FrameLayout(this).apply {
-            background = rounded(Color.rgb(14, 14, 15), gold, 2)
+            background = rounded(Color.rgb(10, 12, 15), gold, 1)
             clipToPadding = true
         }
         preview.addView(board, FrameLayout.LayoutParams(-1, -1))
-        root.addView(preview, LinearLayout.LayoutParams(-1, 0, 1f).apply {
-            setMargins(dp(2), dp(8), dp(2), dp(8))
+        content.addView(preview, LinearLayout.LayoutParams(-1, dp(226)).apply {
+            setMargins(dp(1), dp(10), dp(1), dp(8))
         })
 
         status = TextView(this).apply {
-            text = "اختر طريقة اللعب للبدء"
+            text = "اختر نمط اللعب وابدأ التحدي"
             setTextColor(cream)
-            textSize = 14f
+            textSize = 13f
             gravity = Gravity.CENTER
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
-        root.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
+        content.addView(status, LinearLayout.LayoutParams(-1, dp(30)))
 
-        val aiButton = makeButton("♟  اللعب ضد الكمبيوتر  •  مستوى متوسط", true).apply {
-            setOnClickListener {
-                stopOnlinePolling()
-                playVsComputer = true
-                board.localSide = Side.WHITE
+        fun menuButton(label: String, highlighted: Boolean, height: Int = 52, action: () -> Unit): Button {
+            return makeButton(label, highlighted).apply {
+                textSize = 14f
+                setPadding(dp(8), 0, dp(8), 0)
+                setOnClickListener { action() }
+                content.addView(this, LinearLayout.LayoutParams(-1, dp(height)).apply {
+                    setMargins(dp(2), dp(4), dp(2), dp(4))
+                })
+            }
+        }
+
+        menuButton("▶  ابدأ اللعب • اللعب ضد الكمبيوتر (متوسط)", true, 54) {
+            stopOnlinePolling()
+            playVsComputer = true
+            board.localSide = Side.WHITE
+            board.resetBoard()
+            lan.close()
+            status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط"
+        }
+        menuButton("♟  اللعب مع الأصدقاء بدون إنترنت • Wi-Fi", true) { showLanDialog() }
+        menuButton("♟  اللعب مع الأصدقاء عبر الإنترنت", true) { showOnlineDialog() }
+        menuButton("♙  قائمة الأصدقاء • إضافة صديق", false) { showFriendsDialog() }
+        menuButton("⚙  الإعدادات والحساب", false) { showSettingsDialog() }
+
+        val utilityRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        fun utilityButton(label: String, action: () -> Unit) {
+            val button = makeButton(label, false).apply {
+                textSize = 12f
+                setOnClickListener { action() }
+            }
+            utilityRow.addView(button, LinearLayout.LayoutParams(0, dp(46), 1f).apply {
+                setMargins(dp(2), dp(4), dp(2), dp(4))
+            })
+        }
+        utilityButton("📜 سجل النقلات") { showMoveHistory() }
+        utilityButton("❔ القواعد") { showHowToPlay() }
+        content.addView(utilityRow, LinearLayout.LayoutParams(-1, dp(54)))
+
+        menuButton("مباراة جديدة", false, 46) {
+            if (onlineMode) {
+                status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
+            } else {
                 board.resetBoard()
-                lan.close()
-                status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط • يعمل دون إنترنت"
+                lan.send("RESET")
+                updateGameStatus()
             }
         }
-        root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
-            setMargins(dp(2), dp(2), dp(2), dp(5))
-        })
-        val onlineButton = makeButton("♟  اللعب مع الأصدقاء عبر الإنترنت", true).apply {
-            setOnClickListener { showOnlineDialog() }
+        val footer = TextView(this).apply {
+            text = "3D CHESS   •   BLACK & GOLD"
+            setTextColor(Color.rgb(145, 119, 76))
+            textSize = 10f
+            gravity = Gravity.CENTER
+            letterSpacing = 0.16f
         }
-        root.addView(onlineButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
-            setMargins(dp(2), 0, dp(2), dp(4))
-        })
-        val accountButton = makeButton("⚙  الإعدادات والحساب", false).apply {
-            setOnClickListener { showSettingsDialog() }
-        }
-        root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
-            setMargins(dp(2), 0, dp(2), dp(4))
-        })
-        val friendsButton = makeButton("♙  قائمة الأصدقاء • إضافة صديق", false).apply {
-            setOnClickListener { showFriendsDialog() }
-        }
-        root.addView(friendsButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
-            setMargins(dp(2), 0, dp(2), dp(4))
-        })
-        val lanButton = makeButton("♟  اللعب مع الأصدقاء بدون إنترنت • Wi-Fi", true).apply {
-            setOnClickListener { showLanDialog() }
-        }
-        root.addView(lanButton, LinearLayout.LayoutParams(-1, dp(46)).apply {
-            setMargins(dp(2), 0, dp(2), dp(4))
-        })
-
-        val historyButton = makeButton("📜  سجل النقلات", false).apply {
-            setOnClickListener { showMoveHistory() }
-        }
-        root.addView(historyButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
-            setMargins(dp(2), 0, dp(2), dp(3))
-        })
-
-        val helpButton = makeButton("❔  طريقة اللعب والقواعد", false).apply {
-            setOnClickListener { showHowToPlay() }
-        }
-        root.addView(helpButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
-            setMargins(dp(2), 0, dp(2), dp(3))
-        })
-
-        val reset = makeButton("مباراة جديدة", false).apply {
-            setOnClickListener {
-                if (onlineMode) {
-                    status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
-                } else {
-                    board.resetBoard()
-                    lan.send("RESET")
-                    updateGameStatus()
-                }
-            }
-        }
-        root.addView(reset, LinearLayout.LayoutParams(-1, dp(42)).apply {
-            setMargins(dp(2), 0, dp(2), dp(2))
-        })
+        content.addView(footer, LinearLayout.LayoutParams(-1, dp(28)))
+        scroll.addView(content)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
