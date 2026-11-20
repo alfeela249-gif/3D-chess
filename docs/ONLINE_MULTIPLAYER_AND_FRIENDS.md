@@ -56,3 +56,6 @@ RLS is enabled on the feature tables. The app must use only the Supabase publish
 - Verified hosted Supabase RLS is enabled on `player_profiles`, `friendships`, and `online_game_rooms`. Added explicit `SELECT, INSERT, UPDATE` grants to `authenticated` and revoked all table privileges from `anon` on these tables. This is needed because new public tables are no longer automatically exposed to the Data API.
 - Verified the online room RPC functions are SECURITY DEFINER, check `auth.uid()`, are not executable by `anon`, and are executable by `authenticated`.
 - The Android online match transport still polls room snapshots every ~1.8 seconds; it does not yet use Realtime push notifications. Online move history is client-submitted and needs server-side legal-move replay/validation before public production use.
+
+- Security hardening: privileged room mutation functions now live in the non-exposed `private` schema, with small `SECURITY INVOKER` wrappers in `public`. Authenticated execution is intentional; anonymous execution is revoked. The Supabase security advisor was rerun and returned no security lints.
+- Explicit authenticated table grants and anonymous revocations are recorded in the online-room migration for fresh deployments; the same grants were applied and verified on the connected hosted project.
