@@ -160,35 +160,14 @@ class MainActivity : Activity() {
         root.addView(friendsButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
-        val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
-        val host = makeButton("إنشاء مباراة بدون إنترنت", true).apply {
-            setOnClickListener {
-                stopOnlinePolling()
-                playVsComputer = false
-                board.localSide = Side.WHITE
-                board.resetBoard()
-                lan.host()
-                status.text = "أنت الأبيض • بانتظار اللاعب الثاني على نفس Wi-Fi"
-            }
+        val lanButton = makeButton("♟  اللعب مع الأصدقاء بدون إنترنت • Wi-Fi", true).apply {
+            setOnClickListener { showLanDialog() }
         }
-        val join = makeButton("انضمام عبر Wi-Fi", true).apply {
-            setOnClickListener {
-                val ip = EditText(this@MainActivity).apply { hint = "192.168.1.10" }
-                AlertDialog.Builder(this@MainActivity).setTitle("الاتصال باللاعب المضيف")
-                    .setView(ip).setPositiveButton("اتصال") { _, _ ->
-                        val address = ip.text.toString().trim()
-                        if (address.isNotEmpty()) {
-                            stopOnlinePolling()
-                            playVsComputer = false
-                            board.localSide = Side.BLACK
-                            board.resetBoard()
-                            status.text = "جارٍ الاتصال بـ $address"
-                            lan.join(address)
-                        }
-                    }.setNegativeButton("إلغاء", null).show()
-            }
-        }
-        val reset = makeButton("جديدة", false).apply {
+        root.addView(lanButton, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            setMargins(dp(2), 0, dp(2), dp(4))
+        })
+
+        val reset = makeButton("مباراة جديدة", false).apply {
             setOnClickListener {
                 if (onlineMode) {
                     status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
@@ -199,10 +178,9 @@ class MainActivity : Activity() {
                 }
             }
         }
-        controls.addView(host, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(5) })
-        controls.addView(join, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(5) })
-        controls.addView(reset, LinearLayout.LayoutParams(dp(78), dp(48)))
-        root.addView(controls, LinearLayout.LayoutParams(-1, dp(54)))
+        root.addView(reset, LinearLayout.LayoutParams(-1, dp(42)).apply {
+            setMargins(dp(2), 0, dp(2), dp(2))
+        })
         setContentView(root)
         if (intent.data?.scheme == "com.alfeela.chess3d") {
             status.text = auth.acceptOAuthCallback(intent.data!!).message
@@ -225,6 +203,44 @@ class MainActivity : Activity() {
                 }
             }
             .setNegativeButton("إغلاق", null)
+            .show()
+    }
+
+    private fun showLanDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("اللعب مع الأصدقاء بدون إنترنت")
+            .setMessage("اتصل أنت وصديقك بشبكة Wi-Fi نفسها أو بنقطة اتصال أحد الهاتفين. لا تحتاج هذه المباراة إلى إنترنت أو تسجيل دخول.")
+            .setPositiveButton("إنشاء مباراة • الأبيض") { _, _ ->
+                stopOnlinePolling()
+                playVsComputer = false
+                board.localSide = Side.WHITE
+                board.resetBoard()
+                lan.host()
+                status.text = "تم إنشاء المباراة • أنت الأبيض • بانتظار صديقك على الشبكة المحلية"
+            }
+            .setNegativeButton("انضمام • الأسود") { _, _ ->
+                val ip = EditText(this).apply { hint = "عنوان IP للمضيف مثل 192.168.1.10" }
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("الاتصال بصديقك")
+                    .setMessage("أدخل عنوان IP للهاتف الذي أنشأ المباراة.")
+                    .setView(ip)
+                    .setPositiveButton("اتصال") { _, _ ->
+                        val address = ip.text.toString().trim()
+                        if (address.isNotEmpty()) {
+                            stopOnlinePolling()
+                            playVsComputer = false
+                            board.localSide = Side.BLACK
+                            board.resetBoard()
+                            status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
+                            lan.join(address)
+                        } else {
+                            status.text = "أدخل عنوان IP صحيحاً للاتصال"
+                        }
+                    }
+                    .setNegativeButton("إلغاء", null)
+                    .show()
+            }
+            .setNeutralButton("إغلاق", null)
             .show()
     }
 
