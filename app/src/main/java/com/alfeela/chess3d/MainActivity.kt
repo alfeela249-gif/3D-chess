@@ -34,9 +34,9 @@ class MainActivity : Activity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var onlinePoll: Runnable? = null
 
-    private val wood = Color.rgb(65, 20, 13)
-    private val gold = Color.rgb(224, 190, 120)
-    private val cream = Color.rgb(248, 232, 198)
+    private val wood = Color.rgb(10, 10, 12)
+    private val gold = Color.rgb(220, 178, 91)
+    private val cream = Color.rgb(246, 239, 222)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,14 +79,14 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(8), dp(12), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(35, 9, 7), Color.rgb(105, 35, 20), Color.rgb(48, 12, 9))
+                intArrayOf(Color.rgb(7, 8, 10), Color.rgb(25, 23, 20), Color.rgb(8, 9, 11))
             )
         }
 
         val title = TextView(this).apply {
-            text = "3D CHESS"
-            setTextColor(cream)
-            textSize = 29f
+            text = "♔   3D CHESS   ♚"
+            setTextColor(gold)
+            textSize = 27f
             letterSpacing = 0.12f
             typeface = Typeface.create("serif", Typeface.BOLD)
             gravity = Gravity.CENTER
@@ -94,7 +94,7 @@ class MainActivity : Activity() {
         }
         root.addView(title, LinearLayout.LayoutParams(-1, dp(48)))
         val subtitle = TextView(this).apply {
-            text = "لعبة الشطرنج ثلاثية الأبعاد"
+            text = "مملكة الشطرنج • العب وتحدَّ أصدقاءك"
             setTextColor(gold)
             textSize = 13f
             gravity = Gravity.CENTER
@@ -102,17 +102,17 @@ class MainActivity : Activity() {
         }
         root.addView(subtitle, LinearLayout.LayoutParams(-1, dp(26)))
 
-        val modes = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
-        mode2d = makeButton("2D", false)
-        mode3d = makeButton("3D", true)
-        modes.addView(mode2d, LinearLayout.LayoutParams(dp(82), dp(48)).apply { marginEnd = dp(12) })
-        modes.addView(mode3d, LinearLayout.LayoutParams(dp(82), dp(48)))
-        mode2d.setOnClickListener { selectMode(false) }
-        mode3d.setOnClickListener { selectMode(true) }
-        root.addView(modes, LinearLayout.LayoutParams(-1, dp(58)))
+        val sectionTitle = TextView(this).apply {
+            text = "اختر طريقة اللعب"
+            setTextColor(cream)
+            textSize = 15f
+            gravity = Gravity.CENTER
+            typeface = Typeface.create("serif", Typeface.BOLD)
+        }
+        root.addView(sectionTitle, LinearLayout.LayoutParams(-1, dp(34)))
 
         val preview = FrameLayout(this).apply {
-            background = rounded(Color.rgb(25, 22, 19), gold, 2)
+            background = rounded(Color.rgb(14, 14, 15), gold, 2)
             clipToPadding = true
         }
         preview.addView(board, FrameLayout.LayoutParams(-1, -1))
@@ -129,7 +129,7 @@ class MainActivity : Activity() {
         }
         root.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
-        val aiButton = makeButton("اللعب ضد الكمبيوتر • متوسط", true).apply {
+        val aiButton = makeButton("♟  اللعب ضد الكمبيوتر  •  متوسط", true).apply {
             setOnClickListener {
                 stopOnlinePolling()
                 playVsComputer = true
@@ -142,26 +142,26 @@ class MainActivity : Activity() {
         root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
             setMargins(dp(2), dp(2), dp(2), dp(5))
         })
-        val onlineButton = makeButton("اللعب مع الأصدقاء عبر الإنترنت", true).apply {
+        val onlineButton = makeButton("♟  اللعب عبر الإنترنت مع الأصدقاء", true).apply {
             setOnClickListener { showOnlineDialog() }
         }
         root.addView(onlineButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
-        val accountButton = makeButton("الحساب والأصدقاء • تسجيل الدخول", false).apply {
+        val accountButton = makeButton("الحساب وتسجيل الدخول", false).apply {
             setOnClickListener { showAccountDialog() }
         }
         root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
-        val friendsButton = makeButton("إعداد اسم اللاعب • إضافة صديق", false).apply {
+        val friendsButton = makeButton("الأصدقاء • إضافة صديق", false).apply {
             setOnClickListener { showFriendsDialog() }
         }
         root.addView(friendsButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
-        val host = makeButton("HOST • الأبيض", true).apply {
+        val host = makeButton("إنشاء Wi-Fi • الأبيض", true).apply {
             setOnClickListener {
                 stopOnlinePolling()
                 playVsComputer = false
@@ -171,7 +171,7 @@ class MainActivity : Activity() {
                 status.text = "أنت الأبيض • بانتظار اللاعب الثاني على نفس Wi-Fi"
             }
         }
-        val join = makeButton("JOIN • الأسود", true).apply {
+        val join = makeButton("انضمام • الأسود", true).apply {
             setOnClickListener {
                 val ip = EditText(this@MainActivity).apply { hint = "192.168.1.10" }
                 AlertDialog.Builder(this@MainActivity).setTitle("الاتصال باللاعب المضيف")
@@ -401,7 +401,7 @@ class MainActivity : Activity() {
         textSize = 13f
         typeface = Typeface.create("serif", Typeface.BOLD)
         setTextColor(cream)
-        background = rounded(if (highlighted) Color.rgb(112, 76, 39) else Color.rgb(48, 28, 20), gold, 2)
+        background = rounded(if (highlighted) Color.rgb(91, 67, 31) else Color.rgb(28, 27, 25), gold, 2)
         stateListAnimator = null
         setPadding(dp(4), 0, dp(4), 0)
     }
