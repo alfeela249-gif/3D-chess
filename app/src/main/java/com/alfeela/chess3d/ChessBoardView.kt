@@ -219,7 +219,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         val inverse = FloatArray(16)
         val aspect = screenWidth.toFloat() / screenHeight.toFloat()
         Matrix.perspectiveM(p, 0, 52f, aspect, 0.1f, 60f)
-        Matrix.setLookAtM(v, 0, 0f, 9.2f, 11.8f, 0f, 0.25f, 0f, 0f, 1f, 0f)
+        val distance = cameraDistance
+        Matrix.setLookAtM(v, 0, 0f, distance * 0.56f, distance * 0.72f, 0f, 0.25f, 0f, 0f, 1f, 0f)
         Matrix.rotateM(v, 0, Math.toDegrees(boardRotation.toDouble()).toFloat(), 0f, 1f, 0f)
         Matrix.multiplyMM(viewProjection, 0, p, 0, v, 0)
         if (!Matrix.invertM(inverse, 0, viewProjection, 0)) return null
