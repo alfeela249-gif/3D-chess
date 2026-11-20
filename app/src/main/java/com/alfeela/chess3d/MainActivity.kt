@@ -204,13 +204,11 @@ class MainActivity : Activity() {
         utilityButton("❔ القواعد") { showHowToPlay() }
         content.addView(utilityRow, LinearLayout.LayoutParams(-1, dp(54)))
 
-        menuButton("مباراة جديدة", false, 46) {
-            if (onlineMode) {
-                status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
+        menuButton("▶  متابعة اللعب", false, 46) {
+            if (!playVsComputer && !onlineMode && !lan.isConnected()) {
+                status.text = "اختر طريقة اللعب أولاً"
             } else {
-                board.resetBoard()
-                lan.send("RESET")
-                updateGameStatus()
+                showGameScreen()
             }
         }
         val footer = TextView(this).apply {
