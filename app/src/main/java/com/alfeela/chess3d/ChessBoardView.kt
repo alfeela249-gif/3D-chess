@@ -29,6 +29,27 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var oneFingerCameraDrag = false
     private var cameraGestureConsumed = false
 
+    private fun pointerCenterX(event: MotionEvent, excludedIndex: Int = -1): Float {
+        var total = 0f
+        var count = 0
+        for (i in 0 until event.pointerCount) {
+            if (i == excludedIndex) continue
+            total += event.getX(i)
+            count++
+        }
+        return if (count == 0) 0f else total / count
+    }
+
+    private fun pointerSpan(event: MotionEvent, excludedIndex: Int = -1): Float {
+        val indexes = (0 until event.pointerCount).filter { it != excludedIndex }
+        if (indexes.size < 2) return 0f
+        val a = indexes[0]
+        val b = indexes[1]
+        val dx = event.getX(a) - event.getX(b)
+        val dy = event.getY(a) - event.getY(b)
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
     fun rotateCamera(delta: Float) { boardRenderer.rotateBy(delta); requestRender() }
     fun zoomCamera(delta: Float) { boardRenderer.zoomBy(delta); requestRender() }
     fun resetCamera() { boardRenderer.resetCamera(); requestRender() }
@@ -97,13 +118,6 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         return applied
     }
 
-    private fun pointerSpan(event: MotionEvent): Float {
-        if (event.pointerCount < 2) return 0f
-        val dx = event.getX(0) - event.getX(1)
-        val dy = event.getY(0) - event.getY(1)
-        return kotlin.math.sqrt(dx * dx + dy * dy)
-    }
-
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -121,17 +135,17 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 rotateGesture = true
                 cameraGestureConsumed = true
                 oneFingerCameraDrag = false
-                lastRotateX = event.getX(0)
+                lastRotateX = pointerCenterX(event)
                 lastPointerSpan = pointerSpan(event)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (rotateGesture && event.pointerCount >= 2) {
-                    val currentX = event.getX(0)
+                    val currentX = pointerCenterX(event)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy((currentX-lastRotateX)*0.010f)
+                    boardRenderer.rotateBy((currentX-lastRotateX)*0.012f)
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.014f)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f)
                     }
                     lastRotateX = currentX
                     lastPointerSpan = currentSpan
@@ -140,10 +154,14 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
                     val moved = kotlin.math.abs(event.x-downX) > 18f || kotlin.math.abs(event.y-downY) > 18f
-                    // Dragging on an empty square rotates the camera; dragging a piece still moves it.
-                    if (moved && (downSquare == null || game.pieceAt(downSquare!!.first, downSquare!!.second) == null)) {
+                    // A drag anywhere on the board is a camera gesture. Piece movement
+                    // remains reliable through tap-to-select, then tap the destination.
+                    if (moved) {
                         oneFingerCameraDrag = true
+                        cameraGestureConsumed = true
+                        downSquare = null
                         boardRenderer.rotateBy(dx * 0.012f)
+                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.zoomBy(-dy * 0.018f)
                         requestRender()
                     }
                     lastTouchX = event.x
@@ -152,9 +170,24 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                 return true
             }
             MotionEvent.ACTION_POINTER_UP -> {
-                if (event.pointerCount <= 2) {
+                // Rebase the gesture after one finger leaves so the remaining
+                // finger never causes a sudden camera jump.
+                val lifted = event.actionIndex
+                val remaining = event.pointerCount - 1
+                downSquare = null
+                cameraGestureConsumed = true
+                if (remaining >= 2) {
+                    lastRotateX = pointerCenterX(event, lifted)
+                    lastPointerSpan = pointerSpan(event, lifted)
+                    rotateGesture = true
+                } else {
                     rotateGesture = false
-                    downSquare = null
+                    oneFingerCameraDrag = true
+                    if (remaining == 1) {
+                        val index = if (lifted == 0) 1 else 0
+                        lastTouchX = event.getX(index)
+                        lastTouchY = event.getY(index)
+                    }
                 }
                 return true
             }
