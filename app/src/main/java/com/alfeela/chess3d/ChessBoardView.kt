@@ -200,7 +200,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var animationStart = 0L
     @Volatile private var boardRotation = 0f
     @Volatile private var cameraDistance = 15.0f
-    private val animationDuration = 420L
+    private val animationDuration = 520L
+    private var activePieceLift = 0f
 
     fun rotationRadians(): Float = boardRotation
 
@@ -374,14 +375,19 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             val b = if (white) 0.28f else 0.13f
             var x = file-3.5f
             var z = rank-3.5f
+            activePieceLift = 0f
             val moving = animatedMove
             if (moving != null) {
                 val progress = ((android.os.SystemClock.uptimeMillis()-animationStart).toFloat()/animationDuration).coerceIn(0f,1f)
                 val eased = progress*progress*(3f-2f*progress)
+                // Lift the moving piece along a smooth arc to avoid scraping across
+                // neighboring pieces while retaining exact square-to-square travel.
+                val arc = kotlin.math.sin(Math.PI.toFloat() * progress) * 0.48f
                 // Animate the moved piece from its source square to its destination.
                 if (moving.toFile == file && moving.toRank == rank) {
                     x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
                     z = (moving.fromRank-3.5f) + ((moving.toRank-moving.fromRank)*eased)
+                    activePieceLift = arc
                 }
                 // Castling moves two pieces: animate the rook as well, rather than
                 // teleporting it to the adjacent square while the king is moving.
@@ -394,6 +400,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     if (file == rookTo && rank == homeRank) {
                         x = (rookFrom-3.5f) + ((rookTo-rookFrom)*eased)
                         z = homeRank-3.5f
+                        activePieceLift = arc * 0.85f
                     }
                 }
                 if (progress >= 1f) animatedMove = null
@@ -525,7 +532,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         val normalBuffer = ByteBuffer.allocateDirect(normals.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         normalBuffer.put(normals); normalBuffer.position(0)
         Matrix.setIdentityM(model,0)
-        Matrix.translateM(model,0,x,y,z)
+        Matrix.translateM(model,0,x,y + activePieceLift,z)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
@@ -539,7 +546,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,r:Float,g:Float,b:Float) {
         Matrix.setIdentityM(model,0)
-        Matrix.translateM(model,0,x,y,z); Matrix.scaleM(model,0,sx,sy,sz)
+        Matrix.translateM(model,0,x,y + activePieceLift,z); Matrix.scaleM(model,0,sx,sy,sz)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
