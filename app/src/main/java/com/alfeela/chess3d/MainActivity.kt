@@ -148,8 +148,8 @@ class MainActivity : Activity() {
         root.addView(onlineButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
         })
-        val accountButton = makeButton("الحساب وتسجيل الدخول", false).apply {
-            setOnClickListener { showAccountDialog() }
+        val accountButton = makeButton("⚙  الإعدادات والحساب", false).apply {
+            setOnClickListener { showSettingsDialog() }
         }
         root.addView(accountButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
             setMargins(dp(2), 0, dp(2), dp(4))
