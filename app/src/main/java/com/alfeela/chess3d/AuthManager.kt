@@ -120,7 +120,7 @@ class AuthManager(context: Context) {
             val me = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.")
             val low = minOf(me, friendId)
             val high = maxOf(me, friendId)
-            val body = JSONObject().put("status", if (accept) "accepted" else "rejected").put("updated_at", java.time.Instant.now().toString())
+            val body = JSONObject().put("status", if (accept) "accepted" else "rejected")
             val response = authorizedRequest("PATCH", "/rest/v1/friendships?user_low=eq.$low&user_high=eq.$high&status=eq.pending&requested_by=neq.$me", body.toString(), "return=minimal")
             if (response.second in 200..299) Result(true, if (accept) "تم قبول طلب الصداقة." else "تم رفض طلب الصداقة.") else Result(false, "تعذر تحديث طلب الصداقة.")
         } catch (e: Exception) { Result(false, e.message ?: "تعذر الرد على الطلب") }
