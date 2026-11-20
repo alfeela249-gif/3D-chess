@@ -4,6 +4,10 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import org.json.JSONArray
+import org.json.JSONObject
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -24,6 +28,11 @@ class MainActivity : Activity() {
     private lateinit var mode2d: Button
     private lateinit var mode3d: Button
     private var playVsComputer = false
+    private var onlineMode = false
+    private var onlineRoomId: String? = null
+    private var onlineMoves = JSONArray()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var onlinePoll: Runnable? = null
 
     private val wood = Color.rgb(65, 20, 13)
     private val gold = Color.rgb(224, 190, 120)
@@ -43,13 +52,20 @@ class MainActivity : Activity() {
         )
         board = ChessBoardView(this)
         board.onMove = { move ->
-            if (playVsComputer) {
+            if (onlineMode) {
+                val moveJson = JSONObject().put("ff", move.fromFile).put("fr", move.fromRank)
+                    .put("tf", move.toFile).put("tr", move.toRank).put("p", move.promotion?.name ?: "-")
+                onlineMoves.put(moveJson)
+                val roomId = onlineRoomId
+                if (roomId != null) Thread {
+                    val result = auth.submitOnlineMoves(roomId, onlineMoves, board.game.sideToMove.name.lowercase())
+                    runOnUiThread { if (!result.ok) status.text = result.message else updateGameStatus() }
+                }.start()
+            } else if (playVsComputer) {
                 updateGameStatus()
                 Thread {
                     val computerMove = board.game.chooseComputerMove(3)
-                    runOnUiThread {
-                        if (computerMove != null && board.applyComputerMove(computerMove)) updateGameStatus()
-                    }
+                    runOnUiThread { if (computerMove != null && board.applyComputerMove(computerMove)) updateGameStatus() }
                 }.start()
             } else {
                 lan.send("MOVE|${move.fromFile}|${move.fromRank}|${move.toFile}|${move.toRank}|${move.promotion?.name ?: "-"}")
@@ -106,6 +122,7 @@ class MainActivity : Activity() {
 
         val aiButton = makeButton("اللعب ضد الكمبيوتر • متوسط", true).apply {
             setOnClickListener {
+                stopOnlinePolling()
                 playVsComputer = true
                 board.localSide = Side.WHITE
                 board.resetBoard()
@@ -115,6 +132,12 @@ class MainActivity : Activity() {
         }
         root.addView(aiButton, LinearLayout.LayoutParams(-1, dp(48)).apply {
             setMargins(dp(2), dp(2), dp(2), dp(5))
+        })
+        val onlineButton = makeButton("اللعب مع الأصدقاء عبر الإنترنت", true).apply {
+            setOnClickListener { showOnlineDialog() }
+        }
+        root.addView(onlineButton, LinearLayout.LayoutParams(-1, dp(44)).apply {
+            setMargins(dp(2), 0, dp(2), dp(4))
         })
         val accountButton = makeButton("الحساب والأصدقاء • تسجيل الدخول", false).apply {
             setOnClickListener { showAccountDialog() }
@@ -131,6 +154,7 @@ class MainActivity : Activity() {
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL }
         val host = makeButton("HOST • الأبيض", true).apply {
             setOnClickListener {
+                stopOnlinePolling()
                 playVsComputer = false
                 board.localSide = Side.WHITE
                 board.resetBoard()
@@ -145,6 +169,7 @@ class MainActivity : Activity() {
                     .setView(ip).setPositiveButton("اتصال") { _, _ ->
                         val address = ip.text.toString().trim()
                         if (address.isNotEmpty()) {
+                            stopOnlinePolling()
                             playVsComputer = false
                             board.localSide = Side.BLACK
                             board.resetBoard()
@@ -171,6 +196,87 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showOnlineDialog() {
+        if (!auth.hasSession()) { status.text = "سجّل الدخول أولاً للعب عبر الإنترنت"; showAccountDialog(); return }
+        AlertDialog.Builder(this).setTitle("اللعب عبر الإنترنت")
+            .setPositiveButton("إنشاء غرفة") { _, _ -> createOnlineRoom() }
+            .setNegativeButton("انضمام برمز") { _, _ ->
+                val code = EditText(this).apply { hint = "رمز الغرفة" }
+                AlertDialog.Builder(this@MainActivity).setTitle("أدخل رمز الدعوة").setView(code)
+                    .setPositiveButton("انضمام") { _, _ -> joinOnlineRoom(code.text.toString()) }
+                    .setNegativeButton("إلغاء", null).show()
+            }.show()
+    }
+
+    private fun createOnlineRoom() {
+        status.text = "جارٍ إنشاء غرفة..."
+        Thread {
+            val result = auth.createOnlineRoom()
+            runOnUiThread {
+                if (!result.ok || result.id == null) { status.text = result.message; return@runOnUiThread }
+                onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
+                board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
+                status.text = "رمز الغرفة: ${result.code} • أرسل الرمز لصديقك. بانتظار انضمامه..."
+                startOnlinePolling()
+            }
+        }.start()
+    }
+
+    private fun joinOnlineRoom(code: String) {
+        status.text = "جارٍ الانضمام إلى الغرفة..."
+        Thread {
+            val result = auth.joinOnlineRoom(code)
+            runOnUiThread {
+                if (!result.ok || result.id == null) { status.text = result.message; return@runOnUiThread }
+                onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
+                board.localSide = Side.BLACK; board.resetBoard(); board.isEnabled = true
+                applyRoomMoves(result.gameState?.optJSONArray("moves") ?: JSONArray())
+                status.text = "انضممت إلى الغرفة ${result.code} • أنت الأسود"
+                startOnlinePolling()
+            }
+        }.start()
+    }
+
+    private fun startOnlinePolling() {
+        onlinePoll?.let { mainHandler.removeCallbacks(it) }
+        val task = object : Runnable {
+            override fun run() {
+                val id = onlineRoomId ?: return
+                Thread {
+                    val result = auth.fetchOnlineRoom(id)
+                    runOnUiThread {
+                        if (result.ok) {
+                            if (result.status == "playing") board.isEnabled = true
+                            result.gameState?.optJSONArray("moves")?.let { applyRoomMoves(it) }
+                        }
+                    }
+                }.start()
+                mainHandler.postDelayed(this, 1800)
+            }
+        }
+        onlinePoll = task
+        mainHandler.post(task)
+    }
+
+    private fun applyRoomMoves(serverMoves: JSONArray) {
+        if (serverMoves.length() <= onlineMoves.length()) return
+        for (i in onlineMoves.length() until serverMoves.length()) {
+            val item = serverMoves.optJSONObject(i) ?: continue
+            val promotion = item.optString("p", "-").let { if (it == "-") null else runCatching { PieceType.valueOf(it) }.getOrNull() }
+            val move = ChessMove(item.optInt("ff"), item.optInt("fr"), item.optInt("tf"), item.optInt("tr"), promotion)
+            if (!board.applySyncedMove(move)) { status.text = "تعذرت مزامنة حركة المباراة"; return }
+            onlineMoves.put(item)
+        }
+        updateGameStatus()
+    }
+
+    private fun stopOnlinePolling() {
+        onlinePoll?.let { mainHandler.removeCallbacks(it) }
+        onlinePoll = null
+        onlineMode = false
+        onlineRoomId = null
+        board.isEnabled = true
+    }
     private fun showAccountDialog() {
         val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         val email = EditText(this).apply { hint = "البريد الإلكتروني"; inputType = 33 }
@@ -283,6 +389,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        stopOnlinePolling()
         lan.close()
         super.onDestroy()
     }
