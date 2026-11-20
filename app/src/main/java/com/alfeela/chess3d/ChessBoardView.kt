@@ -27,6 +27,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun resetBoard() {
         game.reset()
         selected = null
+        boardRenderer.setSelection(null)
         requestRender()
     }
 
@@ -40,8 +41,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action != MotionEvent.ACTION_UP) return true
         // Board occupies the central area. A near-overhead camera keeps square mapping intuitive.
-        val nx = (event.x / width.coerceAtLeast(1)).coerceIn(0f, 0.999f)
-        val ny = ((event.y / height.coerceAtLeast(1) - 0.16f) / 0.68f).coerceIn(0f, 0.999f)
+        val nx = ((event.x / width.coerceAtLeast(1) - 0.23f) / 0.54f).coerceIn(0f, 0.999f)
+        val ny = ((event.y / height.coerceAtLeast(1) - 0.05f) / 0.90f).coerceIn(0f, 0.999f)
         val file = (nx * 8).toInt()
         val rank = (ny * 8).toInt()
         if (game.sideToMove != localSide) return true
