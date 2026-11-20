@@ -3,6 +3,7 @@ package com.alfeela.chess3d
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -216,7 +217,10 @@ class MainActivity : Activity() {
                 board.localSide = Side.WHITE
                 board.resetBoard()
                 lan.host()
-                status.text = "تم إنشاء المباراة • أنت الأبيض • بانتظار صديقك على الشبكة المحلية"
+                val address = localWifiAddress()
+                status.text = if (address != null)
+                    "أنت الأبيض • أعطِ صديقك العنوان $address والمنفذ 45454"
+                else "أنت الأبيض • تعذر قراءة عنوان Wi-Fi؛ تأكد من اتصال الهاتف بالشبكة أو نقطة الاتصال"
             }
             .setNegativeButton("انضمام • الأسود") { _, _ ->
                 val ip = EditText(this).apply { hint = "عنوان IP للمضيف مثل 192.168.1.10" }
@@ -445,6 +449,14 @@ class MainActivity : Activity() {
         setColor(fill)
         setStroke(dp(width), stroke)
         cornerRadius = dp(5).toFloat()
+    }
+
+    private fun localWifiAddress(): String? {
+        return try {
+            val wifi = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+            val ip = wifi.connectionInfo.ipAddress
+            if (ip == 0) null else "${ip and 0xff}.${ip shr 8 and 0xff}.${ip shr 16 and 0xff}.${ip shr 24 and 0xff}"
+        } catch (_: Exception) { null }
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
