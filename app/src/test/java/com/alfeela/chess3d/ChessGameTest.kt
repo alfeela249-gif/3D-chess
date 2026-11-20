@@ -87,7 +87,7 @@ class ChessGameTest {
         assertTrue(game.makeMove(ChessMove(1, 3, 1, 2))) // b5-b6
         assertTrue(game.makeMove(ChessMove(7, 2, 7, 3))) // ...h6-h5
         assertTrue(game.makeMove(ChessMove(1, 2, 1, 1))) // b6-b7
-        assertTrue(game.makeMove(ChessMove(7, 3, 7, 4))) // ...h5-h4
+        assertTrue(game.makeMove(ChessMove(1, 0, 0, 2))) // ...Nb8-a6 clears b8
 
         val promotions = game.legalMovesFrom(1, 1)
             .filter { it.toFile == 1 && it.toRank == 0 }
