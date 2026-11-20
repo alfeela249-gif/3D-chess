@@ -51,7 +51,8 @@ class AuthManager(context: Context) {
         }.toMap()
         val token = values["access_token"] ?: return Result(false, values["error_description"] ?: "فشل تسجيل الدخول عبر Google")
         val refresh = values["refresh_token"] ?: ""
-        prefs.edit().putString("access_token", token).putString("refresh_token", refresh).apply()
+        prefs.edit().putString("access_token", token).putString("refresh_token", refresh)
+            .putLong("expires_at", System.currentTimeMillis() / 1000 + (values["expires_in"]?.toLongOrNull() ?: 3600L)).apply()
         return Result(true, "تم تسجيل الدخول عبر Google.")
     }
 
@@ -59,13 +60,25 @@ class AuthManager(context: Context) {
 
     fun signOut() { prefs.edit().clear().apply() }
 
-    fun accessToken() = prefs.getString("access_token", null)
+    @Synchronized
+    fun accessToken(): String? {
+        val current = prefs.getString("access_token", null)
+        if (!current.isNullOrBlank() && prefs.getLong("expires_at", 0L) > System.currentTimeMillis() / 1000 + 60) return current
+        val refresh = prefs.getString("refresh_token", null) ?: return current
+        return try {
+            val response = request("POST", "/auth/v1/token?grant_type=refresh_token", JSONObject().put("refresh_token", refresh).toString())
+            if (response.second in 200..299) {
+                saveSession(JSONObject(response.first))
+                prefs.getString("access_token", current)
+            } else current
+        } catch (_: Exception) { current }
+    }
 
     fun sendFriendRequest(username: String): Result {
         return try {
             val userId = currentUserId() ?: return Result(false, "انتهت الجلسة. سجّل الدخول مجدداً.")
             val safeName = URLEncoder.encode(username.trim(), "UTF-8")
-            val found = authorizedRequest("GET", "/rest/v1/player_profiles?select=user_id&username=eq.$safeName", null)
+            val found = authorizedRequest("GET", "/rest/v1/player_profiles?select=user_id&username=ilike.$safeName", null)
             val players = org.json.JSONArray(found.first)
             if (found.second !in 200..299 || players.length() == 0) return Result(false, "لم يتم العثور على لاعب بهذا الاسم.")
             val targetId = players.getJSONObject(0).optString("user_id")
