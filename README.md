@@ -26,5 +26,12 @@ APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 
 The current network layer is a basic TCP message channel. It does not yet synchronize chess moves.
 
+## Supabase (optional cloud features)
+Supabase is reserved for optional player profiles and match history when internet is available. It is not used to host, discover, or synchronize local Wi-Fi games. Offline play must remain available without signing in or contacting Supabase.
+
+Database setup and row-level security are documented in [docs/SUPABASE.md](docs/SUPABASE.md). The matching SQL migration is in `supabase/migrations/20261120000000_create_player_profiles_and_match_results.sql`.
+
+Do not commit Supabase service-role keys or other secrets. Android clients may only use a publishable/anon key after authentication and RLS are configured.
+
 ## Remaining development
-Full chess rules and legal move validation, interactive piece selection, proper 3D chess pieces, move synchronization, automatic LAN discovery, and device testing are still required before this is a complete playable chess game.
+Full chess rules and legal move validation, interactive piece selection, proper 3D chess pieces, move synchronization, automatic LAN discovery, Supabase client integration for optional cloud features, and device testing are still required before this is a complete playable chess game.
