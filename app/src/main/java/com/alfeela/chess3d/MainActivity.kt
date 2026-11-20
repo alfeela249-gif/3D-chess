@@ -168,21 +168,17 @@ class MainActivity : Activity() {
         val password = EditText(this).apply { hint = "كلمة المرور"; inputType = 129 }
         panel.addView(email)
         panel.addView(password)
-        val dialog = AlertDialog.Builder(this).setTitle("حساب 3D Chess").setView(panel)
-            .setNegativeButton("إغلاق", null).create()
-        dialog.setOnShowListener {
-            dialog.setButton(AlertDialog.BUTTON_POSITIVE, "تسجيل الدخول") { _, _ ->
+        AlertDialog.Builder(this).setTitle("حساب 3D Chess").setView(panel)
+            .setPositiveButton("تسجيل الدخول") { _, _ ->
                 runAuth { auth.signIn(email.text.toString().trim(), password.text.toString()) }
             }
-            dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "إنشاء حساب") { _, _ ->
+            .setNeutralButton("إنشاء حساب") { _, _ ->
                 runAuth { auth.signUp(email.text.toString().trim(), password.text.toString()) }
             }
-            dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Google") { _, _ ->
+            .setNegativeButton("Google") { _, _ ->
                 try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(auth.startGoogleOAuth()))) }
                 catch (_: Exception) { status.text = "تعذر فتح صفحة Google" }
-            }
-        }
-        dialog.show()
+            }.show()
     }
 
     private fun runAuth(action: () -> AuthManager.Result) {
