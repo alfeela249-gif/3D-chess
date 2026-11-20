@@ -89,6 +89,42 @@ class AuthManager(context: Context) {
         } catch (e: Exception) { Result(false, e.message ?: "تعذر إرسال طلب الصداقة") }
     }
 
+    data class FriendEntry(val userId: String, val username: String, val nickname: String, val status: String, val incoming: Boolean)
+    data class FriendsResult(val ok: Boolean, val message: String, val entries: List<FriendEntry> = emptyList())
+
+    fun loadFriends(): FriendsResult {
+        return try {
+            val me = currentUserId() ?: return FriendsResult(false, "سجّل الدخول أولاً.")
+            val path = "/rest/v1/friendships?select=user_low,user_high,requested_by,status&or=(user_low.eq.$me,user_high.eq.$me)&order=updated_at.desc"
+            val response = authorizedRequest("GET", path, null)
+            if (response.second !in 200..299) return FriendsResult(false, "تعذر تحميل قائمة الأصدقاء.")
+            val rows = org.json.JSONArray(response.first)
+            val entries = mutableListOf<FriendEntry>()
+            for (i in 0 until rows.length()) {
+                val row = rows.getJSONObject(i)
+                val low = row.optString("user_low")
+                val high = row.optString("user_high")
+                val other = if (low == me) high else low
+                val profileResponse = authorizedRequest("GET", "/rest/v1/player_profiles?select=username,nickname&user_id=eq.$other", null)
+                val profiles = org.json.JSONArray(profileResponse.first)
+                val profile = if (profiles.length() > 0) profiles.getJSONObject(0) else JSONObject()
+                val status = row.optString("status")
+                entries.add(FriendEntry(other, profile.optString("username", "لا يوجد اسم"), profile.optString("nickname", profile.optString("username", "لا يوجد اسم")), status, status == "pending" && row.optString("requested_by") != me))
+            }
+            FriendsResult(true, "تم تحميل الأصدقاء والطلبات.", entries)
+        } catch (e: Exception) { FriendsResult(false, e.message ?: "تعذر تحميل الأصدقاء") }
+    }
+
+    fun respondFriendRequest(friendId: String, accept: Boolean): Result {
+        return try {
+            val me = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.")
+            val low = minOf(me, friendId)
+            val high = maxOf(me, friendId)
+            val body = JSONObject().put("status", if (accept) "accepted" else "rejected").put("updated_at", java.time.Instant.now().toString())
+            val response = authorizedRequest("PATCH", "/rest/v1/friendships?user_low=eq.$low&user_high=eq.$high&status=eq.pending&requested_by=neq.$me", body.toString(), "return=minimal")
+            if (response.second in 200..299) Result(true, if (accept) "تم قبول طلب الصداقة." else "تم رفض طلب الصداقة.") else Result(false, "تعذر تحديث طلب الصداقة.")
+        } catch (e: Exception) { Result(false, e.message ?: "تعذر الرد على الطلب") }
+    }
     fun savePlayerProfile(username: String, nickname: String): Result {
         return try {
             val userId = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.")
