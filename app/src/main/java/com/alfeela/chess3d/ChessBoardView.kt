@@ -60,8 +60,11 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action != MotionEvent.ACTION_UP) return true
         // Board occupies the central area. A near-overhead camera keeps square mapping intuitive.
-        val nx = ((event.x / width.coerceAtLeast(1) - 0.23f) / 0.54f).coerceIn(0f, 0.999f)
-        val ny = ((event.y / height.coerceAtLeast(1) - 0.05f) / 0.90f).coerceIn(0f, 0.999f)
+        val boardSize = minOf(width, height).toFloat().coerceAtLeast(1f)
+        val boardLeft = (width - boardSize) / 2f
+        val boardTop = (height - boardSize) / 2f
+        val nx = ((event.x - boardLeft) / boardSize).coerceIn(0f, 0.999f)
+        val ny = ((event.y - boardTop) / boardSize).coerceIn(0f, 0.999f)
         val file = (nx * 8).toInt()
         val rank = (ny * 8).toInt()
         if (game.sideToMove != localSide) return true
@@ -143,12 +146,16 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0,0,width,height)
-        Matrix.perspectiveM(projection,0,38f,width.toFloat()/height.coerceAtLeast(1),0.1f,100f)
+        val half = 4.48f
+        val aspect = width.toFloat() / height.coerceAtLeast(1)
+        val halfHeight = if (aspect < 1f) half / aspect else half
+        val halfWidth = if (aspect < 1f) half else half * aspect
+        Matrix.orthoM(projection,0,-halfWidth,halfWidth,-halfHeight,halfHeight,-30f,30f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        Matrix.setLookAtM(view,0,0f,12f,2.0f,0f,0f,0f,0f,1f,0f)
+        Matrix.setLookAtM(view,0,0f,14f,0f,0f,0f,0f,0f,0f,-1f)
         Matrix.multiplyMM(vp,0,projection,0,view,0)
         drawCube(0f,-0.22f,0f,8.55f,0.38f,8.55f,0.035f,0.035f,0.04f)
         val previousMove = game.lastMove
@@ -179,43 +186,95 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             val b = if (white) 0.28f else 0.13f
             val x = file-3.5f
             val z = rank-3.5f
-            // Layered sculptural forms echo the reference's polished gold and black pieces.
-            drawCube(x,0.16f,z,0.58f,0.14f,0.58f,r*0.72f,g*0.72f,b*0.72f)
-            drawCube(x,0.25f,z,0.48f,0.12f,0.48f,r,g,b)
-            drawCube(x,0.38f,z,0.28f,0.20f,0.28f,r*0.92f,g*0.92f,b*0.92f)
+            // Rounded, stacked chess-piece silhouettes in polished gold and black.
+            drawCylinder(x,0.13f,z,0.34f,0.14f,r*0.68f,g*0.68f,b*0.68f)
+            drawCylinder(x,0.23f,z,0.27f,0.12f,r,g,b)
+            drawCylinder(x,0.36f,z,0.17f,0.20f,r*0.94f,g*0.94f,b*0.94f)
             when(piece.type) {
                 PieceType.PAWN -> {
-                    drawCube(x,0.53f,z,0.22f,0.12f,0.22f,r,g,b)
-                    drawCube(x,0.66f,z,0.22f,0.22f,0.22f,r,g,b)
+                    drawCylinder(x,0.51f,z,0.13f,0.12f,r,g,b)
+                    drawSphere(x,0.66f,z,0.15f,r,g,b)
                 }
                 PieceType.ROOK -> {
-                    drawCube(x,0.61f,z,0.42f,0.30f,0.42f,r,g,b)
-                    drawCube(x,0.80f,z,0.48f,0.10f,0.48f,r,g,b)
-                    for(k in -1..1) drawCube(x+k*0.14f,0.88f,z,0.09f,0.12f,0.09f,r,g,b)
+                    drawCylinder(x,0.59f,z,0.22f,0.26f,r,g,b)
+                    drawCylinder(x,0.75f,z,0.27f,0.08f,r,g,b)
+                    for(k in -2..2) drawCube(x+k*0.09f,0.84f,z,0.075f,0.12f,0.075f,r,g,b)
                 }
                 PieceType.KNIGHT -> {
-                    drawCube(x,0.64f,z,0.30f,0.34f,0.28f,r,g,b)
-                    drawCube(x+0.08f,0.87f,z,0.24f,0.28f,0.24f,r,g,b)
-                    drawCube(x+0.16f,1.02f,z,0.20f,0.10f,0.20f,r,g,b)
+                    drawCylinder(x,0.59f,z,0.21f,0.24f,r,g,b)
+                    drawSphere(x,0.81f,z,0.20f,r,g,b)
+                    drawCube(x+0.10f,0.94f,z,0.17f,0.23f,0.14f,r,g,b)
                 }
                 PieceType.BISHOP -> {
-                    drawCube(x,0.68f,z,0.30f,0.40f,0.30f,r,g,b)
-                    drawCube(x,0.94f,z,0.20f,0.18f,0.20f,r,g,b)
-                    drawCube(x,1.06f,z,0.06f,0.20f,0.06f,0.98f,0.80f,0.48f)
+                    drawCylinder(x,0.62f,z,0.20f,0.30f,r,g,b)
+                    drawSphere(x,0.85f,z,0.13f,r,g,b)
+                    drawCube(x,0.98f,z,0.045f,0.18f,0.045f,0.98f,0.80f,0.48f)
                 }
                 PieceType.QUEEN -> {
-                    drawCube(x,0.68f,z,0.34f,0.42f,0.34f,r,g,b)
-                    drawCube(x,0.96f,z,0.30f,0.18f,0.30f,r,g,b)
-                    for(k in -2..2) drawCube(x+k*0.09f,1.10f,z,0.06f,0.14f,0.06f,0.98f,0.78f,0.42f)
+                    drawCylinder(x,0.63f,z,0.22f,0.34f,r,g,b)
+                    drawSphere(x,0.90f,z,0.15f,r,g,b)
+                    for(k in 0..5) {
+                        val angle = k * 1.047f
+                        drawSphere(x+kotlin.math.cos(angle)*0.17f,1.00f,z+kotlin.math.sin(angle)*0.17f,0.055f,0.98f,0.78f,0.42f)
+                    }
                 }
                 PieceType.KING -> {
-                    drawCube(x,0.68f,z,0.34f,0.42f,0.34f,r,g,b)
-                    drawCube(x,0.96f,z,0.30f,0.18f,0.30f,r,g,b)
-                    drawCube(x,1.16f,z,0.07f,0.32f,0.07f,0.98f,0.80f,0.48f)
-                    drawCube(x,1.16f,z,0.28f,0.07f,0.07f,0.98f,0.80f,0.48f)
+                    drawCylinder(x,0.63f,z,0.22f,0.34f,r,g,b)
+                    drawSphere(x,0.90f,z,0.15f,r,g,b)
+                    drawCube(x,1.12f,z,0.055f,0.30f,0.055f,0.98f,0.80f,0.48f)
+                    drawCube(x,1.12f,z,0.25f,0.055f,0.055f,0.98f,0.80f,0.48f)
                 }
             }
         }
+    }
+
+    private fun drawCylinder(x:Float,y:Float,z:Float,radius:Float,height:Float,r:Float,g:Float,b:Float) {
+        val vertices = ArrayList<Float>()
+        val segments = 24
+        for(i in 0 until segments) {
+            val a = i * 2.0 * Math.PI / segments
+            val c = (i+1) * 2.0 * Math.PI / segments
+            val ax = kotlin.math.cos(a).toFloat()*radius
+            val az = kotlin.math.sin(a).toFloat()*radius
+            val bx = kotlin.math.cos(c).toFloat()*radius
+            val bz = kotlin.math.sin(c).toFloat()*radius
+            val bottom = y-height/2f
+            val top = y+height/2f
+            floatArrayOf(ax,bottom,az,bx,bottom,bz,bx,top,bz,ax,bottom,az,bx,top,bz,ax,top,az,0f,bottom,0f,bx,bottom,bz,ax,bottom,az,0f,top,0f,ax,top,az,bx,top,bz).forEach { vertices.add(it) }
+        }
+        drawTriangles(vertices.toFloatArray(),x,y,z,r,g,b)
+    }
+
+    private fun drawSphere(x:Float,y:Float,z:Float,radius:Float,r:Float,g:Float,b:Float) {
+        val vertices = ArrayList<Float>()
+        val rings = 10
+        val slices = 20
+        for(i in 0 until rings) {
+            val p1 = -Math.PI/2 + i*Math.PI/rings
+            val p2 = -Math.PI/2 + (i+1)*Math.PI/rings
+            for(j in 0 until slices) {
+                val t1 = j*2*Math.PI/slices
+                val t2 = (j+1)*2*Math.PI/slices
+                fun vertex(p:Double,t:Double) = floatArrayOf((kotlin.math.cos(p)*kotlin.math.cos(t)).toFloat()*radius,kotlin.math.sin(p).toFloat()*radius,(kotlin.math.cos(p)*kotlin.math.sin(t)).toFloat()*radius)
+                val a=vertex(p1,t1); val c=vertex(p1,t2); val d=vertex(p2,t2); val e=vertex(p2,t1)
+                listOf(a,c,d,a,d,e).forEach { v -> v.forEach { vertices.add(it) } }
+            }
+        }
+        drawTriangles(vertices.toFloatArray(),x,y,z,r,g,b)
+    }
+
+    private fun drawTriangles(vertices:FloatArray,x:Float,y:Float,z:Float,r:Float,g:Float,b:Float) {
+        val buffer = ByteBuffer.allocateDirect(vertices.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        buffer.put(vertices); buffer.position(0)
+        Matrix.setIdentityM(model,0)
+        Matrix.translateM(model,0,x,y,z)
+        Matrix.multiplyMM(mvp,0,vp,0,model,0)
+        GLES20.glUseProgram(program)
+        GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
+        GLES20.glUniform4f(colorHandle,r,g,b,1f)
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,buffer)
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertices.size/3)
     }
 
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,r:Float,g:Float,b:Float) {
