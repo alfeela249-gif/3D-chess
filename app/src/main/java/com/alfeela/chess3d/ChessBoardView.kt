@@ -70,7 +70,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun applyComputerMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
         return applied
     }
 
