@@ -300,6 +300,20 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var targetCameraDistance = 15.0f
     @Volatile private var targetCameraElevation = 38f
     private var lastCameraFrameNanos = 0L
+    @Volatile private var whitePieceColor = 0xF0E6D2.toInt()
+    @Volatile private var blackPieceColor = 0x09090B
+    @Volatile private var lightSquareColor = 0xFFFFFF.toInt()
+    @Volatile private var darkSquareColor = 0x858B95.toInt()
+    fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
+        whitePieceColor = whitePiece
+        blackPieceColor = blackPiece
+        lightSquareColor = lightSquare
+        darkSquareColor = darkSquare
+    }
+    private fun red(color: Int) = android.graphics.Color.red(color) / 255f
+    private fun green(color: Int) = android.graphics.Color.green(color) / 255f
+    private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
+
     private val animationDuration = 520L
     private var activePieceLift = 0f
     private var activePieceYaw = 0f
@@ -435,6 +449,11 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val indexBuffer = ByteBuffer.allocateDirect(indices.size*2)
         .order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(indices); position(0) }
 
+    fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
+        boardRenderer.setAppearance(whitePiece, blackPiece, lightSquare, darkSquare)
+        requestRender()
+    }
+
     fun setSelection(value: Pair<Int, Int>?, targets: Set<Pair<Int, Int>>) {
         selected = value
         legalTargets = targets
@@ -500,9 +519,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             } ?: false
             val isCheckedKing = checkedKing == square
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.94f else 0.42f,
-                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.95f else 0.45f,
-                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.97f else 0.52f)
+                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
+                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else green(if (light) lightSquareColor else darkSquareColor),
+                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else blue(if (light) lightSquareColor else darkSquareColor))
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
@@ -513,9 +532,10 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 if (piece.side == Side.WHITE) 90f else -90f
             } else 0f
             // Reference finish: glossy piano-black versus warm ivory.
-            val r = if (white) 0.94f else 0.035f
-            val g = if (white) 0.90f else 0.038f
-            val b = if (white) 0.80f else 0.045f
+            val pieceColor = if (white) whitePieceColor else blackPieceColor
+            val r = red(pieceColor)
+            val g = green(pieceColor)
+            val b = blue(pieceColor)
             var x = file-3.5f
             var z = rank-3.5f
             activePieceLift = 0f
