@@ -390,19 +390,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(dp(6), dp(4), dp(6), dp(4))
         }, LinearLayout.LayoutParams(-1, dp(30)))
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        val history = makeButton("📜 سجل النقلات", false).apply { setOnClickListener { showMoveHistory() } }
-        val reset = makeButton("مباراة جديدة", true).apply {
-            setOnClickListener {
-                if (onlineMode) status.text = "إعادة ضبط مباراة الإنترنت غير متاحة أثناء اللعب"
-                else { board.resetBoard(); lan.send("RESET"); updateGameStatus() }
-            }
-        }
-        actions.addView(history, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
-        actions.addView(reset, LinearLayout.LayoutParams(0, dp(50), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
-        gameRoot.addView(actions, LinearLayout.LayoutParams(-1, dp(56)))
-        val rules = makeButton("❔ طريقة اللعب والقواعد", false).apply { setOnClickListener { showHowToPlay() } }
-        gameRoot.addView(rules, LinearLayout.LayoutParams(-1, dp(48)))
+        // Bottom action buttons intentionally removed to keep the 3D board unobstructed.
         setContentView(gameRoot)
     }
     private fun showHowToPlay() {
