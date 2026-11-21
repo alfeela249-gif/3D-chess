@@ -190,7 +190,7 @@ class MainActivity : Activity() {
         val crown = TextView(this).apply {
             text = "♔     ♕"
             setTextColor(Color.rgb(255, 211, 112))
-            textSize = 54f
+            textSize = 64f
             gravity = Gravity.CENTER
             typeface = Typeface.create("serif", Typeface.BOLD)
             setShadowLayer(13f, 0f, 11f, Color.rgb(91, 51, 12))
@@ -254,7 +254,7 @@ class MainActivity : Activity() {
                 textSize = 27f
                 gravity = Gravity.CENTER
                 setShadowLayer(5f, 0f, 3f, Color.BLACK)
-            }, LinearLayout.LayoutParams(dp(48), -1))
+            }, LinearLayout.LayoutParams(dp(58), -1))
             tile.addView(View(this).apply {
                 setBackgroundColor(Color.rgb(136, 101, 46))
             }, LinearLayout.LayoutParams(dp(1), dp(38)))
@@ -266,14 +266,14 @@ class MainActivity : Activity() {
             copy.addView(TextView(this).apply {
                 text = label
                 setTextColor(if (highlighted) Color.rgb(255, 224, 164) else cream)
-                textSize = 15f
+                textSize = 17f
                 gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
                 typeface = Typeface.create("serif", Typeface.BOLD)
             }, LinearLayout.LayoutParams(-1, dp(27)))
             copy.addView(TextView(this).apply {
                 text = detail
                 setTextColor(Color.rgb(180, 165, 140))
-                textSize = 11f
+                textSize = 12f
                 gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
             }, LinearLayout.LayoutParams(-1, dp(21)))
             tile.addView(copy, LinearLayout.LayoutParams(0, -1, 1f))
@@ -298,7 +298,7 @@ class MainActivity : Activity() {
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى $savedLevel"
             showGameScreen()
         }
-        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(72)).apply {
+        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(76)).apply {
             topMargin = dp(5)
             bottomMargin = dp(5)
         })
@@ -311,30 +311,13 @@ class MainActivity : Activity() {
         }
         addHomeAction(homeTile("📶", "اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
             showLanDialog()
-        }, 72)
+        }, 76)
         addHomeAction(homeTile("🌐", "اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
-        }, 72)
+        }, 76)
         addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت") {
             showMatchHistory()
-        }, 72)
-
-        val utilityRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-        fun utilityButton(label: String, action: () -> Unit) {
-            val button = makeButton(label, false).apply {
-                textSize = 12f
-                setOnClickListener { action() }
-            }
-            utilityRow.addView(button, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                setMargins(dp(3), dp(5), dp(3), dp(5))
-            })
-        }
-        utilityButton("📜  سجل النقلات") { showMoveHistory() }
-        utilityButton("❔  قواعد اللعب") { showHowToPlay() }
-        content.addView(utilityRow, LinearLayout.LayoutParams(-1, dp(54)))
+        }, 76)
 
         val footer = TextView(this).apply {
             text = "BLACK  •  GOLD  •  STRATEGY"
