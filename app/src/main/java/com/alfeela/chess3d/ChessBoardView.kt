@@ -29,6 +29,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private var lastTouchY = 0f
     private var oneFingerCameraDrag = false
     private var cameraGestureConsumed = false
+    @Volatile var cameraTouchSensitivity: Float = 1.0f
 
     private fun pointerCenterX(event: MotionEvent, excludedIndex: Int = -1): Float {
         var total = 0f
@@ -143,6 +144,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         }
         requestRender()
     }
+    fun setPieceStyle(style: Int) {
+        queueEvent { boardRenderer.setPieceStyle(style.coerceIn(0, 2)) }
+        requestRender()
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
@@ -171,10 +176,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val currentX = pointerCenterX(event)
                     val currentY = pointerCenterY(event)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy((currentX-lastRotateX)*0.009f)
-                    boardRenderer.tiltBy((lastRotateY-currentY)*0.15f)
+                    boardRenderer.rotateBy((currentX-lastRotateX)*0.009f*cameraTouchSensitivity)
+                    boardRenderer.tiltBy((lastRotateY-currentY)*0.15f*cameraTouchSensitivity)
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f*cameraTouchSensitivity)
                     }
                     lastRotateX = currentX
                     lastRotateY = currentY
@@ -190,8 +195,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         oneFingerCameraDrag = true
                         cameraGestureConsumed = true
                         downSquare = null
-                        boardRenderer.rotateBy(dx * 0.009f)
-                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(-dy * 0.15f)
+                        boardRenderer.rotateBy(dx * 0.009f * cameraTouchSensitivity)
+                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(-dy * 0.15f * cameraTouchSensitivity)
                         requestRender()
                     }
                     lastTouchX = event.x
@@ -311,12 +316,14 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var blackPieceColor = 0x09090B
     @Volatile private var lightSquareColor = 0xFFFFFF.toInt()
     @Volatile private var darkSquareColor = 0x858B95.toInt()
+    @Volatile private var pieceStyle = 0
     fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
         whitePieceColor = whitePiece
         blackPieceColor = blackPiece
         lightSquareColor = lightSquare
         darkSquareColor = darkSquare
     }
+    fun setPieceStyle(style: Int) { pieceStyle = style.coerceIn(0, 2) }
     private fun red(color: Int) = android.graphics.Color.red(color) / 255f
     private fun green(color: Int) = android.graphics.Color.green(color) / 255f
     private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
@@ -324,6 +331,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private val animationDuration = 520L
     private var activePieceLift = 0f
     private var activePieceYaw = 0f
+    private var activePieceScaleX = 1f
+    private var activePieceScaleY = 1f
+    private var activePieceScaleZ = 1f
 
     fun rotationRadians(): Float = boardRotation
 
@@ -528,6 +538,11 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
             val piece = game.pieceAt(file, rank) ?: continue
+            when (pieceStyle) {
+                1 -> { activePieceScaleX = 0.88f; activePieceScaleY = 1.04f; activePieceScaleZ = 0.88f }
+                2 -> { activePieceScaleX = 1.08f; activePieceScaleY = 1.10f; activePieceScaleZ = 1.08f }
+                else -> { activePieceScaleX = 1f; activePieceScaleY = 1f; activePieceScaleZ = 1f }
+            }
             val white = piece.side == Side.WHITE
             // Turn each Staunton horse inward toward the center of the board.
             activePieceYaw = if (piece.type == PieceType.KNIGHT) {
@@ -648,6 +663,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 }
             }
             activePieceYaw = 0f
+            activePieceScaleX = 1f
+            activePieceScaleY = 1f
+            activePieceScaleZ = 1f
         }
     }
 
@@ -738,6 +756,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         Matrix.setIdentityM(model,0)
         Matrix.translateM(model,0,x,y + activePieceLift,z)
         if (activePieceYaw != 0f) Matrix.rotateM(model,0,activePieceYaw,0f,1f,0f)
+        Matrix.scaleM(model,0,activePieceScaleX,activePieceScaleY,activePieceScaleZ)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
@@ -751,7 +770,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,r:Float,g:Float,b:Float) {
         Matrix.setIdentityM(model,0)
-        Matrix.translateM(model,0,x,y + activePieceLift,z); if (activePieceYaw != 0f) Matrix.rotateM(model,0,activePieceYaw,0f,1f,0f); Matrix.scaleM(model,0,sx,sy,sz)
+        Matrix.translateM(model,0,x,y + activePieceLift,z); if (activePieceYaw != 0f) Matrix.rotateM(model,0,activePieceYaw,0f,1f,0f); Matrix.scaleM(model,0,activePieceScaleX,activePieceScaleY,activePieceScaleZ); Matrix.scaleM(model,0,sx,sy,sz)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
