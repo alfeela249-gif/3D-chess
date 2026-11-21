@@ -171,7 +171,7 @@ class MainActivity : Activity() {
             profileBar.addView(item, LinearLayout.LayoutParams(dp(44), dp(42)))
         }
         quickAction("♟") { showFriendsDialog() }
-        quickAction("📜") { showMatchHistory() }
+        quickAction("⚙") { showSettingsDialog() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
 
         val hero = LinearLayout(this).apply {
