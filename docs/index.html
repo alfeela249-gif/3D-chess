@@ -59,8 +59,8 @@ const key=new THREE.DirectionalLight(0xffd99a,3.4);key.position.set(-7,12,8);key
 const rim=new THREE.DirectionalLight(0x8fa9d8,1.5);rim.position.set(7,7,-8);scene.add(rim);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x171513,roughness:.92}));floor.rotation.x=-Math.PI/2;floor.position.y=-.16;floor.receiveShadow=true;scene.add(floor);
 const board=new THREE.Group();scene.add(board);
-const dark=new THREE.MeshStandardMaterial({color:0x171719,roughness:.22,metalness:.28});
-const light=new THREE.MeshStandardMaterial({color:0xe8dfcb,roughness:.38,metalness:.08});
+const dark=new THREE.MeshStandardMaterial({color:0x777e88,roughness:.32,metalness:.08});
+const light=new THREE.MeshStandardMaterial({color:0xf1f2f4,roughness:.38,metalness:.02});
 const edgeMat=new THREE.MeshStandardMaterial({color:0x6c6b68,metalness:.55,roughness:.24});
 const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),new THREE.MeshStandardMaterial({color:0x101012,roughness:.3,metalness:.35}));base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
 const trim=new THREE.Mesh(new THREE.BoxGeometry(8.58,.09,8.58),edgeMat);trim.position.y=-.2;board.add(trim);
@@ -134,7 +134,7 @@ function makePiece(type,material){
 }
 const black=mat(0x09090b,.22,.16),ivory=mat(0xeee5d2,.08,.26);
 const back=['rook','knight','bishop','queen','king','bishop','knight','rook'];
-for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[6,'pawn',black],[7,back[x],black]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);board.add(p)}}
+for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[6,'pawn',black],[7,back[x],black]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);if(type==='knight')p.rotation.y=(m===ivory?1:-1)*Math.PI/2;board.add(p)}}
 function cameraUpdate(dt){if(spin)targetAz+=dt*.25*speed;const a=smooth?1-Math.exp(-dt/(smoothMs/1000)):1;azimuth+=(targetAz-azimuth)*a;elevation+=(targetEl-elevation)*a;distance+=(targetDist-distance)*a;const ce=Math.cos(elevation);camera.position.set(Math.sin(azimuth)*distance*ce,Math.sin(elevation)*distance,Math.cos(azimuth)*distance*ce);camera.lookAt(0,.25,0)}
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
 function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;cameraUpdate(dt);renderer.render(scene,camera);frames++;if(now-fpsTime>600){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsTime))+' FPS';frames=0;fpsTime=now}}requestAnimationFrame(animate);
