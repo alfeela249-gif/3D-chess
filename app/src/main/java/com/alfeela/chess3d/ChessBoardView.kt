@@ -75,16 +75,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         boardRenderer.squareAt(x, y, width, height)
 
     private fun animate(move: ChessMove) {
+        // Continuous rendering already supplies animation frames; avoid
+        // scheduling redundant callbacks on the UI thread.
         boardRenderer.animateMove(move)
         requestRender()
-        postDelayed(object : Runnable {
-            override fun run() {
-                if (boardRenderer.isAnimating()) {
-                    requestRender()
-                    postDelayed(this, 16L)
-                }
-            }
-        }, 16L)
     }
 
     private fun completeMove(move: ChessMove) {
@@ -373,7 +367,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private fun green(color: Int) = android.graphics.Color.green(color) / 255f
     private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
 
-    private val animationDuration = 680L
+    private val animationDuration = 420L
     private var activePieceLift = 0f
     private var activePieceGlow = 0f
     private var activePieceYaw = 0f
