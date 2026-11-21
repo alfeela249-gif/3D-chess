@@ -571,9 +571,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     // Traditional Staunton knight: a recognizable raised horse head,
                     // long arched neck, swept mane, muzzle, ears and a visible eye.
                     drawCylinder(x,0.50f,z,0.20f,0.42f,r,g,b)
-                    drawSphere(x+0.035f,0.76f,z,0.17f,r,g,b,0.92f,1.55f,0.88f)
-                    drawSphere(x-0.035f,1.02f,z,0.145f,r,g,b,0.90f,1.18f,0.90f)
-                    drawSphere(x-0.145f,0.99f,z-0.015f,0.105f,r,g,b,1.30f,0.72f,0.82f)
+                    drawSphere(x+0.035f,0.76f,z,0.17f,r,g,b)
+                    drawSphere(x-0.035f,1.02f,z,0.145f,r,g,b)
+                    drawSphere(x-0.145f,0.99f,z-0.015f,0.105f,r,g,b)
                     // Sculpted tapered ears and a swept-back mane, angled in profile.
                     drawTriangles(floatArrayOf(
                         -0.13f,1.12f,-0.10f, -0.08f,1.12f,-0.10f, -0.105f,1.39f,-0.10f,
