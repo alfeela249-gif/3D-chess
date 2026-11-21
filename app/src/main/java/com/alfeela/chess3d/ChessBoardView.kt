@@ -302,6 +302,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     private var lastCameraFrameNanos = 0L
     private val animationDuration = 520L
     private var activePieceLift = 0f
+    private var activePieceYaw = 0f
 
     fun rotationRadians(): Float = boardRotation
 
@@ -489,6 +490,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         } else null
         for (rank in 0..7) for (file in 0..7) {
             activePieceLift = 0f
+            activePieceYaw = 0f
             val light = (file+rank)%2==0
             val square = file to rank
             val isSelected = selected == square
@@ -498,9 +500,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             } ?: false
             val isCheckedKing = checkedKing == square
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.78f else 0.16f,
-                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.74f else 0.18f,
-                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.70f else 0.20f)
+                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.88f else 0.40f,
+                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.89f else 0.44f,
+                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.92f else 0.49f)
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
@@ -551,6 +553,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             drawCylinder(x,0.105f,z,0.35f,0.14f,r*0.82f,g*0.82f,b*0.82f)
             drawCylinder(x,0.185f,z,0.315f,0.045f,hi,hg,hb)
             drawCylinder(x,0.245f,z,0.255f,0.10f,r,g,b)
+            activePieceYaw = if (piece.type == PieceType.KNIGHT) { if (white) 90f else -90f } else 0f
             when(piece.type) {
                 PieceType.PAWN -> {
                     drawCylinder(x,0.49f,z,0.125f,0.43f,r,g,b)
@@ -618,6 +621,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                     drawCube(x,1.34f,z,0.30f,0.075f,0.075f,r,g,b)
                 }
             }
+            activePieceYaw = 0f
         }
     }
 
@@ -707,6 +711,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         normalBuffer.put(normals); normalBuffer.position(0)
         Matrix.setIdentityM(model,0)
         Matrix.translateM(model,0,x,y + activePieceLift,z)
+        if (activePieceYaw != 0f) Matrix.rotateM(model,0,activePieceYaw,0f,1f,0f)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
