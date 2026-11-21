@@ -133,8 +133,12 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this)
                 .setTitle("ترقية الجندي")
                 .setMessage("اختر القطعة التي تريد الترقية إليها")
-                .setItems(choices) { _, which -> complete(types[which]) }
-                .setOnCancelListener { /* Keep the pawn move pending; no illegal default promotion. */ }
+                .setItems(choices) { _, which ->
+                    if (which in types.indices) complete(types[which])
+                }
+                // If the chooser is dismissed, complete the legal move as a queen
+                // promotion rather than leaving the pawn stranded on the last rank.
+                .setOnCancelListener { complete(PieceType.QUEEN) }
                 .show()
         }
 
