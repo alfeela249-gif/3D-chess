@@ -80,7 +80,7 @@ function wirePage(key){
  }
  if(key==='wifi'){
   const details=document.querySelector('#wifiDetails');
-  document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♜ إنشاء مجموعة جديدة</b><small>1. افتح إعدادات نقطة الاتصال في هاتفك. 2. فعّل نقطة الاتصال. 3. ارجع إلى تطبيق 3D Chess لبدء استضافة المباراة. 4. أرسل عنوان IP الظاهر لصديقك ليتمكن من الانضمام.</small><div class="status">ملاحظة: يتطلب Android تفعيل نقطة الاتصال يدوياً في معظم الأجهزة.</div>'};
+  document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♜ إنشاء مجموعة جديدة</b><small>1. افتح إعدادات نقطة الاتصال في هاتفك. 2. فعّل نقطة الاتصال. 3. ارجع إلى تطبيق 3D Chess لبدء استضافة المباراة. 4. يتصل صديقك بنقطة الاتصال ثم يضغط «انضمام للمجموعة» ليبحث التطبيق عن غرفتك تلقائياً دون إدخال عنوان IP.</small><div class="status">ملاحظة: يتطلب Android تفعيل نقطة الاتصال يدوياً في معظم الأجهزة.</div>'};
   document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♞ الانضمام إلى مجموعة</b><small>1. اتصل بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. اضغط انضمام للمجموعة في تطبيق Android. 3. سيبحث التطبيق تلقائياً عن غرفة صديقك ويتصل بها دون كتابة أي عنوان.</small><div class="status">في تطبيق Android: اضغط انضمام للمجموعة وسيبدأ البحث التلقائي عن الغرفة.</div>'};
   // معاينة الويب تعرض خطوات البحث فقط؛ اكتشاف UDP والاتصال الفعلي متاحان داخل تطبيق Android.
  }
