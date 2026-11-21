@@ -87,12 +87,29 @@ function makePiece(type,material){
  }
  if(type==='knight'){
   addLathe(g,[[0,.34],[.22,.38],[.25,.45],[.22,.53],[.17,.65],[.12,.73],[0,.76]],material);
-  addSphere(g,-.015,.78,0,.18,material,1.08,1.0,1.05);
-  addSphere(g,-.035,1.02,-.015,.15,material,.96,1.15,.9);
-  addSphere(g,.085,.98,-.13,.105,material,1.2,.72,.8);
-  addBox(g,-.11,1.16,.015,.10,.29,.16,material,0,0,-.18);
-  addBox(g,-.13,1.31,.045,.075,.16,.12,material,0,0,-.18);
-  addSphere(g,.16,1.03,-.13,.025,accent);
+  // A sculpted Staunton horse profile replaces the former abstract blocky head.
+  const horse=new THREE.Shape();
+  horse.moveTo(-.25,.91);
+  horse.quadraticCurveTo(-.32,.99,-.25,1.08);
+  horse.lineTo(-.17,1.12);
+  horse.quadraticCurveTo(-.14,1.27,-.09,1.39);
+  horse.lineTo(-.12,1.55);
+  horse.quadraticCurveTo(-.02,1.51,.035,1.39);
+  horse.quadraticCurveTo(.13,1.46,.18,1.38);
+  horse.lineTo(.14,1.25);
+  horse.quadraticCurveTo(.25,1.13,.20,1.02);
+  horse.quadraticCurveTo(.17,.88,.08,.77);
+  horse.quadraticCurveTo(-.02,.70,-.13,.76);
+  horse.quadraticCurveTo(-.20,.81,-.25,.91);
+  const horseGeo=new THREE.ExtrudeGeometry(horse,{depth:.22,bevelEnabled:true,bevelSegments:4,steps:1,bevelSize:.025,bevelThickness:.025,curveSegments:12});
+  horseGeo.computeVertexNormals();
+  const horseHead=new THREE.Mesh(horseGeo,material);
+  horseHead.position.z=-.11;
+  horseHead.castShadow=true;horseHead.receiveShadow=true;g.add(horseHead);
+  addSphere(g,-.17,1.075,-.135,.027,accent);
+  addSphere(g,-.255,.99,-.135,.018,shadow);
+  // A raised mane ridge gives the neck a flowing, carved silhouette.
+  addBox(g,.13,1.13,-.13,.055,.36,.055,material,0,0,-.28);
  }
  if(type==='bishop'){
   addLathe(g,[[0,.34],[.23,.38],[.24,.46],[.20,.56],[.15,.70],[.13,.84],[.16,.90],[.12,.96],[0,.96]],material);
