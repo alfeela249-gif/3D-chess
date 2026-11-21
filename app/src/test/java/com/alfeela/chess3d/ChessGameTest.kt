@@ -96,4 +96,23 @@ class ChessGameTest {
         assertTrue(game.makeMove(ChessMove(1, 1, 1, 0, PieceType.KNIGHT)))
         assertEquals(ChessPiece(Side.WHITE, PieceType.KNIGHT), game.pieceAt(1, 0))
     }
+
+    @Test fun missingPromotionChoiceDefaultsToQueen() {
+        val game = ChessGame()
+        assertTrue(game.makeMove(ChessMove(0, 6, 0, 4))) // a2-a4
+        assertTrue(game.makeMove(ChessMove(1, 1, 1, 3))) // ...b7-b5
+        assertTrue(game.makeMove(ChessMove(0, 4, 1, 3))) // axb5
+        assertTrue(game.makeMove(ChessMove(7, 1, 7, 2))) // ...h7-h6
+        assertTrue(game.makeMove(ChessMove(1, 3, 1, 2))) // b5-b6
+        assertTrue(game.makeMove(ChessMove(7, 2, 7, 3))) // ...h6-h5
+        assertTrue(game.makeMove(ChessMove(1, 2, 1, 1))) // b6-b7
+        assertTrue(game.makeMove(ChessMove(1, 0, 0, 2))) // ...Nb8-a6
+
+        // The UI/network caller omitted the promotion type: the engine must
+        // still make a legal move and replace the pawn with a queen.
+        assertTrue(game.makeMove(ChessMove(1, 1, 1, 0)))
+        assertEquals(ChessPiece(Side.WHITE, PieceType.QUEEN), game.pieceAt(1, 0))
+        assertEquals(PieceType.QUEEN, game.moveHistory().last().promotion)
+    }
+
 }
