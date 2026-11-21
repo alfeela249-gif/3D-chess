@@ -725,7 +725,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun drawCube(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,r:Float,g:Float,b:Float) {
         Matrix.setIdentityM(model,0)
-        Matrix.translateM(model,0,x,y + activePieceLift,z); Matrix.scaleM(model,0,sx,sy,sz)
+        Matrix.translateM(model,0,x,y + activePieceLift,z); if (activePieceYaw != 0f) Matrix.rotateM(model,0,activePieceYaw,0f,1f,0f); Matrix.scaleM(model,0,sx,sy,sz)
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
