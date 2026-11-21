@@ -1319,7 +1319,8 @@ class MainActivity : Activity() {
                 dialog.dismiss()
                 onlinePoll?.let { mainHandler.removeCallbacks(it) }
                 lan.close()
-                showHome()
+                setContentView(homeRoot)
+                status = homeStatus
             }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener {
                 dialog.dismiss()
