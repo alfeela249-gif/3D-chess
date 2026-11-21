@@ -115,4 +115,22 @@ class ChessGameTest {
         assertEquals(PieceType.QUEEN, game.moveHistory().last().promotion)
     }
 
+
+    @Test fun blackPawnPromotionAlsoDefaultsToQueenWhenChoiceIsMissing() {
+        val game = ChessGame()
+        assertTrue(game.makeMove(ChessMove(4, 6, 4, 4))) // e2-e4
+        assertTrue(game.makeMove(ChessMove(0, 1, 0, 3))) // ...a7-a5
+        assertTrue(game.makeMove(ChessMove(1, 6, 1, 4))) // b2-b4
+        assertTrue(game.makeMove(ChessMove(0, 3, 1, 4))) // ...axb4
+        assertTrue(game.makeMove(ChessMove(7, 6, 7, 5))) // h2-h3
+        assertTrue(game.makeMove(ChessMove(1, 4, 1, 5))) // ...b4-b3
+        assertTrue(game.makeMove(ChessMove(7, 5, 7, 4))) // h3-h4
+        assertTrue(game.makeMove(ChessMove(1, 5, 1, 6))) // ...b3-b2
+        assertTrue(game.makeMove(ChessMove(1, 7, 0, 5))) // Nb1-a3 clears b1
+
+        assertTrue(game.makeMove(ChessMove(1, 6, 1, 7)))
+        assertEquals(ChessPiece(Side.BLACK, PieceType.QUEEN), game.pieceAt(1, 7))
+        assertEquals(PieceType.QUEEN, game.moveHistory().last().promotion)
+    }
+
 }
