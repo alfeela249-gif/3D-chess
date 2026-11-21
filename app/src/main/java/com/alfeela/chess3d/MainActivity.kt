@@ -60,6 +60,7 @@ class MainActivity : Activity() {
 
         auth = AuthManager(this)
         lan = LanConnection(
+            context = this,
             onState = { message ->
                 runOnUiThread {
                     if (::board.isInitialized) {
