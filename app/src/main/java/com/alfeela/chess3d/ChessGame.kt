@@ -80,11 +80,19 @@ class ChessGame {
 
     @Synchronized
     fun makeMove(move: ChessMove): Boolean {
-        if (move !in legalMoves()) return false
-        applyUnchecked(move)
+        // A pawn must never remain a pawn on the final rank. If a caller
+        // (UI, LAN, online sync, or AI) omits the promotion choice, default
+        // safely to a queen while still validating the resulting legal move.
+        val movingPiece = if (inside(move.fromFile, move.fromRank))
+            squares[move.fromRank][move.fromFile] else null
+        val normalizedMove = if (movingPiece?.type == PieceType.PAWN &&
+            move.toRank == if (movingPiece.side == Side.WHITE) 0 else 7 &&
+            move.promotion == null) move.copy(promotion = PieceType.QUEEN) else move
+        if (normalizedMove !in legalMoves()) return false
+        applyUnchecked(normalizedMove)
         sideToMove = sideToMove.opposite()
-        lastMove = move
-        history += move
+        lastMove = normalizedMove
+        history += normalizedMove
         return true
     }
 
