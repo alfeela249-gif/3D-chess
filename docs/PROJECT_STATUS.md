@@ -27,7 +27,7 @@ Native Android application (application ID: `com.alfeela.chess3d`) with:
 - The user approved the saved **Classic Staunton 3D Chess Set** on 2026-11-21; it supersedes the earlier fantasy-medieval direction.
 - Blendstra project: `c0999f0c-787a-42a3-b97e-8654892aba1e`
 - Version: `version_5e2b0678e7108cbda3671c80385bd19ebde36d5a6aea934c1a13ca71fdee5fa8`
-- [Open approved model](https://blendstra.com/studio?workspace=wsp_adb20fdc3deb8b498a5627d0c41c91052953abee&project=c0999f0c-787a-42a3-b97e-8654892aba1c0999f0c-787a-42a3-b97e-8654892aba1c)
+- [Open approved model](https://blendstra.com/studio?workspace=wsp_adb20fdc3deb8b498a5627d0c41c91052953abee&project=c0999f0c-787a-42a3-b97e-8654892aba1e&version=version_5e2b0678e7108cbda3671c80385bd19ebde36d5a6aea934c1a13ca71fdee5fa8)
 - Inspection reports 343 scene objects and a 32-piece set with board. The saved model is not yet integrated into the Android runtime; Android still uses procedural geometry. See `docs/APPROVED_PIECE_ART_DIRECTION.md`.
 
 ## Remaining work before calling the project complete
