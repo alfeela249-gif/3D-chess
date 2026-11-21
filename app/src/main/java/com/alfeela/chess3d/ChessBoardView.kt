@@ -163,7 +163,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun applyRemoteMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); requestRender() }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
         return applied
     }
 
@@ -297,8 +297,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                                     completeMove(selectedMove)
                                 }
                             } else completeMove(candidate)
-                        } else completeMove(candidate)
-                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
+                        } else completeMove(candidate)                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
                         selected = destination
                         refreshSelection()
                         requestRender()
@@ -374,7 +373,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private fun green(color: Int) = android.graphics.Color.green(color) / 255f
     private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
 
-    private val animationDuration = 520L
+    private val animationDuration = 680L
     private var activePieceLift = 0f
     private var activePieceYaw = 0f
     private var activePieceScaleX = 1f
@@ -597,8 +596,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             val square = file to rank
             val isSelected = selected == square
             val isTarget = legalTargets.contains(square)
-            val isLastMove = previousMove?.let {
-                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
+            val isLastMove = previousMove?.let {                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
             } ?: false
             val isCheckedKing = checkedKing == square
             if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
@@ -632,10 +630,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             val moving = animatedMove
             if (moving != null) {
                 val progress = ((android.os.SystemClock.uptimeMillis()-animationStart).toFloat()/animationDuration).coerceIn(0f,1f)
-                val eased = progress*progress*(3f-2f*progress)
+                val eased = progress * progress * progress * (progress * (progress * 6f - 15f) + 10f)
                 // Lift the moving piece along a smooth arc to avoid scraping across
                 // neighboring pieces while retaining exact square-to-square travel.
-                val arc = kotlin.math.sin(Math.PI.toFloat() * progress) * 0.48f
+                val arc = kotlin.math.sin(Math.PI.toFloat() * eased) * 0.38f
                 // Animate the moved piece from its source square to its destination.
                 if (moving.toFile == file && moving.toRank == rank) {
                     x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
@@ -897,8 +895,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                     }
                     val vertexBuffer = ByteBuffer.allocateDirect(local.size * 4).order(ByteOrder.nativeOrder())
                         .asFloatBuffer().apply { put(local); position(0) }
-                    val normalBuffer = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder())
-                        .asFloatBuffer().apply { put(normals); position(0) }
+                    val normalBuffer = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder())                        .asFloatBuffer().apply { put(normals); position(0) }
                     val shortIndices = ShortArray(primitive.indices.size) { primitive.indices[it].toShort() }
                     val indexBuffer = ByteBuffer.allocateDirect(shortIndices.size * 2).order(ByteOrder.nativeOrder())
                         .asShortBuffer().apply { put(shortIndices); position(0) }
