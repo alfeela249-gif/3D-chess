@@ -397,45 +397,31 @@ class MainActivity : Activity() {
         status = gameStatus
         gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
         val boardArea = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val capturedPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
-            setPadding(dp(4), dp(8), dp(4), dp(8))
+            gravity = Gravity.CENTER
+            background = rounded(Color.rgb(10, 12, 15), gold, 2)
+            setPadding(dp(3), dp(3), dp(3), dp(3))
         }
         val whiteCaptures = TextView(this).apply {
-            text = "—"
-            textSize = 18f
+            text = "الأبيض: —"
+            textSize = 15f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(246, 239, 222))
             typeface = Typeface.create("serif", Typeface.BOLD)
+            maxLines = 1
+            setPadding(dp(4), dp(2), dp(4), dp(2))
+            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
         }
         val blackCaptures = TextView(this).apply {
-            text = "—"
-            textSize = 18f
+            text = "الأسود: —"
+            textSize = 15f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(205, 205, 205))
             typeface = Typeface.create("serif", Typeface.BOLD)
+            maxLines = 1
+            setPadding(dp(4), dp(2), dp(4), dp(2))
+            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
         }
-        capturedPanel.addView(TextView(this).apply {
-            text = "أسر الأبيض"
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTextColor(gold)
-        }, LinearLayout.LayoutParams(-1, dp(28)))
-        capturedPanel.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
-        capturedPanel.addView(View(this).apply { setBackgroundColor(Color.rgb(100, 77, 44)) },
-            LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(6); bottomMargin = dp(6) })
-        capturedPanel.addView(TextView(this).apply {
-            text = "أسر الأسود"
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTextColor(gold)
-        }, LinearLayout.LayoutParams(-1, dp(28)))
-        capturedPanel.addView(blackCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
         board.onCapturedPiecesChanged = { white, black ->
             fun symbols(pieces: List<ChessPiece>): String = if (pieces.isEmpty()) "—" else
                 pieces.joinToString(" ") { piece ->
@@ -449,32 +435,23 @@ class MainActivity : Activity() {
                     }
                 }
             runOnUiThread {
-                whiteCaptures.text = symbols(white)
-                blackCaptures.text = symbols(black)
+                whiteCaptures.text = "الأبيض: ${symbols(white)}"
+                blackCaptures.text = "الأسود: ${symbols(black)}"
             }
         }
         board.onCapturedPiecesChanged?.invoke(board.game.capturedPieces(Side.WHITE), board.game.capturedPieces(Side.BLACK))
-        val boardFrame = FrameLayout(this).apply { background = rounded(Color.rgb(10, 12, 15), gold, 2); clipToPadding = true }
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         board.set2DMode(getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("board_2d_mode", false))
-        boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
-        boardArea.addView(capturedPanel, LinearLayout.LayoutParams(dp(70), -1).apply { rightMargin = dp(6) })
-        boardArea.addView(boardFrame, LinearLayout.LayoutParams(0, -1, 1f))
-        gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
+        boardArea.addView(blackCaptures, LinearLayout.LayoutParams(-1, dp(34)))
+        boardArea.addView(board, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            topMargin = dp(3)
+            bottomMargin = dp(3)
+        })
+        boardArea.addView(whiteCaptures, LinearLayout.LayoutParams(-1, dp(34)))
+        gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            setMargins(0, dp(8), 0, dp(8))
+        })
 
-        val zoomControls = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-        zoomControls.addView(makeButton("＋ تكبير", true).apply {
-            setOnClickListener { board.zoomCamera(-1.5f) }
-        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
-        zoomControls.addView(makeButton("－ تصغير", false).apply {
-            setOnClickListener { board.zoomCamera(1.5f) }
-        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
-        zoomControls.addView(makeButton("إعادة الضبط", false).apply {
-            setOnClickListener { board.resetCamera() }
-        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
         val displayModeButton = makeButton(if (board.is2DMode()) "عرض 3D" else "عرض 2D", false).apply {
             textSize = 11f
             setOnClickListener {
@@ -485,10 +462,11 @@ class MainActivity : Activity() {
                 Toast.makeText(this@MainActivity, if (use2D) "تم تحويل الرقعة إلى العرض ثنائي الأبعاد" else "تمت العودة إلى العرض ثلاثي الأبعاد", Toast.LENGTH_SHORT).show()
             }
         }
-        zoomControls.addView(displayModeButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
-        gameRoot.addView(zoomControls, LinearLayout.LayoutParams(-1, dp(48)))
+        gameRoot.addView(displayModeButton, LinearLayout.LayoutParams(-1, dp(42)).apply {
+            setMargins(dp(4), dp(2), dp(4), dp(2))
+        })
         gameRoot.addView(TextView(this).apply {
-            text = "اسحب بإصبع واحد لتدوير الرقعة وإمالتها • استخدم إصبعين أو أزرار التكبير والتصغير"
+            text = "اسحب بإصبع واحد لتحريك زاوية الرؤية • قرّب أو أبعد بإصبعين"
             setTextColor(Color.rgb(218, 190, 145))
             textSize = 10f
             gravity = Gravity.CENTER
