@@ -297,8 +297,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                                     completeMove(selectedMove)
                                 }
                             } else completeMove(candidate)
-                        } else completeMove(candidate)                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
-                        selected = destination
+                        } else completeMove(candidate)                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {                        selected = destination
                         refreshSelection()
                         requestRender()
                     } else if (!isDrag) {
@@ -345,6 +344,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private var mvpHandle = 0
     private var colorHandle = 0
     private var normalHandle = 0
+    private var glowHandle = 0
     @Volatile private var selected: Pair<Int, Int>? = null
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
     @Volatile private var animatedMove: ChessMove? = null
@@ -375,6 +375,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
 
     private val animationDuration = 680L
     private var activePieceLift = 0f
+    private var activePieceGlow = 0f
     private var activePieceYaw = 0f
     private var activePieceScaleX = 1f
     private var activePieceScaleY = 1f
@@ -486,6 +487,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private val fragmentShader = """
         precision mediump float;
         uniform vec4 uColor;
+        uniform float uGlow;
         varying vec3 vNormal;
         varying vec3 vPosition;
         void main(){
@@ -501,7 +503,8 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             float fillSpecular = pow(max(dot(n, fillHalf), 0.0), 42.0);
             float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0) * 0.20;
             vec3 lit = uColor.rgb * (0.34 + diffuse * 0.72 + fill * 0.24 + rim)
-                + vec3(1.0,0.96,0.88) * (specular * 0.62 + fillSpecular * 0.18);
+                + vec3(1.0,0.96,0.88) * (specular * 0.62 + fillSpecular * 0.18)
+                + vec3(1.0,0.58,0.12) * uGlow;
             gl_FragColor = vec4(lit, uColor.a);
         }
     """
@@ -546,6 +549,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         mvpHandle = GLES20.glGetUniformLocation(program,"uMvp")
         colorHandle = GLES20.glGetUniformLocation(program,"uColor")
         normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
+        glowHandle = GLES20.glGetUniformLocation(program,"uGlow")
         // Keep both sides visible while generated procedural meshes use per-face normals.
         GLES20.glDisable(GLES20.GL_CULL_FACE)
         loadGlbBoard()
@@ -592,13 +596,13 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         for (rank in 0..7) for (file in 0..7) {
             activePieceLift = 0f
             activePieceYaw = 0f
+            activePieceGlow = 0f
             val light = (file+rank)%2==0
             val square = file to rank
             val isSelected = selected == square
             val isTarget = legalTargets.contains(square)
             val isLastMove = previousMove?.let {                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
-            } ?: false
-            val isCheckedKing = checkedKing == square
+            } ?: false            val isCheckedKing = checkedKing == square
             if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
                 drawCube(file-3.5f,if (glbBoardReady) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady) 0.025f else 0.12f,0.98f,
                     if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
@@ -656,6 +660,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 }
                 if (progress >= 1f) animatedMove = null
             }
+            // A subtle pulsing amber emissive highlight identifies the selected piece.
+            activePieceGlow = if (isSelected) {
+                0.45f + 0.22f * kotlin.math.sin(android.os.SystemClock.uptimeMillis() * 0.006).toFloat()
+            } else 0f
             // Use the approved imported Staunton geometry when available.
             if (glbPiecesReady && glbPieceTemplates.containsKey(piece.side to piece.type)) {
                 drawGlbPiece(piece, file, x, z)
@@ -897,8 +905,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                         .asFloatBuffer().apply { put(local); position(0) }
                     val normalBuffer = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder())                        .asFloatBuffer().apply { put(normals); position(0) }
                     val shortIndices = ShortArray(primitive.indices.size) { primitive.indices[it].toShort() }
-                    val indexBuffer = ByteBuffer.allocateDirect(shortIndices.size * 2).order(ByteOrder.nativeOrder())
-                        .asShortBuffer().apply { put(shortIndices); position(0) }
+                    val indexBuffer = ByteBuffer.allocateDirect(shortIndices.size * 2).order(ByteOrder.nativeOrder())                        .asShortBuffer().apply { put(shortIndices); position(0) }
                     val label = node.name.lowercase()
                     val gold = label.contains("brass") || label.contains("bead") ||
                         label.contains("merlon") || label.contains("mitre slit") ||
@@ -938,6 +945,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         Matrix.multiplyMM(mvp, 0, vp, 0, model, 0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvp, 0)
+        GLES20.glUniform1f(glowHandle, activePieceGlow)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(normalHandle)
         for (part in parts) {
@@ -1099,6 +1107,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
+        GLES20.glUniform1f(glowHandle,activePieceGlow)
         GLES20.glUniform4f(colorHandle,r,g,b,alpha.coerceIn(0f,1f))
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,buffer)
@@ -1113,6 +1122,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
+        GLES20.glUniform1f(glowHandle,activePieceGlow)
         GLES20.glUniform4f(colorHandle,r,g,b,1f)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
