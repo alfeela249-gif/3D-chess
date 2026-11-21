@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p app/src/main/assets
           curl --fail --location --retry 3 --retry-delay 2 \\
-            https://raw.githubusercontent.com/alfeela249-gif/3D-chess/main/docs/chess.glb \\
+            https://alfeela249-gif.github.io/3D-chess/chess.glb?v=20261121-2 \\
             --output app/src/main/assets/staunton-chess.glb
           test -s app/src/main/assets/staunton-chess.glb
           echo "Bundled Staunton GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
