@@ -12,6 +12,10 @@ import android.os.Looper
 import org.json.JSONArray
 import org.json.JSONObject
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
+import java.net.URL
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -48,6 +52,7 @@ class MainActivity : Activity() {
     private var soundEnabled = true
     private var toneGenerator: ToneGenerator? = null
     private var profileAvatarPreview: ImageView? = null
+    private var selectedAvatarUri: Uri? = null
     private val profilePrefs by lazy { getSharedPreferences("player_profile", MODE_PRIVATE) }
     private val profileImageRequest = 7314
 
@@ -902,6 +907,7 @@ class MainActivity : Activity() {
             if (!saved.isNullOrBlank()) setImageURI(Uri.parse(saved))
         }
         profileAvatarPreview = avatar
+        selectedAvatarUri = profilePrefs.getString("avatar_uri", null)?.let { Uri.parse(it) }
         panel.addView(avatar, LinearLayout.LayoutParams(dp(104), dp(104)))
         val choosePhoto = makeButton("اختيار صورة من الهاتف أو المعرض", false).apply {
             setOnClickListener {
@@ -926,6 +932,19 @@ class MainActivity : Activity() {
         }
         panel.addView(username)
         panel.addView(nickname)
+        Thread {
+            val remote = auth.loadPlayerProfile()
+            if (remote != null) runOnUiThread {
+                if (username.text.isNullOrBlank()) username.setText(remote.username)
+                if (nickname.text.isNullOrBlank()) nickname.setText(remote.nickname)
+                if (selectedAvatarUri == null && !remote.avatarUrl.isNullOrBlank()) {
+                    Thread {
+                        val bitmap = try { URL(remote.avatarUrl).openStream().use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
+                        if (bitmap != null) runOnUiThread { avatar.setImageBitmap(bitmap) }
+                    }.start()
+                }
+            }
+        }.start()
         AlertDialog.Builder(this).setTitle("ملفي الشخصي").setView(panel)
             .setPositiveButton("حفظ الملف الشخصي") { _, _ ->
                 val user = username.text.toString().trim()
@@ -935,8 +954,23 @@ class MainActivity : Activity() {
                     return@setPositiveButton
                 }
                 status.text = "جارٍ حفظ الملف الشخصي..."
+                val photoUri = selectedAvatarUri
                 Thread {
-                    val result = auth.savePlayerProfile(user, display)
+                    var avatarUrl = auth.loadPlayerProfile()?.avatarUrl
+                    if (photoUri != null) {
+                        val imageBytes = encodeAvatar(photoUri)
+                        if (imageBytes == null) {
+                            runOnUiThread { status.text = "تعذر قراءة الصورة المختارة." }
+                            return@Thread
+                        }
+                        val upload = auth.uploadPlayerAvatar(imageBytes)
+                        if (!upload.first.ok || upload.second == null) {
+                            runOnUiThread { status.text = upload.first.message }
+                            return@Thread
+                        }
+                        avatarUrl = upload.second
+                    }
+                    val result = auth.savePlayerProfile(user, display, avatarUrl)
                     runOnUiThread {
                         status.text = result.message
                         if (result.ok) {
@@ -961,10 +995,27 @@ class MainActivity : Activity() {
             try {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             } catch (_: SecurityException) { }
+            selectedAvatarUri = uri
             profilePrefs.edit().putString("avatar_uri", uri.toString()).apply()
             profileAvatarPreview?.setImageURI(uri)
             Toast.makeText(this, "تم اختيار صورة الملف الشخصي", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun encodeAvatar(uri: Uri): ByteArray? {
+        return try {
+            val source = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
+            val scaled = if (source.width > 512 || source.height > 512) {
+                val ratio = minOf(512f / source.width, 512f / source.height)
+                Bitmap.createScaledBitmap(source, (source.width * ratio).toInt().coerceAtLeast(1),
+                    (source.height * ratio).toInt().coerceAtLeast(1), true)
+            } else source
+            val output = ByteArrayOutputStream()
+            scaled.compress(Bitmap.CompressFormat.JPEG, 86, output)
+            if (scaled !== source) scaled.recycle()
+            source.recycle()
+            output.toByteArray()
+        } catch (_: Exception) { null }
     }
 
     private fun showFriendsDialog() {
