@@ -61,7 +61,7 @@ profile:{title:'ملفي الشخصي',html:`<p>اكتب الاسم الذي ت�
 friends:{title:'الأصدقاء',html:`<p>أضف أسماء أصدقائك إلى قائمة المتابعة على هذا الجهاز.</p><input class="field" id="friendName" maxlength="24" placeholder="اسم الصديق"><button class="dialogBtn" id="addFriend">إضافة صديق</button><div id="friendList" class="setting">لا توجد أسماء مضافة بعد.</div>`},
 wifi:{title:'اللعب مع الأصدقاء عبر Wi-Fi',html:`<p>كوّن مجموعة مع صديقك أو انضم إلى مجموعته. اللعب محلي ولا يحتاج إلى إنترنت.</p>
 <button class="wifiChoice" id="openHotspot"><span class="wifiIcon">♜</span><span><b>إنشاء مجموعة</b><small>افتح نقطة اتصال هاتفك وابدأ مجموعة جديدة</small></span><span class="go">‹</span></button>
-<button class="wifiChoice" id="joinHotspot"><span class="wifiIcon">♞</span><span><b>انضمام للمجموعة</b><small>اتصل بنقطة صديقك وأدخل عنوان المجموعة</small></span><span class="go">‹</span></button>
+<button class="wifiChoice" id="joinHotspot"><span class="wifiIcon">♞</span><span><b>انضمام للمجموعة</b><small>اتصل بنقطة صديقك وابحث تلقائياً عن الغرفة</small></span><span class="go">‹</span></button>
 <div id="wifiDetails" class="wifiInfo" hidden></div><div class="status">معاينة للتصميم والخطوات؛ الاتصال الفعلي يتم من تطبيق Android.</div>`},
 online:{title:'اللعب عبر الإنترنت',html:`<p>اللعب من مدينتين مختلفتين يحتاج خادماً لمزامنة النقلات وربط اللاعبين.</p><div class="status">ميزة اللعب عبر الإنترنت غير مفعّلة في معاينة الويب حالياً. لن نعرض اتصالاً وهمياً أو نعلن عن مباراة غير متصلة.</div>`}
 };
@@ -81,8 +81,8 @@ function wirePage(key){
  if(key==='wifi'){
   const details=document.querySelector('#wifiDetails');
   document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♜ إنشاء مجموعة جديدة</b><small>1. افتح إعدادات نقطة الاتصال في هاتفك. 2. فعّل نقطة الاتصال. 3. ارجع إلى تطبيق 3D Chess لبدء استضافة المباراة. 4. أرسل عنوان IP الظاهر لصديقك ليتمكن من الانضمام.</small><div class="status">ملاحظة: يتطلب Android تفعيل نقطة الاتصال يدوياً في معظم الأجهزة.</div>'};
-  document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♞ الانضمام إلى مجموعة</b><small>1. اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. أدخل عنوان IP الخاص به في تطبيق Android. 3. اضغط انضمام لبدء المباراة.</small><input class="field" id="previewHostIp" placeholder="عنوان المجموعة مثل 192.168.43.1" inputmode="decimal"><button class="dialogBtn" id="previewJoin">متابعة</button><div id="previewJoinStatus" class="status" hidden></div>'};
-  document.querySelector('#previewJoin').onclick=()=>{const ip=document.querySelector('#previewHostIp').value.trim(),status=document.querySelector('#previewJoinStatus');status.hidden=false;status.textContent=ip?'تم إدخال العنوان '+ip+' — أكمل الاتصال الفعلي من تطبيق Android.':'يرجى إدخال عنوان IP أولاً.'};
+  document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♞ الانضمام إلى مجموعة</b><small>1. اتصل بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. اضغط انضمام للمجموعة في تطبيق Android. 3. سيبحث التطبيق تلقائياً عن غرفة صديقك ويتصل بها دون كتابة أي عنوان.</small><div class="status">في تطبيق Android: اضغط انضمام للمجموعة وسيبدأ البحث التلقائي عن الغرفة.</div>'};
+  // معاينة الويب تعرض خطوات البحث فقط؛ اكتشاف UDP والاتصال الفعلي متاحان داخل تطبيق Android.
  }
  if(key==='profile'){
   const input=document.querySelector('#playerName');input.value=localStorage.getItem('chessPlayerName')||'';
