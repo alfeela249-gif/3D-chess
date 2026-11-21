@@ -137,6 +137,13 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         return applied
     }
 
+    fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
+        queueEvent {
+            boardRenderer.setAppearance(whitePiece, blackPiece, lightSquare, darkSquare)
+        }
+        requestRender()
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -448,11 +455,6 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         .order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(cube); position(0) }
     private val indexBuffer = ByteBuffer.allocateDirect(indices.size*2)
         .order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(indices); position(0) }
-
-    fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
-        boardRenderer.setAppearance(whitePiece, blackPiece, lightSquare, darkSquare)
-        requestRender()
-    }
 
     fun setSelection(value: Pair<Int, Int>?, targets: Set<Pair<Int, Int>>) {
         selected = value
