@@ -19,6 +19,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ImageView
 import android.widget.EditText
 import android.app.AlertDialog
 import android.widget.FrameLayout
@@ -46,6 +47,9 @@ class MainActivity : Activity() {
     private var activeMatchStartedAt: Long = 0L
     private var soundEnabled = true
     private var toneGenerator: ToneGenerator? = null
+    private var profileAvatarPreview: ImageView? = null
+    private val profilePrefs by lazy { getSharedPreferences("player_profile", MODE_PRIVATE) }
+    private val profileImageRequest = 7314
 
     private val wood = Color.rgb(10, 10, 12)
     private val gold = Color.rgb(220, 178, 91)
@@ -858,6 +862,10 @@ class MainActivity : Activity() {
         board.isEnabled = true
     }
     private fun showAccountDialog() {
+        if (auth.hasSession()) {
+            showPlayerProfileDialog()
+            return
+        }
         val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         val email = EditText(this).apply { hint = "البريد الإلكتروني"; inputType = 33 }
         val password = EditText(this).apply { hint = "كلمة المرور"; inputType = 129 }
@@ -876,17 +884,95 @@ class MainActivity : Activity() {
             }.show()
     }
 
-    private fun showFriendsDialog() {
-        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
-        val username = EditText(this).apply { hint = "اسم المستخدم (3-20 حرفاً)" }
-        val nickname = EditText(this).apply { hint = "الاسم الظاهر" }
+    private fun showPlayerProfileDialog() {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(12), dp(20), dp(4))
+        }
+        val avatar = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.rgb(42, 34, 22))
+                setStroke(dp(2), gold)
+            }
+            clipToOutline = true
+            val saved = profilePrefs.getString("avatar_uri", null)
+            if (!saved.isNullOrBlank()) setImageURI(Uri.parse(saved))
+        }
+        profileAvatarPreview = avatar
+        panel.addView(avatar, LinearLayout.LayoutParams(dp(104), dp(104)))
+        val choosePhoto = makeButton("اختيار صورة من الهاتف أو المعرض", false).apply {
+            setOnClickListener {
+                val picker = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                }
+                startActivityForResult(picker, profileImageRequest)
+            }
+        }
+        panel.addView(choosePhoto, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(10) })
+        val username = EditText(this).apply {
+            hint = "اسم المستخدم (3-20 حرفاً)"
+            setText(profilePrefs.getString("username", ""))
+            singleLine = true
+        }
+        val nickname = EditText(this).apply {
+            hint = "الاسم الظاهر"
+            setText(profilePrefs.getString("nickname", ""))
+            singleLine = true
+        }
         panel.addView(username)
         panel.addView(nickname)
-        AlertDialog.Builder(this).setTitle("الملف الشخصي والأصدقاء").setView(panel)
-            .setPositiveButton("حفظ اسمي") { _, _ ->
-                runAuth { auth.savePlayerProfile(username.text.toString(), nickname.text.toString().ifBlank { username.text.toString() }) }
+        AlertDialog.Builder(this).setTitle("ملفي الشخصي").setView(panel)
+            .setPositiveButton("حفظ الملف الشخصي") { _, _ ->
+                val user = username.text.toString().trim()
+                val display = nickname.text.toString().trim().ifBlank { user }
+                if (user.length !in 3..20) {
+                    Toast.makeText(this, "اسم المستخدم يجب أن يكون من 3 إلى 20 حرفاً", Toast.LENGTH_LONG).show()
+                    return@setPositiveButton
+                }
+                status.text = "جارٍ حفظ الملف الشخصي..."
+                Thread {
+                    val result = auth.savePlayerProfile(user, display)
+                    runOnUiThread {
+                        status.text = result.message
+                        if (result.ok) {
+                            profilePrefs.edit().putString("username", user).putString("nickname", display).apply()
+                            Toast.makeText(this, "تم حفظ الملف الشخصي", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }.start()
             }
-            .setNeutralButton("إرسال طلب صداقة") { _, _ ->
+            .setNeutralButton("تسجيل الخروج") { _, _ ->
+                auth.signOut()
+                status.text = "تم تسجيل الخروج من الحساب"
+            }
+            .setNegativeButton("إغلاق", null).show()
+    }
+
+    @Deprecated("Use the document picker result for profile photos")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == profileImageRequest && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: SecurityException) { }
+            profilePrefs.edit().putString("avatar_uri", uri.toString()).apply()
+            profileAvatarPreview?.setImageURI(uri)
+            Toast.makeText(this, "تم اختيار صورة الملف الشخصي", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showFriendsDialog() {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
+        val username = EditText(this).apply { hint = "اسم المستخدم لإرسال طلب صداقة" }
+        panel.addView(username)
+        AlertDialog.Builder(this).setTitle("الأصدقاء").setView(panel)
+            .setPositiveButton("إرسال طلب صداقة") { _, _ ->
                 runAuth { auth.sendFriendRequest(username.text.toString()) }
             }
             .setNegativeButton("الأصدقاء والطلبات") { _, _ -> showFriendList() }.show()
