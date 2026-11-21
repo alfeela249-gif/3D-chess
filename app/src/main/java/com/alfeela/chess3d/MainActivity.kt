@@ -48,6 +48,8 @@ class MainActivity : Activity() {
     private var onlinePoll: Runnable? = null
     private var pendingHotspotSettingsReturn = false
     private var activeMatchMode: String? = null
+    private var lastMatchMode: String? = null
+    private var finishDialogShown = false
     private var activeMatchStartedAt: Long = 0L
     private var soundEnabled = true
     private var toneGenerator: ToneGenerator? = null
@@ -522,6 +524,8 @@ class MainActivity : Activity() {
     private fun beginMatch(mode: String) {
         saveActiveMatch()
         activeMatchMode = mode
+        lastMatchMode = mode
+        finishDialogShown = false
         activeMatchStartedAt = System.currentTimeMillis()
     }
 
@@ -1266,11 +1270,112 @@ class MainActivity : Activity() {
 
     private fun updateGameStatus() {
         val game = board.game
-        status.text = when {
-            game.isCheckmate() -> "كش مات • الفائز: ${sideName(game.sideToMove.opposite())}"
-            game.isStalemate() -> "تعادل • لا توجد نقلات قانونية"
-            game.isInCheck(game.sideToMove) -> "كش على الملك • دور ${sideName(game.sideToMove)}"
-            else -> "دور ${sideName(game.sideToMove)} • اختر قطعة ثم مربع الوجهة"
+        when {
+            game.isCheckmate() -> {
+                val winner = game.sideToMove.opposite()
+                status.text = "كش مات • الفائز: ${sideName(winner)}"
+                if (!finishDialogShown) showMatchFinishedDialog(winner, false)
+            }
+            game.isStalemate() -> {
+                status.text = "تعادل • لا توجد نقلات قانونية"
+                if (!finishDialogShown) showMatchFinishedDialog(null, true)
+            }
+            game.isInCheck(game.sideToMove) -> status.text = "كش على الملك • دور ${sideName(game.sideToMove)}"
+            else -> status.text = "دور ${sideName(game.sideToMove)} • اختر قطعة ثم مربع الوجهة"
+        }
+    }
+
+    private fun showMatchFinishedDialog(winner: Side?, draw: Boolean) {
+        finishDialogShown = true
+        saveActiveMatch()
+        val localWon = winner != null && winner == board.localSide
+        val heading = when {
+            draw -> "تعادل!"
+            localWon -> "مبروك! لقد انتصرت 🏆"
+            else -> "انتهت المباراة • هزيمة"
+        }
+        val detail = if (draw) "انتهت المباراة بالتعادل." else
+            "الفائز: ${sideName(winner!!)}\n${if (localWon) "أحسنت اللعب!" else "حظاً أوفر في المباراة القادمة."}"
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(12), dp(20), dp(8))
+            background = rounded(Color.rgb(20, 17, 13), gold, 1)
+        }
+        val emblem = TextView(this).apply {
+            text = if (draw) "🤝" else if (localWon) "♛" else "♟"
+            textSize = 48f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+        }
+        panel.addView(emblem, LinearLayout.LayoutParams(-1, dp(66)))
+        val message = TextView(this).apply {
+            text = detail
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(cream)
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setPadding(0, dp(6), 0, dp(10))
+        }
+        panel.addView(message, LinearLayout.LayoutParams(-1, -2))
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(heading)
+            .setView(panel)
+            .setNeutralButton("العودة إلى الصفحة الرئيسية", null)
+            .setNegativeButton("مراجعة المباراة السابقة", null)
+            .setPositiveButton("مباراة جديدة", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
+                dialog.dismiss()
+                stopOnlinePolling()
+                lan.close()
+                setContentView(homeRoot)
+                status = homeStatus
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener {
+                dialog.dismiss()
+                showMoveHistory()
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                dialog.dismiss()
+                startAnotherMatch()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun startAnotherMatch() {
+        val mode = lastMatchMode ?: activeMatchMode ?: "computer"
+        beginMatch(mode)
+        board.resetBoard()
+        finishDialogShown = false
+        when (mode) {
+            "computer" -> {
+                playVsComputer = true
+                onlineMode = false
+                lan.close()
+                board.localSide = Side.WHITE
+                status.text = "مباراة جديدة • أنت الأبيض والكمبيوتر الأسود"
+            }
+            "wifi" -> {
+                playVsComputer = false
+                onlineMode = false
+                lan.send("RESET")
+                status.text = "مباراة جديدة • دور الأبيض"
+            }
+            "online" -> {
+                playVsComputer = false
+                onlineMode = true
+                onlineMoves = JSONArray()
+                val roomId = onlineRoomId
+                if (roomId != null) Thread {
+                    val result = auth.submitOnlineMoves(roomId, onlineMoves, "white")
+                    runOnUiThread { if (!result.ok) status.text = result.message }
+                }.start()
+                status.text = "مباراة جديدة • دور الأبيض"
+            }
+            else -> status.text = "مباراة جديدة • دور الأبيض"
         }
     }
 
