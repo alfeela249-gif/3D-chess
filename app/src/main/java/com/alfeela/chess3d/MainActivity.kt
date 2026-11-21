@@ -505,48 +505,147 @@ class MainActivity : Activity() {
     }
 
     private fun showLanDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("اللعب مع صديق عبر نقطة الاتصال")
-            .setMessage("اختر طريقة الاتصال:\n• افتح نقطة الاتصال في هاتفك ليكون هو المضيف.\n• أو انضم إلى نقطة اتصال صديقك بإدخال عنوان IP الخاص به.\nلا تحتاج المباراة إلى إنترنت.")
-            .setPositiveButton("فتح نقطة اتصال") { _, _ ->
-                pendingHotspotSettingsReturn = true
-                try {
-                    startActivity(Intent("android.settings.TETHER_SETTINGS"))
-                } catch (_: Exception) {
-                    try {
-                        startActivity(Intent("android.settings.SETTINGS"))
-                    } catch (_: Exception) {
-                        pendingHotspotSettingsReturn = false
-                        status.text = "افتح إعدادات الهاتف ثم نقطة الاتصال ومشاركة الإنترنت"
-                    }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(22))
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(5, 6, 8), Color.rgb(25, 20, 14), Color.rgb(7, 8, 10)))
+        }
+        val back = makeButton("‹  القائمة الرئيسية", false).apply {
+            textSize = 13f
+            setOnClickListener { setContentView(homeRoot); status = homeStatus }
+        }
+        root.addView(back, LinearLayout.LayoutParams(-1, dp(46)))
+        val emblem = TextView(this).apply {
+            text = "♟"
+            textSize = 48f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+        }
+        root.addView(emblem, LinearLayout.LayoutParams(-1, dp(76)))
+        root.addView(TextView(this).apply {
+            text = "اللعب مع الأصدقاء"
+            textSize = 25f
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-1, dp(42)))
+        root.addView(TextView(this).apply {
+            text = "اتصل بصديقك والعبا معاً عبر Wi-Fi دون الحاجة إلى الإنترنت"
+            textSize = 13f
+            setTextColor(Color.rgb(190, 177, 153))
+            gravity = Gravity.CENTER
+            setPadding(dp(8), 0, dp(8), 0)
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+
+        fun optionCard(icon: String, titleText: String, description: String, action: () -> Unit): LinearLayout {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), dp(16), dp(16), dp(16))
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(37, 30, 21), Color.rgb(19, 18, 17))).apply {
+                    cornerRadius = dp(18).toFloat()
+                    setStroke(dp(1), Color.rgb(126, 94, 49))
+                }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { action() }
+                elevation = dp(3).toFloat()
+            }
+            val symbol = TextView(this).apply {
+                text = icon
+                textSize = 34f
+                gravity = Gravity.CENTER
+                setTextColor(gold)
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(14).toFloat()
+                    setColor(Color.rgb(54, 42, 27))
                 }
             }
-            .setNegativeButton("انضمام إلى نقطة اتصال") { _, _ ->
-                val ip = EditText(this).apply { hint = "عنوان IP للمضيف مثل 192.168.43.1" }
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("الانضمام إلى صديق")
-                    .setMessage("اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi، ثم أدخل عنوان IP الذي يظهر على هاتفه.")
-                    .setView(ip)
-                    .setPositiveButton("اتصال") { _, _ ->
-                        val address = ip.text.toString().trim()
-                        if (address.isNotEmpty()) {
-                            stopOnlinePolling()
-                            playVsComputer = false
-                            board.localSide = Side.BLACK
-                            board.resetBoard()
-                            board.isEnabled = false
-                            status.text = "جارٍ الاتصال بنقطة اتصال الصديق..."
-                            lan.join(address)
-                            showGameScreen()
-                        } else {
-                            status.text = "أدخل عنوان IP صحيحاً للاتصال"
-                        }
-                    }
-                    .setNegativeButton("إلغاء", null)
-                    .show()
+            card.addView(symbol, LinearLayout.LayoutParams(dp(62), dp(66)))
+            val texts = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), 0, 0, 0)
             }
-            .setNeutralButton("إغلاق", null)
-            .show()
+            texts.addView(TextView(this).apply {
+                text = titleText
+                textSize = 18f
+                typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                setTextColor(Color.rgb(239, 211, 158))
+            })
+            texts.addView(TextView(this).apply {
+                text = description
+                textSize = 12f
+                setTextColor(Color.rgb(194, 184, 166))
+                setPadding(0, dp(5), 0, 0)
+            })
+            card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+            card.addView(TextView(this).apply {
+                text = "‹"
+                textSize = 27f
+                setTextColor(gold)
+            }, LinearLayout.LayoutParams(dp(24), -2))
+            return card
+        }
+
+        val create = optionCard("♜", "إنشاء مجموعة", "افتح نقطة اتصال هاتفك وكن قائد المجموعة") {
+            pendingHotspotSettingsReturn = true
+            try {
+                startActivity(Intent("android.settings.TETHER_SETTINGS"))
+            } catch (_: Exception) {
+                try { startActivity(Intent("android.settings.SETTINGS")) }
+                catch (_: Exception) {
+                    pendingHotspotSettingsReturn = false
+                    Toast.makeText(this, "افتح إعدادات الهاتف ثم نقطة الاتصال", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        root.addView(create, LinearLayout.LayoutParams(-1, dp(112)).apply {
+            topMargin = dp(20)
+        })
+        val join = optionCard("♞", "انضمام للمجموعة", "أدخل عنوان المجموعة للاتصال بصديقك") {
+            val ip = EditText(this).apply {
+                hint = "عنوان IP للمضيف مثل 192.168.43.1"
+                setSingleLine(true)
+                setTextColor(cream)
+                setHintTextColor(Color.GRAY)
+            }
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("الانضمام إلى المجموعة")
+                .setMessage("اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi، ثم أدخل عنوان IP الذي يظهر على هاتفه.")
+                .setView(ip)
+                .setPositiveButton("انضمام") { _, _ ->
+                    val address = ip.text.toString().trim()
+                    if (address.isNotEmpty()) {
+                        stopOnlinePolling()
+                        playVsComputer = false
+                        board.localSide = Side.BLACK
+                        board.resetBoard()
+                        board.isEnabled = false
+                        status.text = "جارٍ الاتصال بالمجموعة..."
+                        lan.join(address)
+                        showGameScreen()
+                    } else {
+                        Toast.makeText(this, "أدخل عنوان IP للمجموعة", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("إلغاء", null)
+                .show()
+        }
+        root.addView(join, LinearLayout.LayoutParams(-1, dp(112)).apply {
+            topMargin = dp(12)
+        })
+        root.addView(TextView(this).apply {
+            text = "✦  اتصال محلي آمن وبسيط  ✦"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(166, 143, 105))
+            setPadding(0, dp(24), 0, 0)
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        setContentView(root)
     }
 
     private fun startLanHost() {
