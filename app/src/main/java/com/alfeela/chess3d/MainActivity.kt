@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     private var onlineMoves = JSONArray()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var onlinePoll: Runnable? = null
+    private var pendingHotspotSettingsReturn = false
 
     private val wood = Color.rgb(10, 10, 12)
     private val gold = Color.rgb(220, 178, 91)
@@ -521,26 +522,26 @@ class MainActivity : Activity() {
 
     private fun showLanDialog() {
         AlertDialog.Builder(this)
-            .setTitle("اللعب مع الأصدقاء بدون إنترنت")
-            .setMessage("1) اتصل أنت وصديقك بشبكة Wi-Fi نفسها أو Hotspot.\n2) المضيف يختار إنشاء مباراة ويرسل عنوان IP الظاهر له.\n3) الصديق يختار انضمام ويدخل العنوان.\nلن تبدأ الحركة حتى يتصل الهاتفان بنجاح.")
-            .setPositiveButton("إنشاء مباراة • الأبيض") { _, _ ->
-                stopOnlinePolling()
-                playVsComputer = false
-                board.localSide = Side.WHITE
-                board.resetBoard()
-                board.isEnabled = false
-                lan.host()
-                showGameScreen()
-                val address = localWifiAddress()
-                status.text = if (address != null)
-                    "أنت الأبيض • أعطِ صديقك العنوان $address والمنفذ 45454"
-                else "أنت الأبيض • تعذر قراءة عنوان Wi-Fi؛ تأكد من اتصال الهاتف بالشبكة أو نقطة الاتصال"
+            .setTitle("اللعب مع صديق عبر نقطة الاتصال")
+            .setMessage("اختر طريقة الاتصال:\n• افتح نقطة الاتصال في هاتفك ليكون هو المضيف.\n• أو انضم إلى نقطة اتصال صديقك بإدخال عنوان IP الخاص به.\nلا تحتاج المباراة إلى إنترنت.")
+            .setPositiveButton("فتح نقطة اتصال") { _, _ ->
+                pendingHotspotSettingsReturn = true
+                try {
+                    startActivity(Intent("android.settings.TETHER_SETTINGS"))
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent("android.settings.SETTINGS"))
+                    } catch (_: Exception) {
+                        pendingHotspotSettingsReturn = false
+                        status.text = "افتح إعدادات الهاتف ثم نقطة الاتصال ومشاركة الإنترنت"
+                    }
+                }
             }
-            .setNegativeButton("انضمام • الأسود") { _, _ ->
-                val ip = EditText(this).apply { hint = "عنوان IP للمضيف مثل 192.168.1.10" }
+            .setNegativeButton("انضمام إلى نقطة اتصال") { _, _ ->
+                val ip = EditText(this).apply { hint = "عنوان IP للمضيف مثل 192.168.43.1" }
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("الاتصال بصديقك")
-                    .setMessage("أدخل عنوان IP للهاتف الذي أنشأ المباراة.")
+                    .setTitle("الانضمام إلى صديق")
+                    .setMessage("اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi، ثم أدخل عنوان IP الذي يظهر على هاتفه.")
                     .setView(ip)
                     .setPositiveButton("اتصال") { _, _ ->
                         val address = ip.text.toString().trim()
@@ -550,7 +551,7 @@ class MainActivity : Activity() {
                             board.localSide = Side.BLACK
                             board.resetBoard()
                             board.isEnabled = false
-                            status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
+                            status.text = "جارٍ الاتصال بنقطة اتصال الصديق..."
                             lan.join(address)
                             showGameScreen()
                         } else {
@@ -562,6 +563,29 @@ class MainActivity : Activity() {
             }
             .setNeutralButton("إغلاق", null)
             .show()
+    }
+
+    private fun startLanHost() {
+        stopOnlinePolling()
+        playVsComputer = false
+        board.localSide = Side.WHITE
+        board.resetBoard()
+        board.isEnabled = false
+        lan.host()
+        showGameScreen()
+        val address = localWifiAddress()
+        status.text = if (address != null)
+            "نقطة الاتصال جاهزة • أنت الأبيض • أرسل لصديقك $address • المنفذ 45454"
+        else
+            "تم فتح المباراة • فعّل نقطة الاتصال ثم أرسل لصديقك عنوان IP الظاهر في تفاصيلها"
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && pendingHotspotSettingsReturn) {
+            pendingHotspotSettingsReturn = false
+            startLanHost()
+        }
     }
 
     private fun showOnlineDialog() {
