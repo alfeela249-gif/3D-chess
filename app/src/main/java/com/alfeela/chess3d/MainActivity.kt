@@ -61,7 +61,13 @@ class MainActivity : Activity() {
                     }
                     status.text = when {
                         message.startsWith("Waiting for opponent") ->
-                            "بانتظار الصديق • عنوانك ${localWifiAddress() ?: "غير متاح"} • المنفذ 45454"
+                            "غرفتك جاهزة • بانتظار انضمام الصديق عبر البحث التلقائي"
+                        message == "Searching for nearby rooms" ->
+                            "جارٍ البحث عن غرف 3D Chess على شبكة Wi-Fi المتصلة..."
+                        message.startsWith("Found room at") ->
+                            "تم العثور على الغرفة • جارٍ الاتصال تلقائياً..."
+                        message == "Discovery timeout: no room found" ->
+                            "لم نعثر على غرفة • تأكد من اتصالك بنقطة اتصال صديقك وأنه بدأ المجموعة، ثم حاول مجدداً"
                         message == "Opponent connected" -> "تم اتصال الصديق بنجاح عبر Wi-Fi"
                         message == "Connection closed by opponent" -> "انقطع اتصال الصديق • تحقق من الشبكة ثم أعد إنشاء المباراة"
                         message.startsWith("Connection lost:") -> "انقطع اتصال Wi-Fi: ${message.substringAfter(":").trim()}"
@@ -607,34 +613,15 @@ class MainActivity : Activity() {
         root.addView(create, LinearLayout.LayoutParams(-1, dp(112)).apply {
             topMargin = dp(20)
         })
-        val join = optionCard("♞", "انضمام للمجموعة", "أدخل عنوان المجموعة للاتصال بصديقك") {
-            val ip = EditText(this).apply {
-                hint = "عنوان IP للمضيف مثل 192.168.43.1"
-                setSingleLine(true)
-                setTextColor(cream)
-                setHintTextColor(Color.GRAY)
-            }
-            AlertDialog.Builder(this@MainActivity)
-                .setTitle("الانضمام إلى المجموعة")
-                .setMessage("اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi، ثم أدخل عنوان IP الذي يظهر على هاتفه.")
-                .setView(ip)
-                .setPositiveButton("انضمام") { _, _ ->
-                    val address = ip.text.toString().trim()
-                    if (address.isNotEmpty()) {
-                        stopOnlinePolling()
-                        playVsComputer = false
-                        board.localSide = Side.BLACK
-                        board.resetBoard()
-                        board.isEnabled = false
-                        status.text = "جارٍ الاتصال بالمجموعة..."
-                        lan.join(address)
-                        showGameScreen()
-                    } else {
-                        Toast.makeText(this, "أدخل عنوان IP للمجموعة", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .setNegativeButton("إلغاء", null)
-                .show()
+        val join = optionCard("♞", "انضمام للمجموعة", "ابحث تلقائياً عن غرفة صديقك عبر Wi-Fi") {
+            stopOnlinePolling()
+            playVsComputer = false
+            board.localSide = Side.BLACK
+            board.resetBoard()
+            board.isEnabled = false
+            status.text = "جارٍ البحث عن غرف قريبة..."
+            showGameScreen()
+            lan.discoverAndJoin()
         }
         root.addView(join, LinearLayout.LayoutParams(-1, dp(112)).apply {
             topMargin = dp(12)
@@ -659,9 +646,9 @@ class MainActivity : Activity() {
         showGameScreen()
         val address = localWifiAddress()
         status.text = if (address != null)
-            "نقطة الاتصال جاهزة • أنت الأبيض • أرسل لصديقك $address • المنفذ 45454"
+            "نقطة الاتصال جاهزة • أنت الأبيض • سيعثر عليك صديقك تلقائياً عند البحث"
         else
-            "تم فتح المباراة • فعّل نقطة الاتصال ثم أرسل لصديقك عنوان IP الظاهر في تفاصيلها"
+            "تم فتح المباراة • فعّل نقطة الاتصال؛ سيعثر عليك صديقك تلقائياً عبر البحث"
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
