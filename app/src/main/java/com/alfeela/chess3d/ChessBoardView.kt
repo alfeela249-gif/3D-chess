@@ -204,7 +204,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val currentX = pointerCenterX(event)
                     val currentY = pointerCenterY(event)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy(-(currentX-lastRotateX)*0.006f*cameraTouchSensitivity)
+                    val dx = (currentX - lastRotateX).coerceIn(-80f, 80f)
+                    val dy = (currentY - lastRotateY).coerceIn(-80f, 80f)
+                    boardRenderer.rotateBy(-dx * 0.0045f * cameraTouchSensitivity)
+                    if (kotlin.math.abs(dy) > 0.5f) {
+                        boardRenderer.tiltBy(dy * 0.10f * cameraTouchSensitivity)
+                    }
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
                         boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f*cameraTouchSensitivity)
                     }
@@ -222,8 +227,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         oneFingerCameraDrag = true
                         cameraGestureConsumed = true
                         downSquare = null
-                        boardRenderer.rotateBy(-dx * 0.006f * cameraTouchSensitivity)
-                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(dy * 0.229f * cameraTouchSensitivity)
+                        val smoothDx = dx.coerceIn(-80f, 80f)
+                        val smoothDy = dy.coerceIn(-60f, 60f)
+                        boardRenderer.rotateBy(-smoothDx * 0.0045f * cameraTouchSensitivity)
+                        if (kotlin.math.abs(smoothDy) > 1.5f) {
+                            boardRenderer.tiltBy(smoothDy * 0.12f * cameraTouchSensitivity)
+                        }
                         requestRender()
                     }
                     lastTouchX = event.x
@@ -439,7 +448,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         val elapsed = if (lastCameraFrameNanos == 0L) 16_000_000L
             else (now - lastCameraFrameNanos).coerceIn(1_000_000L, 50_000_000L)
         lastCameraFrameNanos = now
-        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 55_000_000.0)).toFloat()
+        // A shorter response constant reduces the feeling of the camera dragging
+        // behind the finger while retaining frame-rate-independent easing.
+        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 38_000_000.0)).toFloat()
         boardRotation += (targetBoardRotation - boardRotation) * alpha
         cameraDistance += (targetCameraDistance - cameraDistance) * alpha
         cameraElevation += (targetCameraElevation - cameraElevation) * alpha
