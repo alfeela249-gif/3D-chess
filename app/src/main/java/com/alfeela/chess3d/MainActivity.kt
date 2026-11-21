@@ -70,6 +70,14 @@ class MainActivity : Activity() {
             onMessage = { message -> runOnUiThread { handleNetworkMessage(message) } }
         )
         board = ChessBoardView(this)
+        getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
+            board.setAppearance(
+                prefs.getInt("white_piece", Color.rgb(240,230,210)),
+                prefs.getInt("black_piece", Color.rgb(9,9,11)),
+                prefs.getInt("light_square", Color.WHITE),
+                prefs.getInt("dark_square", Color.rgb(133,139,149))
+            )
+        }
         board.onMove = { move ->
             if (onlineMode) {
                 val moveJson = JSONObject().put("ff", move.fromFile).put("fr", move.fromRank)
