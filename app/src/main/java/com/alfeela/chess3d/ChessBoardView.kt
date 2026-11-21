@@ -1,6 +1,7 @@
 package com.alfeela.chess3d
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.opengl.GLSurfaceView
 import android.opengl.GLES20
 import android.opengl.Matrix
@@ -15,7 +16,7 @@ import javax.microedition.khronos.opengles.GL10
 
 class ChessBoardView(context: Context) : GLSurfaceView(context) {
     val game = ChessGame()
-    private val boardRenderer = BoardRenderer(game)
+    private val boardRenderer = BoardRenderer(game, context.assets)
     var localSide: Side = Side.WHITE
     var onMove: ((ChessMove) -> Unit)? = null
     var onPromotionRequested: ((Side, (PieceType) -> Unit) -> Unit)? = null
@@ -326,7 +327,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 }
 
-private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Renderer {
+private class BoardRenderer(private val game: ChessGame, private val assets: AssetManager) : GLSurfaceView.Renderer {
+    private data class GlbBoardMesh(val vertices: FloatBuffer, val normals: FloatBuffer, val indices: java.nio.ShortBuffer, val count: Int, val color: FloatArray)
+    private val glbBoardMeshes = ArrayList<GlbBoardMesh>()
+    @Volatile private var glbBoardReady = false
     private val projection = FloatArray(16)
     private val view = FloatArray(16)
     private val vp = FloatArray(16)
@@ -542,6 +546,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
         // Keep both sides visible while generated procedural meshes use per-face normals.
         GLES20.glDisable(GLES20.GL_CULL_FACE)
+        loadGlbBoard()
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
@@ -573,6 +578,9 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         // Thick polished black plinth gives the board a real raised edge.
         drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,0.025f,0.028f,0.032f)
         drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,0.11f,0.105f,0.10f)
+        // The approved GLB supplies the actual 64 square meshes when its asset
+        // is present. Procedural squares remain the safe fallback on load errors.
+        if (glbBoardReady) drawGlbBoard()
         val previousMove = game.lastMove
         val checkedKing = if (game.isInCheck(game.sideToMove)) {
             (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
@@ -589,10 +597,12 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
             } ?: false
             val isCheckedKing = checkedKing == square
-            drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
-                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else green(if (light) lightSquareColor else darkSquareColor),
-                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else blue(if (light) lightSquareColor else darkSquareColor))
+            if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
+                drawCube(file-3.5f,if (glbBoardReady) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady) 0.025f else 0.12f,0.98f,
+                    if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
+                    if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else green(if (light) lightSquareColor else darkSquareColor),
+                    if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else blue(if (light) lightSquareColor else darkSquareColor))
+            }
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
@@ -727,6 +737,113 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             activePieceScaleX = 1f
             activePieceScaleY = 1f
             activePieceScaleZ = 1f
+        }
+    }
+
+    /**
+     * Load the approved GLB board-square geometry into GLES20 buffers.
+     * glTF/Blendstra uses Z-up; this renderer uses Y-up, so coordinates are
+     * converted from (X,Y,Z) to (X,Z,Y) after the node transform.
+     */
+    private fun loadGlbBoard() {
+        glbBoardMeshes.clear()
+        glbBoardReady = false
+        try {
+            val bytes = assets.open("staunton-chess.glb").use { it.readBytes() }
+            val scene = GlbAsset.parse(bytes)
+            for (node in scene.nodes) {
+                if (!node.name.startsWith("Board square", ignoreCase = true)) continue
+                val mesh = scene.meshes.getOrNull(node.mesh) ?: continue
+                for (primitive in mesh.primitives) {
+                    if (primitive.positions.size < 9 || primitive.indices.size < 3 || primitive.indices.any { it !in 0 until primitive.positions.size / 3 }) continue
+                    val transformed = FloatArray(primitive.positions.size)
+                    val source = primitive.positions
+                    for (i in source.indices step 3) {
+                        val x = source[i]; val y = source[i + 1]; val z = source[i + 2]
+                        val p = transformGlbPoint(node, x, y, z)
+                        transformed[i] = p[0]
+                        transformed[i + 1] = p[2] // source Z becomes renderer Y
+                        transformed[i + 2] = p[1] // source Y becomes renderer Z
+                    }
+                    val normals = FloatArray(transformed.size)
+                    if (primitive.normals != null && primitive.normals.size == normals.size) {
+                        for (i in primitive.normals.indices step 3) {
+                            val nx = primitive.normals[i]; val ny = primitive.normals[i + 1]; val nz = primitive.normals[i + 2]
+                            normals[i] = nx; normals[i + 1] = nz; normals[i + 2] = ny
+                        }
+                    } else {
+                        for (i in primitive.indices.indices step 3) {
+                            if (i + 2 >= primitive.indices.size) break
+                            val a = primitive.indices[i] * 3; val b = primitive.indices[i + 1] * 3; val c = primitive.indices[i + 2] * 3
+                            val ux = transformed[b]-transformed[a]; val uy = transformed[b+1]-transformed[a+1]; val uz = transformed[b+2]-transformed[a+2]
+                            val vx = transformed[c]-transformed[a]; val vy = transformed[c+1]-transformed[a+1]; val vz = transformed[c+2]-transformed[a+2]
+                            var nx = uy*vz-uz*vy; var ny = uz*vx-ux*vz; var nz = ux*vy-uy*vx
+                            val len = kotlin.math.sqrt(nx*nx+ny*ny+nz*nz).coerceAtLeast(0.00001f)
+                            nx/=len; ny/=len; nz/=len
+                            for (v in intArrayOf(a,b,c)) { normals[v]=nx; normals[v+1]=ny; normals[v+2]=nz }
+                        }
+                    }
+                    if (primitive.indices.any { it > 65535 }) continue
+                    val vb = ByteBuffer.allocateDirect(transformed.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(transformed); position(0) }
+                    val nb = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(normals); position(0) }
+                    val shorts = ShortArray(primitive.indices.size) { primitive.indices[it].toShort() }
+                    val ib = ByteBuffer.allocateDirect(shorts.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(shorts); position(0) }
+                    var cx = 0f; var cz = 0f
+                    for (i in transformed.indices step 3) { cx += transformed[i]; cz += transformed[i+2] }
+                    val vertexCount = transformed.size / 3
+                    cx /= vertexCount; cz /= vertexCount
+                    val file = kotlin.math.floor(cx + 4f).toInt().coerceIn(0, 7)
+                    val rank = kotlin.math.floor(cz + 4f).toInt().coerceIn(0, 7)
+                    val isLight = (file + rank) % 2 == 0
+                    val color = if (isLight) floatArrayOf(0.78f,0.70f,0.55f,1f) else floatArrayOf(0.075f,0.065f,0.055f,1f)
+                    glbBoardMeshes.add(GlbBoardMesh(vb, nb, ib, shorts.size, color))
+                }
+            }
+            glbBoardReady = glbBoardMeshes.size >= 56
+            android.util.Log.i("3DChess", "GLB board loaded: ${glbBoardMeshes.size} square primitives")
+        } catch (error: Exception) {
+            glbBoardMeshes.clear()
+            glbBoardReady = false
+            android.util.Log.e("3DChess", "GLB board load failed; using procedural board", error)
+        }
+    }
+
+    private fun transformGlbPoint(node: GlbAsset.Node, x: Float, y: Float, z: Float): FloatArray {
+        val matrix = node.matrix
+        if (matrix != null && matrix.size == 16) {
+            return floatArrayOf(
+                matrix[0]*x + matrix[4]*y + matrix[8]*z + matrix[12],
+                matrix[1]*x + matrix[5]*y + matrix[9]*z + matrix[13],
+                matrix[2]*x + matrix[6]*y + matrix[10]*z + matrix[14]
+            )
+        }
+        val sx = x * node.scale.getOrElse(0) { 1f }
+        val sy = y * node.scale.getOrElse(1) { 1f }
+        val sz = z * node.scale.getOrElse(2) { 1f }
+        val qx = node.rotation.getOrElse(0) { 0f }; val qy = node.rotation.getOrElse(1) { 0f }
+        val qz = node.rotation.getOrElse(2) { 0f }; val qw = node.rotation.getOrElse(3) { 1f }
+        val ix = qw*sx + qy*sz - qz*sy
+        val iy = qw*sy + qz*sx - qx*sz
+        val iz = qw*sz + qx*sy - qy*sx
+        val iw = -qx*sx - qy*sy - qz*sz
+        val rx = ix*qw + iw*(-qx) + iy*(-qz) - iz*(-qy)
+        val ry = iy*qw + iw*(-qy) + iz*(-qx) - ix*(-qz)
+        val rz = iz*qw + iw*(-qz) + ix*(-qy) - iy*(-qx)
+        return floatArrayOf(rx + node.translation.getOrElse(0) { 0f }, ry + node.translation.getOrElse(1) { 0f }, rz + node.translation.getOrElse(2) { 0f })
+    }
+
+    private fun drawGlbBoard() {
+        GLES20.glUseProgram(program)
+        Matrix.setIdentityM(model, 0)
+        Matrix.multiplyMM(mvp, 0, vp, 0, model, 0)
+        GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvp, 0)
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glEnableVertexAttribArray(normalHandle)
+        for (mesh in glbBoardMeshes) {
+            GLES20.glUniform4f(colorHandle, mesh.color[0], mesh.color[1], mesh.color[2], mesh.color[3])
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.vertices)
+            GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.normals)
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.count, GLES20.GL_UNSIGNED_SHORT, mesh.indices)
         }
     }
 
