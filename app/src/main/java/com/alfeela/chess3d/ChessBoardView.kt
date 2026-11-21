@@ -72,6 +72,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun zoomCamera(delta: Float) { boardRenderer.zoomBy(delta); requestRender() }
     fun tiltCamera(delta: Float) { boardRenderer.tiltBy(delta); requestRender() }
     fun resetCamera() { boardRenderer.resetCamera(); requestRender() }
+    fun set2DMode(enabled: Boolean) { boardRenderer.set2DMode(enabled); requestRender() }
+    fun is2DMode(): Boolean = boardRenderer.is2DMode()
 
     private fun squareAt(x: Float, y: Float): Pair<Int, Int>? =
         boardRenderer.squareAt(x, y, width, height)
@@ -230,9 +232,9 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val dx = (currentX - lastRotateX).coerceIn(-width.toFloat(), width.toFloat())
                     val dy = (currentY - lastRotateY).coerceIn(-height.toFloat(), height.toFloat())
                     val minDimension = minOf(width, height).coerceAtLeast(1).toFloat()
-                    boardRenderer.rotateBy(dx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
-                    if (kotlin.math.abs(dy) > 0.5f) {
-                        boardRenderer.tiltBy(dy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
+                    if (!boardRenderer.is2DMode()) {
+                        boardRenderer.rotateBy(dx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
+                        if (kotlin.math.abs(dy) > 0.5f) boardRenderer.tiltBy(dy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                     }
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
                         boardRenderer.zoomBy((lastPointerSpan-currentSpan) * 0.045f * cameraTouchSensitivity)
@@ -254,9 +256,9 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         // Avoid clipping normal swipe events; clipping caused fast drags to lose movement.
                         val dragDx = dx.coerceIn(-width.toFloat(), width.toFloat())
                         val dragDy = dy.coerceIn(-height.toFloat(), height.toFloat())
-                        boardRenderer.rotateBy(dragDx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
-                        if (kotlin.math.abs(dragDy) > 0.5f) {
-                            boardRenderer.tiltBy(dragDy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
+                        if (!boardRenderer.is2DMode()) {
+                            boardRenderer.rotateBy(dragDx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
+                            if (kotlin.math.abs(dragDy) > 0.5f) boardRenderer.tiltBy(dragDy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                         }
                         requestRender()
                     }
@@ -390,6 +392,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var targetBoardRotation = 0f
     @Volatile private var targetCameraDistance = 17.0f
     @Volatile private var targetCameraElevation = 38f
+    @Volatile private var is2D = false
     private var lastCameraFrameNanos = 0L
     @Volatile private var whitePieceColor = 0xF0E6D2.toInt()
     @Volatile private var blackPieceColor = 0x09090B
@@ -405,6 +408,18 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         darkSquareColor = darkSquare
     }
     fun setPieceStyle(style: Int) { pieceStyle = style.coerceIn(0, 2) }
+    fun is2DMode(): Boolean = is2D
+    fun set2DMode(enabled: Boolean) {
+        is2D = enabled
+        if (enabled) {
+            targetBoardRotation = 0f
+            targetCameraElevation = 89.5f
+        } else {
+            targetBoardRotation = 0f
+            targetCameraElevation = 38f
+            targetCameraDistance = 17f
+        }
+    }
     private fun red(color: Int) = android.graphics.Color.red(color) / 255f
     private fun green(color: Int) = android.graphics.Color.green(color) / 255f
     private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
@@ -433,14 +448,20 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         val viewProjection = FloatArray(16)
         val inverse = FloatArray(16)
         val aspect = screenWidth.toFloat() / screenHeight.toFloat()
-        Matrix.perspectiveM(p, 0, 36f, aspect, 0.1f, 60f)
         val distance = cameraDistance
-        val elevation = Math.toRadians(cameraElevation.toDouble())
-        Matrix.setLookAtM(v, 0, 0f,
-            distance * kotlin.math.sin(elevation).toFloat(),
-            distance * kotlin.math.cos(elevation).toFloat(),
-            0f, 0.25f, 0f, 0f, 1f, 0f)
-        Matrix.rotateM(v, 0, Math.toDegrees(boardRotation.toDouble()).toFloat(), 0f, 1f, 0f)
+        if (is2D) {
+            val halfHeight = 5.15f * (distance / 17f).coerceIn(0.55f, 1.75f)
+            Matrix.orthoM(p, 0, -halfHeight * aspect, halfHeight * aspect, -halfHeight, halfHeight, 0.1f, 60f)
+            Matrix.setLookAtM(v, 0, 0f, distance, 0f, 0f, 0f, 0f, 0f, 0f, -1f)
+        } else {
+            Matrix.perspectiveM(p, 0, 36f, aspect, 0.1f, 60f)
+            val elevation = Math.toRadians(cameraElevation.toDouble())
+            Matrix.setLookAtM(v, 0, 0f,
+                distance * kotlin.math.sin(elevation).toFloat(),
+                distance * kotlin.math.cos(elevation).toFloat(),
+                0f, 0.25f, 0f, 0f, 1f, 0f)
+            Matrix.rotateM(v, 0, Math.toDegrees(boardRotation.toDouble()).toFloat(), 0f, 1f, 0f)
+        }
         Matrix.multiplyMM(viewProjection, 0, p, 0, v, 0)
         if (!Matrix.invertM(inverse, 0, viewProjection, 0)) return null
 
@@ -474,9 +495,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         val rank = kotlin.math.floor(boardZ + 4f).toInt()
         return if (file in 0..7 && rank in 0..7) file to rank else null
     }
-    fun rotateBy(delta: Float) { targetBoardRotation += delta }
+    fun rotateBy(delta: Float) { if (!is2D) targetBoardRotation += delta }
     fun tiltBy(delta: Float) {
-        targetCameraElevation = (targetCameraElevation + delta).coerceIn(24f, 62f)
+        if (!is2D) targetCameraElevation = (targetCameraElevation + delta).coerceIn(24f, 62f)
     }
     fun zoomBy(delta: Float) {
         targetCameraDistance = (targetCameraDistance + delta).coerceIn(8f, 30f)
@@ -603,7 +624,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
 
     private fun updateProjection() {
         val aspect = viewportWidth.toFloat() / viewportHeight.coerceAtLeast(1)
-        Matrix.perspectiveM(projection, 0, 36f, aspect, 0.1f, 60f)
+        if (is2D) {
+            val halfHeight = 5.15f * (cameraDistance / 17f).coerceIn(0.55f, 1.75f)
+            Matrix.orthoM(projection, 0, -halfHeight * aspect, halfHeight * aspect, -halfHeight, halfHeight, 0.1f, 60f)
+        } else Matrix.perspectiveM(projection, 0, 36f, aspect, 0.1f, 60f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -612,12 +636,16 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glClearColor(red(sceneBackgroundColor), green(sceneBackgroundColor), blue(sceneBackgroundColor), 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         val distance = cameraDistance
-        val elevation = Math.toRadians(cameraElevation.toDouble())
-        Matrix.setLookAtM(view,0,0f,
-            distance*kotlin.math.sin(elevation).toFloat(),
-            distance*kotlin.math.cos(elevation).toFloat(),
-            0f,0.25f,0f,0f,1f,0f)
-        Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
+        if (is2D) {
+            Matrix.setLookAtM(view, 0, 0f, distance, 0f, 0f, 0f, 0f, 0f, 0f, -1f)
+        } else {
+            val elevation = Math.toRadians(cameraElevation.toDouble())
+            Matrix.setLookAtM(view,0,0f,
+                distance*kotlin.math.sin(elevation).toFloat(),
+                distance*kotlin.math.cos(elevation).toFloat(),
+                0f,0.25f,0f,0f,1f,0f)
+            Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
+        }
         Matrix.multiplyMM(vp,0,projection,0,view,0)
         // Thick polished black plinth gives the board a real raised edge.
         drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,0.025f,0.028f,0.032f)
