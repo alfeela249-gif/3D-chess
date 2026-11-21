@@ -59,8 +59,8 @@ const key=new THREE.DirectionalLight(0xffd99a,3.4);key.position.set(-7,12,8);key
 const rim=new THREE.DirectionalLight(0x8fa9d8,1.5);rim.position.set(7,7,-8);scene.add(rim);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x171513,roughness:.92}));floor.rotation.x=-Math.PI/2;floor.position.y=-.16;floor.receiveShadow=true;scene.add(floor);
 const board=new THREE.Group();scene.add(board);
-const dark=new THREE.MeshStandardMaterial({color:0x777e88,roughness:.32,metalness:.08});
-const light=new THREE.MeshStandardMaterial({color:0xf1f2f4,roughness:.38,metalness:.02});
+const dark=new THREE.MeshStandardMaterial({color:0x858b95,roughness:.32,metalness:.08});
+const light=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.38,metalness:.02});
 const edgeMat=new THREE.MeshStandardMaterial({color:0x6c6b68,metalness:.55,roughness:.24});
 const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),new THREE.MeshStandardMaterial({color:0x101012,roughness:.3,metalness:.35}));base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
 const trim=new THREE.Mesh(new THREE.BoxGeometry(8.58,.09,8.58),edgeMat);trim.position.y=-.2;board.add(trim);
