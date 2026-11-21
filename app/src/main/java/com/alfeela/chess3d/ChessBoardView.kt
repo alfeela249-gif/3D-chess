@@ -164,8 +164,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val currentX = pointerCenterX(event)
                     val currentY = pointerCenterY(event)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy((currentX-lastRotateX)*0.012f)
-                    boardRenderer.tiltBy((lastRotateY-currentY)*0.22f)
+                    boardRenderer.rotateBy((currentX-lastRotateX)*0.009f)
+                    boardRenderer.tiltBy((lastRotateY-currentY)*0.15f)
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
                         boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f)
                     }
@@ -183,8 +183,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         oneFingerCameraDrag = true
                         cameraGestureConsumed = true
                         downSquare = null
-                        boardRenderer.rotateBy(dx * 0.012f)
-                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(-dy * 0.22f)
+                        boardRenderer.rotateBy(dx * 0.009f)
+                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(-dy * 0.15f)
                         requestRender()
                     }
                     lastTouchX = event.x
@@ -292,9 +292,14 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
     @Volatile private var animatedMove: ChessMove? = null
     @Volatile private var animationStart = 0L
+    // Current camera values are eased toward touch-controlled targets on the GL thread.
     @Volatile private var boardRotation = 0f
     @Volatile private var cameraDistance = 15.0f
     @Volatile private var cameraElevation = 38f
+    @Volatile private var targetBoardRotation = 0f
+    @Volatile private var targetCameraDistance = 15.0f
+    @Volatile private var targetCameraElevation = 38f
+    private var lastCameraFrameNanos = 0L
     private val animationDuration = 520L
     private var activePieceLift = 0f
 
@@ -355,10 +360,34 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         val rank = kotlin.math.floor(boardZ + 4f).toInt()
         return if (file in 0..7 && rank in 0..7) file to rank else null
     }
-    fun rotateBy(delta: Float) { boardRotation += delta }
-    fun tiltBy(delta: Float) { cameraElevation = (cameraElevation + delta).coerceIn(24f, 62f) }
-    fun zoomBy(delta: Float) { cameraDistance = (cameraDistance + delta).coerceIn(9.5f, 22f) }
-    fun resetCamera() { boardRotation = 0f; cameraDistance = 15.0f; cameraElevation = 38f }
+    fun rotateBy(delta: Float) { targetBoardRotation += delta }
+    fun tiltBy(delta: Float) {
+        targetCameraElevation = (targetCameraElevation + delta).coerceIn(24f, 62f)
+    }
+    fun zoomBy(delta: Float) {
+        targetCameraDistance = (targetCameraDistance + delta).coerceIn(9.5f, 22f)
+    }
+    fun resetCamera() {
+        targetBoardRotation = 0f
+        targetCameraDistance = 15.0f
+        targetCameraElevation = 38f
+    }
+
+    // Frame-rate-independent damped interpolation removes touch-event jitter
+    // while preserving responsive camera control on both 60 Hz and faster displays.
+    private fun smoothCameraMotion() {
+        val now = System.nanoTime()
+        val elapsed = if (lastCameraFrameNanos == 0L) 16_000_000L
+            else (now - lastCameraFrameNanos).coerceIn(1_000_000L, 50_000_000L)
+        lastCameraFrameNanos = now
+        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 55_000_000.0)).toFloat()
+        boardRotation += (targetBoardRotation - boardRotation) * alpha
+        cameraDistance += (targetCameraDistance - cameraDistance) * alpha
+        cameraElevation += (targetCameraElevation - cameraElevation) * alpha
+        if (kotlin.math.abs(targetBoardRotation - boardRotation) < 0.00005f) boardRotation = targetBoardRotation
+        if (kotlin.math.abs(targetCameraDistance - cameraDistance) < 0.001f) cameraDistance = targetCameraDistance
+        if (kotlin.math.abs(targetCameraElevation - cameraElevation) < 0.005f) cameraElevation = targetCameraElevation
+    }
 
     fun animateMove(move: ChessMove) { animatedMove = move; animationStart = android.os.SystemClock.uptimeMillis() }
     fun isAnimating(): Boolean = animatedMove != null
@@ -439,6 +468,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        smoothCameraMotion()
         updateProjection()
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         val distance = cameraDistance
