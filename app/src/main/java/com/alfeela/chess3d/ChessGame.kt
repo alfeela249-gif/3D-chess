@@ -94,7 +94,7 @@ class ChessGame {
         val movingPiece = if (inside(move.fromFile, move.fromRank))
             squares[move.fromRank][move.fromFile] else null
         val normalizedMove = if (movingPiece?.type == PieceType.PAWN &&
-            move.toRank == if (movingPiece.side == Side.WHITE) 0 else 7 &&
+            move.toRank == (if (movingPiece.side == Side.WHITE) 0 else 7) &&
             move.promotion == null) move.copy(promotion = PieceType.QUEEN) else move
         if (normalizedMove !in legalMoves()) return false
         applyUnchecked(normalizedMove)
