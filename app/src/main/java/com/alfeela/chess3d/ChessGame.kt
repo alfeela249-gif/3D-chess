@@ -27,9 +27,16 @@ class ChessGame {
     var lastMove: ChessMove? = null
         private set
     private val history = mutableListOf<ChessMove>()
+    private val capturesBySide = mutableMapOf(
+        Side.WHITE to mutableListOf<ChessPiece>(),
+        Side.BLACK to mutableListOf<ChessPiece>()
+    )
 
     @Synchronized
     fun moveHistory(): List<ChessMove> = history.toList()
+
+    @Synchronized
+    fun capturedPieces(capturedBy: Side): List<ChessPiece> = capturesBySide[capturedBy]?.toList() ?: emptyList()
 
     init { reset() }
 
@@ -50,6 +57,7 @@ class ChessGame {
         enPassant = null
         lastMove = null
         history.clear()
+        capturesBySide.values.forEach { it.clear() }
     }
 
     @Synchronized
@@ -260,6 +268,7 @@ class ChessGame {
     private fun applyUnchecked(move: ChessMove) {
         val piece = squares[move.fromRank][move.fromFile] ?: return
         val captured = squares[move.toRank][move.toFile]
+        if (captured != null) capturesBySide[piece.side]?.add(captured)
         if (piece.type == PieceType.KING) {
             if (piece.side == Side.WHITE) { whiteKingSide = false; whiteQueenSide = false }
             else { blackKingSide = false; blackQueenSide = false }
@@ -276,6 +285,7 @@ class ChessGame {
         if (piece.type == PieceType.PAWN && enPassant == Pair(move.toFile, move.toRank) &&
             move.fromFile != move.toFile && captured == null) {
             val capturedRank = move.toRank + if (piece.side == Side.WHITE) 1 else -1
+            squares[capturedRank][move.toFile]?.let { capturesBySide[piece.side]?.add(it) }
             squares[capturedRank][move.toFile] = null
         }
         squares[move.toRank][move.toFile] = if (piece.type == PieceType.PAWN && move.toRank in listOf(0, 7))
