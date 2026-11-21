@@ -19,6 +19,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     private val boardRenderer = BoardRenderer(game, context.assets)
     var localSide: Side = Side.WHITE
     var onMove: ((ChessMove) -> Unit)? = null
+    var onSound: ((String) -> Unit)? = null
     var onPromotionRequested: ((Side, (PieceType) -> Unit) -> Unit)? = null
     private var selected: Pair<Int, Int>? = null
     private var downSquare: Pair<Int, Int>? = null
@@ -82,12 +83,24 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 
     private fun completeMove(move: ChessMove) {
+        val captured = game.pieceAt(move.toFile, move.toRank) != null
         if (game.makeMove(move)) {
+            notifyMoveSound(captured)
             selected = null
             boardRenderer.setSelection(null, emptySet())
             animate(move)
             onMove?.invoke(move)
         }
+    }
+
+    private fun notifyMoveSound(captured: Boolean) {
+        val event = when {
+            game.isCheckmate() -> "mate"
+            game.isInCheck(game.sideToMove) -> "check"
+            captured -> "capture"
+            else -> "move"
+        }
+        onSound?.invoke(event)
     }
 
     private fun refreshSelection() {
@@ -142,22 +155,25 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 
     fun applySyncedMove(move: ChessMove): Boolean {
+        val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
         return applied
     }
 
     fun applyComputerMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
+        val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
         return applied
     }
 
     fun applyRemoteMove(move: ChessMove): Boolean {
         if (game.sideToMove == localSide) return false
+        val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
         return applied
     }
 
