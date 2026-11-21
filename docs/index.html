@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0b0d"><title>3D Chess — معاينة التطوير</title>
+<style>
+:root{color-scheme:dark;--gold:#d9ad62;--muted:#b9ad98;--panel:#171614;--line:#5b472a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#382a19 0,#11100f 45%,#08090b 100%);color:#f4ead8;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+header{padding:18px 20px 12px;max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:Georgia,serif;letter-spacing:3px;font-weight:800;font-size:clamp(20px,4vw,30px)}.brand span{color:var(--gold)}.sub{color:var(--muted);font-size:12px;margin-top:5px}
+.pill{border:1px solid var(--line);border-radius:99px;padding:7px 12px;color:#e8c98d;font-size:12px;white-space:nowrap}
+main{max-width:1100px;margin:auto;padding:8px 16px 30px}.intro{text-align:center;margin:12px 0 18px}.intro h1{font-size:clamp(22px,4vw,34px);margin:0 0 7px;font-family:Georgia,serif}.intro p{margin:0;color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:14px;align-items:stretch}
+.stage{position:relative;min-height:430px;height:min(67vh,650px);border:1px solid #6b512b;border-radius:18px;overflow:hidden;background:linear-gradient(145deg,#171512,#08090c);box-shadow:0 20px 65px #0009}
+canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+.overlay{position:absolute;top:12px;right:12px;left:12px;display:flex;justify-content:space-between;pointer-events:none;gap:8px}.tag{background:#090909b8;border:1px solid #78603a88;color:#e8cf9d;border-radius:9px;padding:7px 10px;font-size:11px;backdrop-filter:blur(8px)}
+.hint{position:absolute;bottom:12px;right:12px;background:#090909bd;color:#e6d7bd;border:1px solid #66502d88;border-radius:10px;padding:8px 12px;font-size:12px;pointer-events:none}
+.panel{background:linear-gradient(160deg,#1c1a17,#101012);border:1px solid #493b27;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-size:16px;margin:0;color:#e7c889}.group{border-top:1px solid #393127;padding-top:12px}.group:first-of-type{border:0;padding:0}
+.label{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#e7ddca;margin-bottom:9px}.value{color:var(--gold);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:#d9ad62;direction:ltr}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+button{background:linear-gradient(#3a2d1c,#211b13);border:1px solid #806239;color:#f5dfb7;border-radius:10px;padding:11px 8px;font:inherit;font-size:13px;cursor:pointer;min-height:42px}
+button:active{transform:scale(.98)}button.secondary{background:#19191a;border-color:#4b4439;color:#e4d8c5}
+.switch{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#e7ddca}.switch input{accent-color:#d9ad62;width:18px;height:18px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:#0d0d0f;border:1px solid #383127;border-radius:10px;padding:10px}.stat small{display:block;color:#a99b84;font-size:11px}.stat b{display:block;color:#e9c984;font-size:18px;margin-top:3px;font-variant-numeric:tabular-nums}
+.note{font-size:11px;line-height:1.7;color:#a99f8f;margin:0}
+footer{text-align:center;color:#817967;font-size:11px;padding:14px}
+@media(max-width:760px){header{padding:14px}.layout{grid-template-columns:1fr}.stage{height:55vh;min-height:340px}.panel{display:grid;grid-template-columns:1fr 1fr;gap:12px}.panel h2,.note{grid-column:1/-1}.actions{grid-column:1/-1}.group{border-top:1px solid #393127;padding-top:10px}.stats{grid-column:1/-1}}
+@media(max-width:390px){.panel{grid-template-columns:1fr}.panel h2,.note,.actions,.stats{grid-column:auto}}
+</style></head>
+<body>
+<header><div><div class="brand">3D <span>CHESS</span></div><div class="sub">معاينة تفاعلية لتطوير الكاميرا والرسومات</div></div><div class="pill">نسخة ويب تجريبية</div></header>
+<main>
+<section class="intro"><h1>استكشف الرقعة من كل زاوية</h1><p>حرّك الكاميرا باللمس أو بالفأرة، وجرّب إعدادات السلاسة مباشرة دون تثبيت APK.</p></section>
+<div class="layout">
+<div class="stage" id="stage"><div class="overlay"><span class="tag">مشهد ثلاثي الأبعاد تفاعلي</span><span class="tag" id="modeTag">تنعيم الحركة: مفعّل</span></div><div class="hint">اسحب للتدوير • إصبعان للتقريب والإمالة</div></div>
+<aside class="panel">
+<h2>إعدادات الكاميرا</h2>
+<div class="group"><div class="label"><span>سرعة الدوران</span><span class="value" id="rotVal">1.0×</span></div><input id="rot" type="range" min=".3" max="2" step=".1" value="1"></div>
+<div class="group"><div class="label"><span>نعومة الحركة</span><span class="value" id="smoothVal">55 ms</span></div><input id="smooth" type="range" min="20" max="180" step="5" value="55"></div>
+<div class="group"><div class="label"><span>زاوية الكاميرا</span><span class="value" id="tiltVal">38°</span></div><input id="tilt" type="range" min="24" max="62" step="1" value="38"></div>
+<div class="group"><div class="label"><span>مسافة الكاميرا</span><span class="value" id="zoomVal">15.0</span></div><input id="zoom" type="range" min="9.5" max="22" step=".5" value="15"></div>
+<div class="actions"><button id="reset">إعادة ضبط الكاميرا</button><button id="spin" class="secondary">دوران تلقائي</button><button id="smoothToggle" class="secondary">إيقاف التنعيم</button><button id="home" class="secondary">زاوية أمامية</button></div>
+<div class="stats"><div class="stat"><small>معدل الإطارات</small><b id="fps">— FPS</b></div><div class="stat"><small>حالة العرض</small><b id="renderState">نشط</b></div></div>
+<p class="note">هذه صفحة معاينة مستقلة للكاميرا ومظهر الرقعة على المتصفح. لا تمثل تشغيل نسخة Android نفسها، وقد يختلف الأداء حسب الجهاز والمتصفح.</p>
+</aside>
+</div></main><footer>3D Chess • صفحة مراجعة التطوير — لا حاجة لتنزيل اللعبة للتجربة</footer>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const stage=document.querySelector('#stage');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x090a0c);scene.fog=new THREE.Fog(0x090a0c,24,48);
+const camera=new THREE.PerspectiveCamera(36,1,.1,100);let azimuth=0,elevation=38*Math.PI/180,distance=15;
+let targetAz=azimuth,targetEl=elevation,targetDist=distance,smooth=true,spin=false,speed=1,smoothMs=55,last=performance.now(),frames=0,fpsTime=last;
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;stage.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xdce6ff,0x342313,2.0));
+const key=new THREE.DirectionalLight(0xffd99a,3.4);key.position.set(-7,12,8);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
+const rim=new THREE.DirectionalLight(0x8fa9d8,1.5);rim.position.set(7,7,-8);scene.add(rim);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x171513,roughness:.92}));floor.rotation.x=-Math.PI/2;floor.position.y=-.16;floor.receiveShadow=true;scene.add(floor);
+const board=new THREE.Group();scene.add(board);
+const dark=new THREE.MeshStandardMaterial({color:0x30251a,roughness:.32,metalness:.25});
+const light=new THREE.MeshStandardMaterial({color:0xd8c6a4,roughness:.48,metalness:.12});
+const edgeMat=new THREE.MeshStandardMaterial({color:0x8b642e,metalness:.72,roughness:.28});
+const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),new THREE.BoxGeometry?dark:dark);base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
+const trim=new THREE.Mesh(new THREE.BoxGeometry(8.58,.09,8.58),edgeMat);trim.position.y=-.2;board.add(trim);
+for(let z=0;z<8;z++)for(let x=0;x<8;x++){const tile=new THREE.Mesh(new THREE.BoxGeometry(.99,.12,.99),(x+z)%2?dark:light);tile.position.set(x-3.5,.19,z-3.5);tile.receiveShadow=true;tile.castShadow=true;board.add(tile)}
+function mat(color,metal=0.55,rough=.28){return new THREE.MeshStandardMaterial({color,metalness:metal,roughness:rough})}
+function lathe(points,m){const mesh=new THREE.Mesh(new THREE.LatheGeometry(points.map(p=>new THREE.Vector2(...p)),48),m);mesh.castShadow=true;mesh.receiveShadow=true;return mesh}
+function sphere(r,m,y){const o=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),m);o.position.y=y;o.castShadow=true;return o}
+function makePiece(type,material){
+ const g=new THREE.Group(),goldLine=edgeMat;
+ const profile=[[0,.08],[.3,.08],[.34,.13],[.29,.19],[.23,.22],[.19,.28],[.16,.48],[.22,.55],[.24,.61],[.18,.66],[.13,.7]];
+ g.add(lathe(profile,material));
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.27,.035,10,40),goldLine);ring.rotation.x=Math.PI/2;ring.position.y=.16;g.add(ring);
+ if(type==='pawn'){g.add(sphere(.16,material,.84));}
+ if(type==='rook'){const cap=new THREE.Mesh(new THREE.CylinderGeometry(.23,.18,.22,12),material);cap.position.y=.82;g.add(cap);for(let i=0;i<8;i++){let a=i*Math.PI/4;let b=new THREE.Mesh(new THREE.BoxGeometry(.1,.16,.13),material);b.position.set(Math.cos(a)*.18,.98,Math.sin(a)*.18);g.add(b)}}
+ if(type==='bishop'){g.add(lathe([[0,.69],[.17,.72],[.13,.82],[.09,.96],[.04,1.05],[0,1.12]],material));g.add(sphere(.08,edgeMat,1.12));}
+ if(type==='queen'){g.add(lathe([[0,.69],[.2,.73],[.17,.84],[.12,.94],[.22,1.02],[.2,1.08]],material));for(let i=0;i<5;i++){let a=i*Math.PI*2/5;g.add(sphere(.075,edgeMat,1.12));g.children[g.children.length-1].position.x=Math.cos(a)*.19;g.children[g.children.length-1].position.z=Math.sin(a)*.19;}g.add(sphere(.07,edgeMat,1.22));}
+ if(type==='king'){g.add(lathe([[0,.69],[.18,.74],[.13,.88],[.1,1.03],[.16,1.1]],material));const v=new THREE.Mesh(new THREE.BoxGeometry(.07,.48,.07),edgeMat);v.position.y=1.28;g.add(v);const h=new THREE.Mesh(new THREE.BoxGeometry(.28,.07,.07),edgeMat);h.position.y=1.32;g.add(h);}
+ if(type==='knight'){const head=new THREE.Mesh(new THREE.ConeGeometry(.23,.58,5),material);head.position.set(0,.93,0);head.rotation.z=-.35;g.add(head);const ear=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),material);ear.position.set(.08,1.2,0);g.add(ear);}
+ return g;
+}
+const gold=mat(0xc18a3e,.82,.22),silver=mat(0x9da8b8,.78,.24);
+const back=['rook','knight','bishop','queen','king','bishop','knight','rook'];
+for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],silver],[1,'pawn',silver],[6,'pawn',gold],[7,back[x],gold]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);board.add(p)}}
+function cameraUpdate(dt){if(spin)targetAz+=dt*.25*speed;const a=smooth?1-Math.exp(-dt/(smoothMs/1000)):1;azimuth+=(targetAz-azimuth)*a;elevation+=(targetEl-elevation)*a;distance+=(targetDist-distance)*a;const ce=Math.cos(elevation);camera.position.set(Math.sin(azimuth)*distance*ce,Math.sin(elevation)*distance,Math.cos(azimuth)*distance*ce);camera.lookAt(0,.25,0)}
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
+function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;cameraUpdate(dt);renderer.render(scene,camera);frames++;if(now-fpsTime>600){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsTime))+' FPS';frames=0;fpsTime=now}}requestAnimationFrame(animate);
+const rot=document.querySelector('#rot'),sm=document.querySelector('#smooth'),tilt=document.querySelector('#tilt'),zoom=document.querySelector('#zoom');
+rot.oninput=()=>{speed=+rot.value;document.querySelector('#rotVal').textContent=speed.toFixed(1)+'×'};
+sm.oninput=()=>{smoothMs=+sm.value;document.querySelector('#smoothVal').textContent=smoothMs+' ms'};
+tilt.oninput=()=>{targetEl=+tilt.value*Math.PI/180;document.querySelector('#tiltVal').textContent=tilt.value+'°'};
+zoom.oninput=()=>{targetDist=+zoom.value;document.querySelector('#zoomVal').textContent=targetDist.toFixed(1)};
+function sync(){tilt.value=Math.round(targetEl*180/Math.PI);zoom.value=targetDist;document.querySelector('#tiltVal').textContent=tilt.value+'°';document.querySelector('#zoomVal').textContent=targetDist.toFixed(1)}
+document.querySelector('#reset').onclick=()=>{targetAz=0;targetEl=38*Math.PI/180;targetDist=15;spin=false;document.querySelector('#spin').textContent='دوران تلقائي';sync()};
+document.querySelector('#home').onclick=()=>{targetAz=0;targetEl=30*Math.PI/180;targetDist=13;sync()};
+document.querySelector('#spin').onclick=e=>{spin=!spin;e.currentTarget.textContent=spin?'إيقاف الدوران':'دوران تلقائي'};
+document.querySelector('#smoothToggle').onclick=e=>{smooth=!smooth;e.currentTarget.textContent=smooth?'إيقاف التنعيم':'تشغيل التنعيم';document.querySelector('#modeTag').textContent='تنعيم الحركة: '+(smooth?'مفعّل':'متوقف')};
+let pointers=new Map(),lastX=0,lastY=0,lastSpan=0;
+renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){lastX=e.clientX;lastY=e.clientY}else lastSpan=span()});
+function span(){const p=[...pointers.values()];return p.length<2?0:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){targetAz-=(e.clientX-prev.x)*.006*speed;targetEl=Math.max(.38,Math.min(1.08,targetEl+(e.clientY-prev.y)*.004*speed));sync()}else{const s=span();targetAz-=(e.clientX-prev.x)*.0025*speed;targetDist=Math.max(9.5,Math.min(22,targetDist+(lastSpan-s)*.018));lastSpan=s;sync()}});
+function end(e){pointers.delete(e.pointerId);lastSpan=span()}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();targetDist=Math.max(9.5,Math.min(22,targetDist+e.deltaY*.01));sync()},{passive:false});
+</script></body></html>
