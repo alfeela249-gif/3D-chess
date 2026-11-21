@@ -131,7 +131,7 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setPadding(dp(14), dp(8), dp(14), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(5, 6, 8), Color.rgb(19, 17, 14), Color.rgb(5, 6, 8))
@@ -150,28 +150,30 @@ class MainActivity : Activity() {
         val profileBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(Color.rgb(20, 19, 17), Color.rgb(104, 82, 48), 1)
-            setPadding(dp(14), dp(5), dp(10), dp(5))
+            background = rounded(Color.rgb(8, 8, 9), Color.rgb(224, 180, 94), 1)
+            setPadding(dp(8), dp(5), dp(8), dp(5))
         }
-        val profile = TextView(this).apply {
-            text = "♙  ملف اللاعب"
-            setTextColor(cream)
-            textSize = 14f
-            typeface = Typeface.create("serif", Typeface.BOLD)
-        }
-        profileBar.addView(profile, LinearLayout.LayoutParams(0, dp(40), 1f))
-        fun quickAction(symbol: String, action: () -> Unit) {
+        fun profileAction(label: String, width: Float = 1f, action: () -> Unit) {
             val item = TextView(this).apply {
-                text = symbol
-                textSize = 21f
+                text = label
+                textSize = 14f
                 gravity = Gravity.CENTER
-                setTextColor(gold)
+                setTextColor(Color.rgb(255, 240, 188))
+                typeface = Typeface.create("serif", Typeface.BOLD)
                 setOnClickListener { action() }
             }
-            profileBar.addView(item, LinearLayout.LayoutParams(dp(44), dp(42)))
+            barProfileAdd(item, width)
         }
-        quickAction("♟") { showFriendsDialog() }
-        quickAction("⚙") { showSettingsDialog() }
+        fun barProfileAdd(item: View, weight: Float) {
+            profileBar.addView(item, LinearLayout.LayoutParams(0, dp(42), weight))
+        }
+        profileAction("♙  ملفي") { showProfileDialog() }
+        profileBar.addView(View(this).apply { setBackgroundColor(Color.rgb(119, 89, 45)) },
+            LinearLayout.LayoutParams(dp(1), dp(30)))
+        profileAction("♟  أصدقائي") { showFriendsDialog() }
+        profileBar.addView(View(this).apply { setBackgroundColor(Color.rgb(119, 89, 45)) },
+            LinearLayout.LayoutParams(dp(1), dp(30)))
+        profileAction("⚙", 0.7f) { showSettingsDialog() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
 
         val hero = LinearLayout(this).apply {
@@ -191,7 +193,7 @@ class MainActivity : Activity() {
         val crown = TextView(this).apply {
             text = "♔     ♕"
             setTextColor(Color.rgb(255, 211, 112))
-            textSize = 48f
+            textSize = 54f
             gravity = Gravity.CENTER
             typeface = Typeface.create("serif", Typeface.BOLD)
             setShadowLayer(13f, 0f, 11f, Color.rgb(91, 51, 12))
@@ -200,33 +202,35 @@ class MainActivity : Activity() {
             translationZ = dp(12).toFloat()
             elevation = dp(12).toFloat()
         }
-        hero.addView(crown, LinearLayout.LayoutParams(-1, dp(62)))
+        hero.addView(crown, LinearLayout.LayoutParams(-1, dp(76)))
         val title = TextView(this).apply {
             text = "3D CHESS"
             setTextColor(cream)
-            textSize = 29f
+            textSize = 34f
             letterSpacing = 0.18f
             typeface = Typeface.create("serif", Typeface.BOLD)
             gravity = Gravity.CENTER
         }
-        hero.addView(title, LinearLayout.LayoutParams(-1, dp(42)))
+        hero.addView(title, LinearLayout.LayoutParams(-1, dp(48)))
         val subtitle = TextView(this).apply {
             text = "مملكة الشطرنج • تحدَّ أصدقاءك واصنع انتصارك"
             setTextColor(Color.rgb(211, 178, 119))
-            textSize = 12f
+            textSize = 13f
             gravity = Gravity.CENTER
         }
-        hero.addView(subtitle, LinearLayout.LayoutParams(-1, dp(28)))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(174)).apply {
-            topMargin = dp(12)
+        hero.addView(subtitle, LinearLayout.LayoutParams(-1, dp(30)))
+        content.addView(hero, LinearLayout.LayoutParams(-1, dp(194)).apply {
+            topMargin = dp(16)
             bottomMargin = dp(8)
         })
 
         status = TextView(this).apply {
-            text = "اختر طريقة اللعب"
+            text = "— اختر طريقة اللعب —"
             setTextColor(cream)
-            textSize = 13f
+            textSize = 18f
             gravity = Gravity.CENTER
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setTextColor(Color.rgb(224, 180, 94))
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
         homeStatus = status
@@ -287,7 +291,7 @@ class MainActivity : Activity() {
 
         val savedDepth = getSharedPreferences("game_settings", MODE_PRIVATE).getInt("computer_depth", 3)
         val savedLevel = when (savedDepth) { 1 -> "سهل"; 4 -> "صعب"; 5 -> "خبير"; else -> "متوسط" }
-        val computerTile = homeTile("♟", "العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت", true) {
+        val computerTile = homeTile("♟", "العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت") {
             stopOnlinePolling()
             beginMatch("computer")
             playVsComputer = true
@@ -314,7 +318,7 @@ class MainActivity : Activity() {
         addHomeAction(homeTile("🌐", "اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
         }, 72)
-        addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت", true) {
+        addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت") {
             showMatchHistory()
         }, 72)
 
