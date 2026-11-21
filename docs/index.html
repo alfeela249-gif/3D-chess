@@ -58,9 +58,11 @@ scene.add(new THREE.HemisphereLight(0xdce6ff,0x342313,2.0));
 const key=new THREE.DirectionalLight(0xffd99a,3.4);key.position.set(-7,12,8);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
 const rim=new THREE.DirectionalLight(0x8fa9d8,1.5);rim.position.set(7,7,-8);scene.add(rim);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x171513,roughness:.92}));floor.rotation.x=-Math.PI/2;floor.position.y=-.16;floor.receiveShadow=true;scene.add(floor);
+const savedAppearance=(()=>{try{return JSON.parse(localStorage.getItem('chessSettings')||'{}')}catch{return {}}})();
+const colorChoices={white:{'عاجي':0xeee5d2,'أبيض ناصع':0xffffff,'ذهبي':0xd7aa42,'أزرق جليدي':0xaedcf2},black:{'أسود لامع':0x09090b,'كحلي':0x101b3d,'أحمر داكن':0x641c28,'أخضر زمردي':0x075c45},light:{'أبيض':0xffffff,'عاجي':0xf2e8d5,'رمادي فاتح':0xd5d8df,'أزرق ثلجي':0xd9efff},dark:{'رمادي':0x858b95,'فحمي':0x30343b,'أزرق داكن':0x243b59,'بني خشبي':0x65452e}};
 const board=new THREE.Group();scene.add(board);
-const dark=new THREE.MeshStandardMaterial({color:0x858b95,roughness:.32,metalness:.08});
-const light=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.38,metalness:.02});
+const dark=new THREE.MeshStandardMaterial({color:colorChoices.dark[savedAppearance.dark]??0x858b95,roughness:.32,metalness:.08});
+const light=new THREE.MeshStandardMaterial({color:colorChoices.light[savedAppearance.light]??0xffffff,roughness:.38,metalness:.02});
 const edgeMat=new THREE.MeshStandardMaterial({color:0x6c6b68,metalness:.55,roughness:.24});
 const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),new THREE.MeshStandardMaterial({color:0x101012,roughness:.3,metalness:.35}));base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
 const trim=new THREE.Mesh(new THREE.BoxGeometry(8.58,.09,8.58),edgeMat);trim.position.y=-.2;board.add(trim);
@@ -132,7 +134,7 @@ function makePiece(type,material){
  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
  return g;
 }
-const black=mat(0x09090b,.22,.16),ivory=mat(0xeee5d2,.08,.26);
+const black=mat(colorChoices.black[savedAppearance.black]??0x09090b,.22,.16),ivory=mat(colorChoices.white[savedAppearance.white]??0xeee5d2,.08,.26);
 const back=['rook','knight','bishop','queen','king','bishop','knight','rook'];
 for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[6,'pawn',black],[7,back[x],black]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);if(type==='knight')p.rotation.y=(m===ivory?1:-1)*Math.PI/2;board.add(p)}}
 function cameraUpdate(dt){if(spin)targetAz+=dt*.25*speed;const a=smooth?1-Math.exp(-dt/(smoothMs/1000)):1;azimuth+=(targetAz-azimuth)*a;elevation+=(targetEl-elevation)*a;distance+=(targetDist-distance)*a;const ce=Math.cos(elevation);camera.position.set(Math.sin(azimuth)*distance*ce,Math.sin(elevation)*distance,Math.cos(azimuth)*distance*ce);camera.lookAt(0,.25,0)}
