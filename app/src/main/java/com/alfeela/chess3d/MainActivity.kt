@@ -394,20 +394,92 @@ class MainActivity : Activity() {
         val gameStatus = TextView(this).apply { setTextColor(cream); textSize = 14f; gravity = Gravity.CENTER; text = homeStatus.text; setPadding(dp(4), dp(8), dp(4), dp(8)) }
         status = gameStatus
         gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
+        val boardArea = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val capturedPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+        }
+        val whiteCaptures = TextView(this).apply {
+            text = "—"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(246, 239, 222))
+            typeface = Typeface.create("serif", Typeface.BOLD)
+        }
+        val blackCaptures = TextView(this).apply {
+            text = "—"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(205, 205, 205))
+            typeface = Typeface.create("serif", Typeface.BOLD)
+        }
+        capturedPanel.addView(TextView(this).apply {
+            text = "أسر الأبيض"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+        }, LinearLayout.LayoutParams(-1, dp(28)))
+        capturedPanel.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        capturedPanel.addView(View(this).apply { setBackgroundColor(Color.rgb(100, 77, 44)) },
+            LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(6); bottomMargin = dp(6) })
+        capturedPanel.addView(TextView(this).apply {
+            text = "أسر الأسود"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+        }, LinearLayout.LayoutParams(-1, dp(28)))
+        capturedPanel.addView(blackCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        board.onCapturedPiecesChanged = { white, black ->
+            fun symbols(pieces: List<ChessPiece>): String = if (pieces.isEmpty()) "—" else
+                pieces.joinToString(" ") { piece ->
+                    when (piece.type) {
+                        PieceType.PAWN -> if (piece.side == Side.WHITE) "♙" else "♟"
+                        PieceType.ROOK -> if (piece.side == Side.WHITE) "♖" else "♜"
+                        PieceType.KNIGHT -> if (piece.side == Side.WHITE) "♘" else "♞"
+                        PieceType.BISHOP -> if (piece.side == Side.WHITE) "♗" else "♝"
+                        PieceType.QUEEN -> if (piece.side == Side.WHITE) "♕" else "♛"
+                        PieceType.KING -> if (piece.side == Side.WHITE) "♔" else "♚"
+                    }
+                }
+            runOnUiThread {
+                whiteCaptures.text = symbols(white)
+                blackCaptures.text = symbols(black)
+            }
+        }
+        board.onCapturedPiecesChanged?.invoke(board.game.capturedPieces(Side.WHITE), board.game.capturedPieces(Side.BLACK))
         val boardFrame = FrameLayout(this).apply { background = rounded(Color.rgb(10, 12, 15), gold, 2); clipToPadding = true }
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
-        gameRoot.addView(boardFrame, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
-        // Camera is controlled directly on the 3D board with touch gestures.
-        // A compact hint replaces the old bottom camera-button strip.
-        gameRoot.addView(TextView(this).apply {
-            text = "اسحب بإصبع واحد لتدوير الرقعة وإمالتها • استخدم إصبعين للتقريب والإبعاد"
-            setTextColor(Color.rgb(218, 190, 145))
-            textSize = 11f
+        boardArea.addView(capturedPanel, LinearLayout.LayoutParams(dp(70), -1).apply { rightMargin = dp(6) })
+        boardArea.addView(boardFrame, LinearLayout.LayoutParams(0, -1, 1f))
+        gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
+
+        val zoomControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(6), dp(4), dp(6), dp(4))
-        }, LinearLayout.LayoutParams(-1, dp(30)))
-        // Bottom action buttons intentionally removed to keep the 3D board unobstructed.
+        }
+        zoomControls.addView(makeButton("＋ تكبير", true).apply {
+            setOnClickListener { board.zoomCamera(-1.5f) }
+        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+        zoomControls.addView(makeButton("－ تصغير", false).apply {
+            setOnClickListener { board.zoomCamera(1.5f) }
+        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+        zoomControls.addView(makeButton("إعادة الضبط", false).apply {
+            setOnClickListener { board.resetCamera() }
+        }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+        gameRoot.addView(zoomControls, LinearLayout.LayoutParams(-1, dp(48)))
+        gameRoot.addView(TextView(this).apply {
+            text = "اسحب بإصبع واحد لتدوير الرقعة وإمالتها • استخدم إصبعين أو أزرار التكبير والتصغير"
+            setTextColor(Color.rgb(218, 190, 145))
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setPadding(dp(6), dp(2), dp(6), dp(2))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         setContentView(gameRoot)
     }
     private fun showHowToPlay() {
