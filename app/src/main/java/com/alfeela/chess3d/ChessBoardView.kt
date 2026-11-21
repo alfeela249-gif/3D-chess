@@ -304,14 +304,27 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     if (candidate != null) {
                         val promotionOptions = candidates.mapNotNull { it.promotion }.distinct()
                         if (promotionOptions.isNotEmpty()) {
+                            // Always have a valid queen-promotion fallback if the
+                            // chooser is unavailable or returns an unexpected value.
+                            val queenMove = candidates.firstOrNull {
+                                it.promotion == PieceType.QUEEN
+                            } ?: candidate
                             val chooser = onPromotionRequested
                             if (chooser != null) {
                                 chooser(localSide) { choice ->
-                                    val selectedMove = candidates.firstOrNull { it.promotion == choice } ?: candidate
+                                    val selectedMove = candidates.firstOrNull {
+                                        it.promotion == choice
+                                    } ?: queenMove
                                     completeMove(selectedMove)
                                 }
-                            } else completeMove(candidate)
-                        } else completeMove(candidate)                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {                        selected = destination
+                            } else {
+                                completeMove(queenMove)
+                            }
+                        } else {
+                            completeMove(candidate)
+                        }
+                    } else if (game.pieceAt(destination.first, destination.second)?.side == localSide) {
+                        selected = destination
                         refreshSelection()
                         requestRender()
                     } else if (!isDrag) {
