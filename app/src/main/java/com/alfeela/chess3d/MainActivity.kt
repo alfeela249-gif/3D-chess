@@ -230,13 +230,13 @@ class MainActivity : Activity() {
         homeStatus = status
         content.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
-        fun homeTile(label: String, detail: String, highlighted: Boolean = false, action: () -> Unit): LinearLayout {
+        fun homeTile(icon: String, label: String, detail: String, highlighted: Boolean = false, action: () -> Unit): LinearLayout {
             val tile = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                elevation = dp(9).toFloat()
-                rotationX = 2.5f
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                elevation = dp(7).toFloat()
+                rotationX = 1.5f
                 background = rounded(
                     if (highlighted) Color.rgb(73, 51, 24) else Color.rgb(24, 24, 24),
                     if (highlighted) gold else Color.rgb(83, 73, 57), 1
@@ -246,24 +246,46 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
             tile.addView(TextView(this).apply {
+                text = icon
+                setTextColor(Color.rgb(245, 206, 124))
+                textSize = 27f
+                gravity = Gravity.CENTER
+                setShadowLayer(5f, 0f, 3f, Color.BLACK)
+            }, LinearLayout.LayoutParams(dp(48), -1))
+            tile.addView(View(this).apply {
+                setBackgroundColor(Color.rgb(136, 101, 46))
+            }, LinearLayout.LayoutParams(dp(1), dp(38)))
+            val copy = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(12), 0, dp(8), 0)
+            }
+            copy.addView(TextView(this).apply {
                 text = label
                 setTextColor(if (highlighted) Color.rgb(255, 224, 164) else cream)
                 textSize = 15f
-                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
                 typeface = Typeface.create("serif", Typeface.BOLD)
-            }, LinearLayout.LayoutParams(-1, dp(30)))
-            tile.addView(TextView(this).apply {
+            }, LinearLayout.LayoutParams(-1, dp(27)))
+            copy.addView(TextView(this).apply {
                 text = detail
                 setTextColor(Color.rgb(180, 165, 140))
                 textSize = 11f
+                gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
+            }, LinearLayout.LayoutParams(-1, dp(21)))
+            tile.addView(copy, LinearLayout.LayoutParams(0, -1, 1f))
+            tile.addView(TextView(this).apply {
+                text = "‹"
+                setTextColor(gold)
+                textSize = 25f
                 gravity = Gravity.CENTER
-            }, LinearLayout.LayoutParams(-1, dp(24)))
+            }, LinearLayout.LayoutParams(dp(24), -1))
             return tile
         }
 
         val savedDepth = getSharedPreferences("game_settings", MODE_PRIVATE).getInt("computer_depth", 3)
         val savedLevel = when (savedDepth) { 1 -> "سهل"; 4 -> "صعب"; 5 -> "خبير"; else -> "متوسط" }
-        val computerTile = homeTile("▶  العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت", true) {
+        val computerTile = homeTile("♟", "العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت", true) {
             stopOnlinePolling()
             beginMatch("computer")
             playVsComputer = true
@@ -273,9 +295,9 @@ class MainActivity : Activity() {
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى $savedLevel"
             showGameScreen()
         }
-        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(66)).apply {
-            topMargin = dp(4)
-            bottomMargin = dp(8)
+        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(72)).apply {
+            topMargin = dp(5)
+            bottomMargin = dp(5)
         })
 
         fun addHomeAction(tile: View, height: Int = 66) {
@@ -284,15 +306,15 @@ class MainActivity : Activity() {
                 bottomMargin = dp(5)
             })
         }
-        addHomeAction(homeTile("♟  اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
+        addHomeAction(homeTile("📶", "اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
             showLanDialog()
         }, 72)
-        addHomeAction(homeTile("🌐  اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
+        addHomeAction(homeTile("🌐", "اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
         }, 72)
-        addHomeAction(homeTile("📜  سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت", true) {
+        addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت", true) {
             showMatchHistory()
-        }, 62)
+        }, 72)
 
         val utilityRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
