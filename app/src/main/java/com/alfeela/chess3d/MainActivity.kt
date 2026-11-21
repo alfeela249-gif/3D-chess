@@ -598,7 +598,7 @@ class MainActivity : Activity() {
             return card
         }
 
-        val create = optionCard("♜", "إنشاء مجموعة", "افتح نقطة اتصال هاتفك وكن قائد المجموعة") {
+        val create = optionCard("♜", "إنشاء مجموعة", "افتح نقطة اتصالك؛ سيعثر عليك صديقك تلقائياً دون إدخال عنوان IP") {
             pendingHotspotSettingsReturn = true
             try {
                 startActivity(Intent("android.settings.TETHER_SETTINGS"))
