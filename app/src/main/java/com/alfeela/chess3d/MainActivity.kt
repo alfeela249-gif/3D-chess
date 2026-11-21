@@ -189,14 +189,16 @@ class MainActivity : Activity() {
             rotationX = 1.5f
         }
         val crown = TextView(this).apply {
-            text = "♛     ♚"
-            setTextColor(gold)
-            textSize = 42f
+            text = "♔     ♕"
+            setTextColor(Color.rgb(255, 211, 112))
+            textSize = 48f
             gravity = Gravity.CENTER
             typeface = Typeface.create("serif", Typeface.BOLD)
-            setShadowLayer(16f, 0f, 7f, Color.rgb(120, 75, 20))
-            rotationY = -8f
-            elevation = dp(8).toFloat()
+            setShadowLayer(13f, 0f, 11f, Color.rgb(91, 51, 12))
+            rotationY = -10f
+            rotationX = 5f
+            translationZ = dp(12).toFloat()
+            elevation = dp(12).toFloat()
         }
         hero.addView(crown, LinearLayout.LayoutParams(-1, dp(62)))
         val title = TextView(this).apply {
