@@ -141,7 +141,7 @@ for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[
 // Optional production GLB: when the approved asset is added at this path it replaces
 // the procedural preview automatically; until then the current preview remains visible.
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-const approvedModelUrl='./assets/staunton-chess.glb';
+const approvedModelUrl='./chess.glb';
 new GLTFLoader().load(approvedModelUrl,(gltf)=>{
  const imported=gltf.scene;
  imported.updateMatrixWorld(true);
