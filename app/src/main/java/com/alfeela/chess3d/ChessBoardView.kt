@@ -167,6 +167,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         }
         requestRender()
     }
+    fun setSceneBackground(color: Int) {
+        queueEvent { boardRenderer.setSceneBackground(color) }
+        requestRender()
+    }
     fun setPieceStyle(style: Int) {
         queueEvent { boardRenderer.setPieceStyle(style.coerceIn(0, 2)) }
         requestRender()
@@ -355,7 +359,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var blackPieceColor = 0x09090B
     @Volatile private var lightSquareColor = 0xFFFFFF.toInt()
     @Volatile private var darkSquareColor = 0x858B95.toInt()
+    @Volatile private var sceneBackgroundColor = android.graphics.Color.rgb(9, 10, 13)
     @Volatile private var pieceStyle = 0
+    fun setSceneBackground(color: Int) { sceneBackgroundColor = color }
     fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
         whitePieceColor = whitePiece
         blackPieceColor = blackPiece
@@ -532,7 +538,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.035f,0.032f,0.030f,1f)
+        GLES20.glClearColor(red(sceneBackgroundColor), green(sceneBackgroundColor), blue(sceneBackgroundColor), 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         val vs = compile(GLES20.GL_VERTEX_SHADER, vertexShader)
         val fs = compile(GLES20.GL_FRAGMENT_SHADER, fragmentShader)
@@ -567,6 +573,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     override fun onDrawFrame(gl: GL10?) {
         smoothCameraMotion()
         updateProjection()
+        GLES20.glClearColor(red(sceneBackgroundColor), green(sceneBackgroundColor), blue(sceneBackgroundColor), 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         val distance = cameraDistance
         val elevation = Math.toRadians(cameraElevation.toDouble())
