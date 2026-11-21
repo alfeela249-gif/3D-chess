@@ -329,6 +329,9 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
 
 private class BoardRenderer(private val game: ChessGame, private val assets: AssetManager) : GLSurfaceView.Renderer {
     private data class GlbBoardMesh(val vertices: FloatBuffer, val normals: FloatBuffer, val indices: java.nio.ShortBuffer, val count: Int, val color: FloatArray)
+    private data class GlbPiecePart(val vertices: FloatBuffer, val normals: FloatBuffer, val indices: java.nio.ShortBuffer, val count: Int, val gold: Boolean)
+    private val glbPieceTemplates = HashMap<Pair<Side, PieceType>, List<GlbPiecePart>>()
+    @Volatile private var glbPiecesReady = false
     private val glbBoardMeshes = ArrayList<GlbBoardMesh>()
     @Volatile private var glbBoardReady = false
     private val projection = FloatArray(16)
@@ -547,6 +550,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         // Keep both sides visible while generated procedural meshes use per-face normals.
         GLES20.glDisable(GLES20.GL_CULL_FACE)
         loadGlbBoard()
+        loadGlbPieces()
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
@@ -654,9 +658,13 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 }
                 if (progress >= 1f) animatedMove = null
             }
-            // Soft layered contact shadows visually ground each piece on its square.
-            drawContactShadow(x, z)
-            // Classic Staunton-inspired silhouettes based on the user's approved
+            // Use the approved imported Staunton geometry when available.
+            if (glbPiecesReady && glbPieceTemplates.containsKey(piece.side to piece.type)) {
+                drawGlbPiece(piece, file, x, z)
+            } else {
+                // Soft layered contact shadows visually ground each piece on its square.
+                drawContactShadow(x, z)
+                // Classic Staunton-inspired silhouettes based on the user's approved
             // glossy black and ivory reference photograph.
             val hi = (r * 1.13f).coerceAtMost(1f)
             val hg = (g * 1.13f).coerceAtMost(1f)
@@ -737,6 +745,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             activePieceScaleX = 1f
             activePieceScaleY = 1f
             activePieceScaleZ = 1f
+            }
         }
     }
 
@@ -762,14 +771,14 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                         val x = source[i]; val y = source[i + 1]; val z = source[i + 2]
                         val p = transformGlbPoint(node, x, y, z)
                         transformed[i] = p[0]
-                        transformed[i + 1] = p[2] // source Z becomes renderer Y
-                        transformed[i + 2] = p[1] // source Y becomes renderer Z
+                        transformed[i + 1] = p[1] // glTF 2.0 is Y-up
+                        transformed[i + 2] = -p[2] // mirror the source ranks to match ChessGame coordinates
                     }
                     val normals = FloatArray(transformed.size)
                     if (primitive.normals != null && primitive.normals.size == normals.size) {
                         for (i in primitive.normals.indices step 3) {
                             val nx = primitive.normals[i]; val ny = primitive.normals[i + 1]; val nz = primitive.normals[i + 2]
-                            normals[i] = nx; normals[i + 1] = nz; normals[i + 2] = ny
+                            normals[i] = nx; normals[i + 1] = ny; normals[i + 2] = -nz
                         }
                     } else {
                         for (i in primitive.indices.indices step 3) {
@@ -805,6 +814,141 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             glbBoardMeshes.clear()
             glbBoardReady = false
             android.util.Log.e("3DChess", "GLB board load failed; using procedural board", error)
+        }
+    }
+
+    /**
+     * Build one reusable model for each side/piece type from the 32 modeled
+     * starting pieces in the approved GLB. Geometry is stored relative to its
+     * source square so the same model can follow moves, captures and promotion.
+     * glTF coordinates are Y-up; the board's rank axis is mirrored to match the
+     * ChessGame renderer's rank 0 at z=-3.5.
+     */
+    private fun loadGlbPieces() {
+        glbPieceTemplates.clear()
+        glbPiecesReady = false
+        try {
+            val scene = GlbAsset.parse(assets.open("staunton-chess.glb").use { it.readBytes() })
+            val squares = HashMap<Pair<Int, Int>, MutableList<GlbPiecePart>>()
+            val backRank = listOf(PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP,
+                PieceType.QUEEN, PieceType.KING, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK)
+
+            for ((nodeIndex, node) in scene.nodes.withIndex()) {
+                // The first 7 nodes are the plinth/frame and the next 64 are
+                // board squares. Remaining mesh nodes are the 32 semantic pieces.
+                if (nodeIndex < 71 || node.name.startsWith("Board square", ignoreCase = true)) continue
+                val mesh = scene.meshes.getOrNull(node.mesh) ?: continue
+                var sumX = 0.0
+                var sumZ = 0.0
+                var total = 0
+                for (primitive in mesh.primitives) {
+                    for (i in primitive.positions.indices step 3) {
+                        val p = transformGlbPoint(node, primitive.positions[i], primitive.positions[i + 1], primitive.positions[i + 2])
+                        sumX += p[0].toDouble()
+                        sumZ += p[2].toDouble()
+                        total++
+                    }
+                }
+                if (total == 0) continue
+                val centerX = (sumX / total).toFloat()
+                val centerZ = (sumZ / total).toFloat()
+                val file = kotlin.math.round(centerX + 3.5f).toInt()
+                val rank = kotlin.math.round(3.5f - centerZ).toInt()
+                if (file !in 0..7 || rank !in 0..7) continue
+                val sourceSquareX = file - 3.5f
+                val sourceSquareZ = 3.5f - rank
+                val parts = squares.getOrPut(file to rank) { ArrayList() }
+
+                for (primitive in mesh.primitives) {
+                    val source = primitive.positions
+                    if (source.size < 9 || primitive.indices.size < 3 ||
+                        source.size / 3 > 65535 ||
+                        primitive.indices.any { it !in 0 until source.size / 3 || it > 65535 }) continue
+                    val local = FloatArray(source.size)
+                    for (i in source.indices step 3) {
+                        val p = transformGlbPoint(node, source[i], source[i + 1], source[i + 2])
+                        local[i] = p[0] - sourceSquareX
+                        local[i + 1] = p[1]
+                        local[i + 2] = -(p[2] - sourceSquareZ)
+                    }
+                    val normalSource = primitive.normals
+                    val normals = FloatArray(local.size)
+                    if (normalSource != null && normalSource.size == normals.size) {
+                        for (i in normalSource.indices step 3) {
+                            normals[i] = normalSource[i]
+                            normals[i + 1] = normalSource[i + 1]
+                            normals[i + 2] = -normalSource[i + 2]
+                        }
+                    } else {
+                        for (i in primitive.indices.indices step 3) {
+                            if (i + 2 >= primitive.indices.size) break
+                            val a = primitive.indices[i] * 3
+                            val b = primitive.indices[i + 1] * 3
+                            val d = primitive.indices[i + 2] * 3
+                            val ux = local[b] - local[a]; val uy = local[b + 1] - local[a + 1]; val uz = local[b + 2] - local[a + 2]
+                            val vx = local[d] - local[a]; val vy = local[d + 1] - local[a + 1]; val vz = local[d + 2] - local[a + 2]
+                            var nx = uy * vz - uz * vy
+                            var ny = uz * vx - ux * vz
+                            var nz = ux * vy - uy * vx
+                            val length = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz).coerceAtLeast(0.00001f)
+                            nx /= length; ny /= length; nz /= length
+                            for (v in intArrayOf(a, b, d)) { normals[v] = nx; normals[v + 1] = ny; normals[v + 2] = nz }
+                        }
+                    }
+                    val vertexBuffer = ByteBuffer.allocateDirect(local.size * 4).order(ByteOrder.nativeOrder())
+                        .asFloatBuffer().apply { put(local); position(0) }
+                    val normalBuffer = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder())
+                        .asFloatBuffer().apply { put(normals); position(0) }
+                    val shortIndices = ShortArray(primitive.indices.size) { primitive.indices[it].toShort() }
+                    val indexBuffer = ByteBuffer.allocateDirect(shortIndices.size * 2).order(ByteOrder.nativeOrder())
+                        .asShortBuffer().apply { put(shortIndices); position(0) }
+                    val label = node.name.lowercase()
+                    val gold = label.contains("brass") || label.contains("bead") ||
+                        label.contains("merlon") || label.contains("mitre slit") ||
+                        label.contains("crown point") || label.contains("crossbar") ||
+                        label.contains("horse eye") || label.contains("horse ear")
+                    parts.add(GlbPiecePart(vertexBuffer, normalBuffer, indexBuffer, shortIndices.size, gold))
+                }
+            }
+
+            for ((square, parts) in squares) {
+                val (file, rank) = square
+                val side = if (rank <= 3) Side.BLACK else Side.WHITE
+                val type = when (rank) {
+                    0, 7 -> backRank[file]
+                    1, 6 -> PieceType.PAWN
+                    else -> null
+                } ?: continue
+                if (parts.isNotEmpty()) glbPieceTemplates.putIfAbsent(side to type, parts.toList())
+            }
+            glbPiecesReady = glbPieceTemplates.size == 12
+            android.util.Log.i("3DChess", "GLB piece templates loaded: ${glbPieceTemplates.size}/12")
+        } catch (error: Exception) {
+            glbPieceTemplates.clear()
+            glbPiecesReady = false
+            android.util.Log.e("3DChess", "GLB piece load failed; using procedural pieces", error)
+        }
+    }
+
+    private fun drawGlbPiece(piece: ChessPiece, file: Int, x: Float, z: Float) {
+        val parts = glbPieceTemplates[piece.side to piece.type] ?: return
+        val pieceColor = if (piece.side == Side.WHITE) whitePieceColor else blackPieceColor
+        val body = floatArrayOf(red(pieceColor), green(pieceColor), blue(pieceColor), 1f)
+        val gold = floatArrayOf(0.78f, 0.58f, 0.25f, 1f)
+        Matrix.setIdentityM(model, 0)
+        Matrix.translateM(model, 0, x, activePieceLift, z)
+        Matrix.scaleM(model, 0, activePieceScaleX, activePieceScaleY, activePieceScaleZ)
+        Matrix.multiplyMM(mvp, 0, vp, 0, model, 0)
+        GLES20.glUseProgram(program)
+        GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvp, 0)
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glEnableVertexAttribArray(normalHandle)
+        for (part in parts) {
+            val color = if (part.gold) gold else body
+            GLES20.glUniform4f(colorHandle, color[0], color[1], color[2], color[3])
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 12, part.vertices)
+            GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT, false, 12, part.normals)
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, part.count, GLES20.GL_UNSIGNED_SHORT, part.indices)
         }
     }
 
