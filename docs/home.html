@@ -24,6 +24,11 @@ button.action{font:inherit;cursor:pointer;text-align:inherit}
 .field{width:100%;margin-top:8px;padding:12px;border:1px solid #765629;border-radius:10px;background:#0d0d0e;color:#fff0bc;font:inherit}
 .dialogBtn{display:block;width:100%;margin-top:10px;padding:12px;border:1px solid var(--gold);border-radius:13px;background:#49351b;color:#fff0bc;font-size:14px;font-weight:700;cursor:pointer}
 .dialogBtn.alt{background:#171513;border-color:#594326}.close{margin-top:16px}
+.wifiChoice{display:flex;align-items:center;gap:13px;width:100%;margin:12px 0;padding:15px;text-align:right;border:1px solid #98713b;border-radius:17px;background:linear-gradient(120deg,#302315,#151416);color:var(--cream);cursor:pointer;box-shadow:inset 0 1px 10px #ffe4a31a,0 8px 18px #0006}
+.wifiChoice:active{transform:scale(.985)}.wifiIcon{width:55px;height:55px;display:grid;place-items:center;flex:none;border-radius:14px;background:#59432655;color:#f3ce83;font-size:31px}
+.wifiChoice b{display:block;color:#f3d99f;font-size:16px}.wifiChoice small{display:block;color:#b9a786;font-size:12px;line-height:1.6;margin-top:4px}.wifiChoice .go{margin-right:auto;color:#eac579;font-size:23px}
+.wifiInfo{border:1px solid #594326;border-radius:13px;padding:13px;background:#171513;margin-top:12px}.wifiInfo b{display:block;color:#f3d99f}.wifiInfo small{display:block;color:#c6b28d;line-height:1.8;margin-top:6px}
+
 .status{padding:10px;border-radius:10px;background:#171513;color:#e5c98d;text-align:center;font-size:13px;line-height:1.7}
 @media(min-width:700px){body{padding:30px}.shell{max-width:480px}.hero{margin-top:24px}}
 </style></head>
@@ -54,7 +59,10 @@ settings:{title:'إعدادات اللعبة',html:`<p>خصص مظهر الوا�
 <button class="dialogBtn" id="saveSettings">حفظ الإعدادات</button><div id="settingsStatus" class="status" hidden></div>`},
 profile:{title:'ملفي الشخصي',html:`<p>اكتب الاسم الذي تريد ظهوره في الواجهة.</p><input class="field" id="playerName" maxlength="24" placeholder="اسم اللاعب"><button class="dialogBtn" id="saveProfile">حفظ الاسم</button><div id="profileStatus" class="status" hidden></div>`},
 friends:{title:'الأصدقاء',html:`<p>أضف أسماء أصدقائك إلى قائمة المتابعة على هذا الجهاز.</p><input class="field" id="friendName" maxlength="24" placeholder="اسم الصديق"><button class="dialogBtn" id="addFriend">إضافة صديق</button><div id="friendList" class="setting">لا توجد أسماء مضافة بعد.</div>`},
-wifi:{title:'اللعب مع صديق عبر Wi-Fi',html:`<p>اختر طريقة الاتصال بين الهاتفين. يجب أن يكون الهاتفان على نفس شبكة Wi-Fi أو نقطة الاتصال.</p><button class="dialogBtn" id="openHotspot">فتح نقطة اتصال</button><button class="dialogBtn alt" id="joinHotspot">انضمام إلى نقطة اتصال</button><div id="wifiDetails" class="setting" hidden></div><div class="status">هذه معاينة للواجهة فقط؛ تشغيل نقطة الاتصال والاتصال الفعلي يتمان من تطبيق Android.</div>`},
+wifi:{title:'اللعب مع الأصدقاء عبر Wi-Fi',html:`<p>كوّن مجموعة مع صديقك أو انضم إلى مجموعته. اللعب محلي ولا يحتاج إلى إنترنت.</p>
+<button class="wifiChoice" id="openHotspot"><span class="wifiIcon">♜</span><span><b>إنشاء مجموعة</b><small>افتح نقطة اتصال هاتفك وابدأ مجموعة جديدة</small></span><span class="go">‹</span></button>
+<button class="wifiChoice" id="joinHotspot"><span class="wifiIcon">♞</span><span><b>انضمام للمجموعة</b><small>اتصل بنقطة صديقك وأدخل عنوان المجموعة</small></span><span class="go">‹</span></button>
+<div id="wifiDetails" class="wifiInfo" hidden></div><div class="status">معاينة للتصميم والخطوات؛ الاتصال الفعلي يتم من تطبيق Android.</div>`},
 online:{title:'اللعب عبر الإنترنت',html:`<p>اللعب من مدينتين مختلفتين يحتاج خادماً لمزامنة النقلات وربط اللاعبين.</p><div class="status">ميزة اللعب عبر الإنترنت غير مفعّلة في معاينة الويب حالياً. لن نعرض اتصالاً وهمياً أو نعلن عن مباراة غير متصلة.</div>`}
 };
 function openPage(key){const page=pages[key];if(!page)return;title.textContent=page.title;body.innerHTML=page.html;modal.classList.add('open');wirePage(key)}
@@ -72,10 +80,9 @@ function wirePage(key){
  }
  if(key==='wifi'){
   const details=document.querySelector('#wifiDetails');
-  document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>فتح نقطة اتصال</b><small>1. اضغط فتح إعدادات نقطة الاتصال في هاتفك من إعدادات Android. 2. فعّل نقطة الاتصال. 3. ارجع إلى اللعبة لبدء استضافة المباراة. 4. أعطِ عنوان IP الظاهر لصديقك.</small><div class="status">ملاحظة: Android يتطلب تفعيل نقطة الاتصال يدوياً على معظم الأجهزة.</div>'};
-  document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>الانضمام إلى نقطة اتصال</b><small>1. اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. أدخل عنوان IP الخاص بالهاتف المضيف داخل تطبيق Android. 3. اضغط انضمام لبدء المباراة.</small><input class="field" id="previewHostIp" placeholder="مثال: 192.168.43.1" inputmode="decimal"><button class="dialogBtn" id="previewJoin">متابعة المعاينة</button><div id="previewJoinStatus" class="status" hidden></div>';
-   document.querySelector('#previewJoin').onclick=()=>{const ip=document.querySelector('#previewHostIp').value.trim(),status=document.querySelector('#previewJoinStatus');status.hidden=false;status.textContent=ip?'تم إدخال العنوان '+ip+' — أكمل الاتصال الفعلي من تطبيق Android.':'يرجى إدخال عنوان IP أولاً.'};
-  };
+  document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♜ إنشاء مجموعة جديدة</b><small>1. افتح إعدادات نقطة الاتصال في هاتفك. 2. فعّل نقطة الاتصال. 3. ارجع إلى تطبيق 3D Chess لبدء استضافة المباراة. 4. أرسل عنوان IP الظاهر لصديقك ليتمكن من الانضمام.</small><div class="status">ملاحظة: يتطلب Android تفعيل نقطة الاتصال يدوياً في معظم الأجهزة.</div>'};
+  document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>♞ الانضمام إلى مجموعة</b><small>1. اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. أدخل عنوان IP الخاص به في تطبيق Android. 3. اضغط انضمام لبدء المباراة.</small><input class="field" id="previewHostIp" placeholder="عنوان المجموعة مثل 192.168.43.1" inputmode="decimal"><button class="dialogBtn" id="previewJoin">متابعة</button><div id="previewJoinStatus" class="status" hidden></div>'};
+  document.querySelector('#previewJoin').onclick=()=>{const ip=document.querySelector('#previewHostIp').value.trim(),status=document.querySelector('#previewJoinStatus');status.hidden=false;status.textContent=ip?'تم إدخال العنوان '+ip+' — أكمل الاتصال الفعلي من تطبيق Android.':'يرجى إدخال عنوان IP أولاً.'};
  }
  if(key==='profile'){
   const input=document.querySelector('#playerName');input.value=localStorage.getItem('chessPlayerName')||'';
