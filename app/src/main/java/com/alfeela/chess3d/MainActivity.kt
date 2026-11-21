@@ -22,6 +22,7 @@ import android.widget.TextView
 import android.widget.EditText
 import android.app.AlertDialog
 import android.widget.FrameLayout
+import android.widget.Toast
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
