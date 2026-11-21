@@ -27,11 +27,11 @@ jobs:
       - name: Include approved Staunton GLB asset
         run: |
           mkdir -p app/src/main/assets
-          curl --fail --location --retry 3 --retry-delay 2 \\
-            https://alfeela249-gif.github.io/3D-chess/chess.glb?v=20261121-2 \\
-            --output app/src/main/assets/staunton-chess.glb
+          curl --fail --location --retry 3 --retry-delay 2 "https://alfeela249-gif.github.io/3D-chess/chess.glb?v=20261121-2" --output app/src/main/assets/staunton-chess.glb
           test -s app/src/main/assets/staunton-chess.glb
-          echo "Bundled Staunton GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
+          magic=$(od -An -tx1 -N4 app/src/main/assets/staunton-chess.glb | tr -d '[:space:]')
+          test "$magic" = "676c5446"
+          echo "Bundled valid GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
       - name: Run chess engine unit tests
         run: gradle testDebugUnitTest
       - name: Build debug APK
