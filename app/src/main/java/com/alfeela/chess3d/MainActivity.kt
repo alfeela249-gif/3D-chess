@@ -798,7 +798,8 @@ class MainActivity : Activity() {
      * mobile data as the default route (common when Wi-Fi has no internet).
      */
     private fun localWifiAddress(): String? {
-        return try {
+        // Prefer Android's Wi-Fi network metadata when available.
+        try {
             val connectivity = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
             val networks = (listOfNotNull(connectivity.activeNetwork) +
                 connectivity.allNetworks.toList()).distinct()
@@ -814,7 +815,26 @@ class MainActivity : Activity() {
                     ?.hostAddress
                 if (address != null) return address
             }
-            null
+        } catch (_: Exception) {
+            // Fall through to interface enumeration for devices that hide SoftAP details.
+        }
+
+        // Some Android versions do not expose the phone's own hotspot as a
+        // ConnectivityManager Wi-Fi network. Inspect active interfaces as fallback.
+        return try {
+            val candidates = java.net.NetworkInterface.getNetworkInterfaces()
+                ?.toList()
+                .orEmpty()
+                .filter { it.isUp && !it.isLoopback }
+                .flatMap { it.inetAddresses.toList() }
+                .filterIsInstance<Inet4Address>()
+                .filter { address ->
+                    !address.isLoopbackAddress && !address.isLinkLocalAddress &&
+                        address.isSiteLocalAddress
+                }
+            candidates.firstOrNull { it.hostAddress.startsWith("192.168.") }?.hostAddress
+                ?: candidates.firstOrNull { it.hostAddress.startsWith("10.") }?.hostAddress
+                ?: candidates.firstOrNull()?.hostAddress
         } catch (_: Exception) { null }
     }
 
