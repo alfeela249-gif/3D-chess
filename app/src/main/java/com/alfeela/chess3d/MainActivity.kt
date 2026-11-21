@@ -94,6 +94,7 @@ class MainActivity : Activity() {
                 prefs.getInt("light_square", Color.WHITE),
                 prefs.getInt("dark_square", Color.rgb(133,139,149))
             )
+            board.setSceneBackground(prefs.getInt("scene_background", Color.rgb(9,10,13)))
         }
         board.onMove = { move ->
             if (onlineMode) {
@@ -556,19 +557,21 @@ class MainActivity : Activity() {
 
     private fun showAppearanceDialog() {
         val prefs = getSharedPreferences("board_appearance", MODE_PRIVATE)
-        val labels = arrayOf("قطع الأبيض", "قطع الأسود", "المربعات الفاتحة", "المربعات الداكنة")
-        val keys = arrayOf("white_piece", "black_piece", "light_square", "dark_square")
+        val labels = arrayOf("قطع الأبيض", "قطع الأسود", "المربعات الفاتحة", "المربعات الداكنة", "خلفية المشهد")
+        val keys = arrayOf("white_piece", "black_piece", "light_square", "dark_square", "scene_background")
         val palettes = arrayOf(
             arrayOf("عاجي", "أبيض ناصع", "ذهبي", "أزرق جليدي"),
             arrayOf("أسود لامع", "كحلي", "أحمر داكن", "أخضر زمردي"),
             arrayOf("أبيض", "عاجي", "رمادي فاتح", "أزرق ثلجي"),
-            arrayOf("رمادي", "فحمي", "أزرق داكن", "بني خشبي")
+            arrayOf("رمادي", "فحمي", "أزرق داكن", "بني خشبي"),
+            arrayOf("أسود كلاسيكي", "رمادي فحمي", "أزرق ليلي", "بني داكن", "أخضر داكن", "عنابي")
         )
         val colors = arrayOf(
             intArrayOf(Color.rgb(240,230,210), Color.WHITE, Color.rgb(220,178,91), Color.rgb(160,205,235)),
             intArrayOf(Color.rgb(9,9,11), Color.rgb(22,35,62), Color.rgb(112,30,38), Color.rgb(20,92,68)),
             intArrayOf(Color.WHITE, Color.rgb(242,232,212), Color.rgb(220,224,230), Color.rgb(220,235,245)),
-            intArrayOf(Color.rgb(133,139,149), Color.rgb(65,70,78), Color.rgb(42,65,92), Color.rgb(112,78,52))
+            intArrayOf(Color.rgb(133,139,149), Color.rgb(65,70,78), Color.rgb(42,65,92), Color.rgb(112,78,52)),
+            intArrayOf(Color.rgb(9,10,13), Color.rgb(38,40,45), Color.rgb(13,27,48), Color.rgb(43,29,20), Color.rgb(15,39,30), Color.rgb(48,20,29))
         )
         fun apply() {
             board.setAppearance(
@@ -577,6 +580,7 @@ class MainActivity : Activity() {
                 prefs.getInt(keys[2], colors[2][0]),
                 prefs.getInt(keys[3], colors[3][0])
             )
+            board.setSceneBackground(prefs.getInt(keys[4], colors[4][0]))
         }
         apply()
         fun choose(index: Int) {
@@ -585,11 +589,11 @@ class MainActivity : Activity() {
                     prefs.edit().putInt(keys[index], colors[index][which]).apply()
                     apply()
                     dialog.dismiss()
-                    if (index < 3) choose(index + 1)
+                    if (index < labels.lastIndex) choose(index + 1)
                     else AlertDialog.Builder(this).setMessage("تم تطبيق الألوان مباشرة وحفظها على هذا الجهاز.").setPositiveButton("حسناً", null).show()
                 }.setNegativeButton("تخطي") { dialog, _ ->
                     dialog.dismiss()
-                    if (index < 3) choose(index + 1)
+                    if (index < labels.lastIndex) choose(index + 1)
                 }.show()
         }
         choose(0)
