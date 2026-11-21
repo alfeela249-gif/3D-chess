@@ -70,6 +70,10 @@ class MainActivity : Activity() {
             onMessage = { message -> runOnUiThread { handleNetworkMessage(message) } }
         )
         board = ChessBoardView(this)
+        getSharedPreferences("game_settings", MODE_PRIVATE).let { prefs ->
+            board.cameraTouchSensitivity = prefs.getFloat("camera_sensitivity", 1.0f)
+            board.setPieceStyle(prefs.getInt("piece_style", 0))
+        }
         getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
             board.setAppearance(
                 prefs.getInt("white_piece", Color.rgb(240,230,210)),
@@ -91,7 +95,8 @@ class MainActivity : Activity() {
             } else if (playVsComputer) {
                 updateGameStatus()
                 Thread {
-                    val computerMove = board.game.chooseComputerMove(3)
+                    val depth = getSharedPreferences("game_settings", MODE_PRIVATE).getInt("computer_depth", 3)
+                    val computerMove = board.game.chooseComputerMove(depth)
                     runOnUiThread { if (computerMove != null && board.applyComputerMove(computerMove)) updateGameStatus() }
                 }.start()
             } else {
@@ -413,23 +418,59 @@ class MainActivity : Activity() {
     }
 
     private fun showSettingsDialog() {
-        val options = arrayOf("الحساب وتسجيل الدخول", "مستوى الكمبيوتر: متوسط", "ألوان القطع والرقعة", "معلومات التطبيق")
-        AlertDialog.Builder(this)
-            .setTitle("إعدادات 3D Chess")
+        val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق")
+        AlertDialog.Builder(this).setTitle("إعدادات اللعبة")
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> showAccountDialog()
-                    1 -> AlertDialog.Builder(this).setTitle("مستوى الكمبيوتر")
-                        .setMessage("المستوى الحالي: متوسط")
-                        .setPositiveButton("حسناً", null).show()
-                    2 -> showAppearanceDialog()
-                    3 -> AlertDialog.Builder(this).setTitle("3D Chess")
-                        .setMessage("لعبة شطرنج ثلاثية الأبعاد • العب ضد الكمبيوتر أو تحدَّ أصدقاءك محلياً وعبر الإنترنت.")
+                    0 -> {
+                        val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
+                        val depths = intArrayOf(1, 3, 4, 5)
+                        val current = depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)
+                        AlertDialog.Builder(this).setTitle("اختر صعوبة الكمبيوتر")
+                            .setSingleChoiceItems(levels, current) { dialog, selected ->
+                                prefs.edit().putInt("computer_depth", depths[selected]).apply()
+                                dialog.dismiss()
+                                AlertDialog.Builder(this).setMessage("تم حفظ مستوى ${levels[selected]}. سيُطبّق على المباراة التالية.")
+                                    .setPositiveButton("حسناً", null).show()
+                            }.setNegativeButton("إلغاء", null).show()
+                    }
+                    1 -> showAppearanceDialog()
+                    2 -> {
+                        val styles = arrayOf("كلاسيكي", "عصري", "ملكي")
+                        val current = prefs.getInt("piece_style", 0).coerceIn(0, 2)
+                        AlertDialog.Builder(this).setTitle("اختر شكل القطع")
+                            .setSingleChoiceItems(styles, current) { dialog, selected ->
+                                prefs.edit().putInt("piece_style", selected).apply()
+                                board.setPieceStyle(selected)
+                                dialog.dismiss()
+                                AlertDialog.Builder(this).setMessage("تم تطبيق تصميم ${styles[selected]} وحفظه.")
+                                    .setPositiveButton("حسناً", null).show()
+                            }.setNegativeButton("إلغاء", null).show()
+                    }
+                    3 -> {
+                        val controls = arrayOf("هادئ", "متوازن", "سريع")
+                        val values = floatArrayOf(0.65f, 1.0f, 1.4f)
+                        val current = when (prefs.getFloat("camera_sensitivity", 1.0f)) {
+                            in 0.0f..0.8f -> 0
+                            in 0.81f..1.15f -> 1
+                            else -> 2
+                        }
+                        AlertDialog.Builder(this).setTitle("حساسية حركة الكاميرا")
+                            .setSingleChoiceItems(controls, current) { dialog, selected ->
+                                prefs.edit().putFloat("camera_sensitivity", values[selected]).apply()
+                                board.cameraTouchSensitivity = values[selected]
+                                dialog.dismiss()
+                                AlertDialog.Builder(this).setMessage("تم ضبط التحكم على وضع ${controls[selected]}.")
+                                    .setPositiveButton("حسناً", null).show()
+                            }.setNegativeButton("إلغاء", null).show()
+                    }
+                    4 -> showAccountDialog()
+                    5 -> AlertDialog.Builder(this).setTitle("3D Chess")
+                        .setMessage("خصص صعوبة الكمبيوتر وألوان الرقعة وأشكال القطع والتحكم بالكاميرا.")
                         .setPositiveButton("حسناً", null).show()
                 }
-            }
-            .setNegativeButton("إغلاق", null)
-            .show()
+            }.setNegativeButton("إغلاق", null).show()
     }
 
     private fun showAppearanceDialog() {
