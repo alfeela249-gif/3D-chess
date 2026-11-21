@@ -40,6 +40,8 @@ class MainActivity : Activity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var onlinePoll: Runnable? = null
     private var pendingHotspotSettingsReturn = false
+    private var activeMatchMode: String? = null
+    private var activeMatchStartedAt: Long = 0L
 
     private val wood = Color.rgb(10, 10, 12)
     private val gold = Color.rgb(220, 178, 91)
@@ -169,7 +171,7 @@ class MainActivity : Activity() {
             profileBar.addView(item, LinearLayout.LayoutParams(dp(44), dp(42)))
         }
         quickAction("♟") { showFriendsDialog() }
-        quickAction("⚙") { showSettingsDialog() }
+        quickAction("📜") { showMatchHistory() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
 
         val hero = LinearLayout(this).apply {
@@ -183,6 +185,8 @@ class MainActivity : Activity() {
                 setStroke(dp(1), Color.rgb(157, 117, 55))
             }
             setPadding(dp(16), dp(14), dp(16), dp(14))
+            elevation = dp(12).toFloat()
+            rotationX = 1.5f
         }
         val crown = TextView(this).apply {
             text = "♛     ♚"
@@ -190,7 +194,9 @@ class MainActivity : Activity() {
             textSize = 42f
             gravity = Gravity.CENTER
             typeface = Typeface.create("serif", Typeface.BOLD)
-            setShadowLayer(12f, 0f, 3f, Color.rgb(120, 75, 20))
+            setShadowLayer(16f, 0f, 7f, Color.rgb(120, 75, 20))
+            rotationY = -8f
+            elevation = dp(8).toFloat()
         }
         hero.addView(crown, LinearLayout.LayoutParams(-1, dp(62)))
         val title = TextView(this).apply {
@@ -229,6 +235,8 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(dp(8), dp(8), dp(8), dp(8))
+                elevation = dp(9).toFloat()
+                rotationX = 2.5f
                 background = rounded(
                     if (highlighted) Color.rgb(73, 51, 24) else Color.rgb(24, 24, 24),
                     if (highlighted) gold else Color.rgb(83, 73, 57), 1
@@ -257,6 +265,7 @@ class MainActivity : Activity() {
         val savedLevel = when (savedDepth) { 1 -> "سهل"; 4 -> "صعب"; 5 -> "خبير"; else -> "متوسط" }
         val computerTile = homeTile("▶  العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت", true) {
             stopOnlinePolling()
+            beginMatch("computer")
             playVsComputer = true
             board.localSide = Side.WHITE
             board.resetBoard()
@@ -281,8 +290,8 @@ class MainActivity : Activity() {
         addHomeAction(homeTile("🌐  اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
         }, 72)
-        addHomeAction(homeTile("⚙  الإعدادات", "الصعوبة • الألوان • الأشكال • التحكم") {
-            showSettingsDialog()
+        addHomeAction(homeTile("📜  سجل المباريات", "مباريات الكمبيوتر • الأصدقاء • الإنترنت") {
+            showMatchHistory()
         }, 62)
         addHomeAction(homeTile("♟  الأصدقاء", "إضافة الأصدقاء وإدارة قائمتك") {
             showFriendsDialog()
@@ -332,6 +341,7 @@ class MainActivity : Activity() {
         val back = makeButton("‹  القائمة الرئيسية", false).apply {
             textSize = 13f
             setOnClickListener {
+                saveActiveMatch()
                 stopOnlinePolling()
                 lan.close()
                 setContentView(homeRoot)
@@ -396,6 +406,75 @@ class MainActivity : Activity() {
             }
             .setNegativeButton("إغلاق", null)
             .show()
+    }
+
+    private fun beginMatch(mode: String) {
+        saveActiveMatch()
+        activeMatchMode = mode
+        activeMatchStartedAt = System.currentTimeMillis()
+    }
+
+    private fun saveActiveMatch() {
+        val mode = activeMatchMode ?: return
+        val moves = board.game.moveHistory()
+        if (moves.isEmpty()) { activeMatchMode = null; activeMatchStartedAt = 0L; return }
+        val game = board.game
+        val result = when {
+            game.isCheckmate() -> "كش مات • الفائز " + sideName(game.sideToMove.opposite())
+            game.isStalemate() -> "تعادل • خنق"
+            else -> "غير مكتملة"
+        }
+        val moveLines = JSONArray()
+        moves.forEachIndexed { index, move ->
+            val from = "" + ('a' + move.fromFile) + (8 - move.fromRank)
+            val to = "" + ('a' + move.toFile) + (8 - move.toRank)
+            val suffix = move.promotion?.let { "=" + it.name } ?: ""
+            moveLines.put((if (index % 2 == 0) (index / 2 + 1).toString() + ". " else "") + from + "-" + to + suffix)
+        }
+        val now = System.currentTimeMillis()
+        val item = JSONObject().put("mode", mode).put("started", activeMatchStartedAt)
+            .put("ended", now).put("duration", ((now - activeMatchStartedAt).coerceAtLeast(0L) / 1000L))
+            .put("result", result).put("count", moves.size).put("moves", moveLines)
+        val prefs = getSharedPreferences("match_history", MODE_PRIVATE)
+        val history = runCatching { JSONArray(prefs.getString("entries", "[]") ?: "[]") }.getOrElse { JSONArray() }
+        history.put(item)
+        val trimmed = JSONArray()
+        for (i in (history.length() - 100).coerceAtLeast(0) until history.length()) trimmed.put(history.getJSONObject(i))
+        prefs.edit().putString("entries", trimmed.toString()).apply()
+        activeMatchMode = null
+        activeMatchStartedAt = 0L
+    }
+
+    private fun showMatchHistory() {
+        val history = runCatching { JSONArray(getSharedPreferences("match_history", MODE_PRIVATE).getString("entries", "[]") ?: "[]") }.getOrElse { JSONArray() }
+        val labels = arrayOf("مباريات ضد الكمبيوتر", "مباريات الأصدقاء عبر Wi-Fi", "مباريات الإنترنت")
+        val modes = arrayOf("computer", "wifi", "online")
+        AlertDialog.Builder(this).setTitle("سجل المباريات • اختر التصنيف")
+            .setItems(labels) { _, category ->
+                val matches = (0 until history.length()).mapNotNull { i ->
+                    history.optJSONObject(i)?.takeIf { it.optString("mode") == modes[category] }
+                }.reversed()
+                if (matches.isEmpty()) {
+                    AlertDialog.Builder(this).setTitle(labels[category])
+                        .setMessage("لا توجد مباريات مسجلة في هذا القسم بعد. ستظهر هنا تفاصيل المباريات بعد إنهائها أو مغادرتها.")
+                        .setPositiveButton("حسناً", null).show()
+                    return@setItems
+                }
+                val date = java.text.SimpleDateFormat("yyyy/MM/dd  HH:mm", java.util.Locale.getDefault())
+                val rows = matches.map { m ->
+                    date.format(java.util.Date(m.optLong("ended"))) + "  •  " + m.optInt("count") + " نقلة\n" + m.optString("result")
+                }.toTypedArray()
+                AlertDialog.Builder(this).setTitle(labels[category]).setItems(rows) { _, selected ->
+                    val m = matches[selected]
+                    val duration = m.optLong("duration")
+                    val moves = m.optJSONArray("moves") ?: JSONArray()
+                    val moveText = (0 until moves.length()).map { moves.optString(it) }.chunked(2).joinToString("\n") { it.joinToString("     ") }
+                    val details = "التصنيف: " + labels[category] + "\nالتاريخ: " + date.format(java.util.Date(m.optLong("ended"))) +
+                        "\nالمدة: " + (duration / 60) + " دقيقة و" + (duration % 60) + " ثانية\nعدد النقلات: " + m.optInt("count") +
+                        "\nالنتيجة: " + m.optString("result") + "\n\nتفاصيل النقلات:\n" + moveText
+                    AlertDialog.Builder(this).setTitle("تفاصيل المباراة").setMessage(details).setPositiveButton("إغلاق", null).show()
+                }.setNegativeButton("رجوع", null).show()
+            }.setNegativeButton("إغلاق", null).show()
     }
 
     private fun showMoveHistory() {
@@ -615,6 +694,7 @@ class MainActivity : Activity() {
         })
         val join = optionCard("♞", "انضمام للمجموعة", "ابحث تلقائياً عن غرفة صديقك عبر Wi-Fi") {
             stopOnlinePolling()
+            beginMatch("wifi")
             playVsComputer = false
             board.localSide = Side.BLACK
             board.resetBoard()
@@ -638,6 +718,7 @@ class MainActivity : Activity() {
 
     private fun startLanHost() {
         stopOnlinePolling()
+        beginMatch("wifi")
         playVsComputer = false
         board.localSide = Side.WHITE
         board.resetBoard()
@@ -677,6 +758,8 @@ class MainActivity : Activity() {
             val result = auth.createOnlineRoom()
             runOnUiThread {
                 if (!result.ok || result.id == null) { status.text = result.message; return@runOnUiThread }
+                beginMatch("online")
+                beginMatch("online")
                 onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
                 status.text = "رمز الغرفة: ${result.code} • بانتظار انضمام صديقك..."
