@@ -167,7 +167,7 @@ class MainActivity : Activity() {
         fun barProfileAdd(item: View, weight: Float) {
             profileBar.addView(item, LinearLayout.LayoutParams(0, dp(42), weight))
         }
-        profileAction("♙  ملفي") { showProfileDialog() }
+        profileAction("♙  ملفي") { showAccountDialog() }
         profileBar.addView(View(this).apply { setBackgroundColor(Color.rgb(119, 89, 45)) },
             LinearLayout.LayoutParams(dp(1), dp(30)))
         profileAction("♟  أصدقائي") { showFriendsDialog() }
