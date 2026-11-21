@@ -293,9 +293,6 @@ class MainActivity : Activity() {
         addHomeAction(homeTile("📜  سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت", true) {
             showMatchHistory()
         }, 62)
-        addHomeAction(homeTile("♟  الأصدقاء", "إضافة الأصدقاء وإدارة قائمتك") {
-            showFriendsDialog()
-        }, 62)
 
         val utilityRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
