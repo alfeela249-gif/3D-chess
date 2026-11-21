@@ -342,31 +342,15 @@ class MainActivity : Activity() {
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
         gameRoot.addView(boardFrame, LinearLayout.LayoutParams(-1, 0, 1f).apply { setMargins(0, dp(8), 0, dp(8)) })
-        val cameraControls = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-        fun cameraButton(label: String, action: () -> Unit) {
-            val button = makeButton(label, false).apply {
-                textSize = 17f
-                setOnClickListener { action() }
-            }
-            cameraControls.addView(button, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                setMargins(dp(2), 0, dp(2), 0)
-            })
-        }
-        cameraButton("يسار") { board.rotateCamera(-0.45f) }
-        cameraButton("يمين") { board.rotateCamera(0.45f) }
-        cameraButton("تقريب +") { board.zoomCamera(-1.4f) }
-        cameraButton("إبعاد −") { board.zoomCamera(1.4f) }
-        cameraButton("إعادة") { board.resetCamera() }
-        gameRoot.addView(cameraControls, LinearLayout.LayoutParams(-1, dp(48)))
+        // Camera is controlled directly on the 3D board with touch gestures.
+        // A compact hint replaces the old bottom camera-button strip.
         gameRoot.addView(TextView(this).apply {
-            text = "اسحب فوق مربع فارغ للتدوير • إصبعان للتدوير والتكبير • استخدم الأزرار أسفل اللوحة"
-            setTextColor(Color.rgb(205, 181, 139))
-            textSize = 10f
+            text = "اسحب بإصبع واحد لتدوير الرقعة وإمالتها • استخدم إصبعين للتقريب والإبعاد"
+            setTextColor(Color.rgb(218, 190, 145))
+            textSize = 11f
             gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(-1, dp(24)))
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         val history = makeButton("📜 سجل النقلات", false).apply { setOnClickListener { showMoveHistory() } }
         val reset = makeButton("مباراة جديدة", true).apply {
