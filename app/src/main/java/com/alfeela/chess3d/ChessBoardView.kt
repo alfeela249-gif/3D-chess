@@ -209,12 +209,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val dx = (currentX - lastRotateX).coerceIn(-width.toFloat(), width.toFloat())
                     val dy = (currentY - lastRotateY).coerceIn(-height.toFloat(), height.toFloat())
                     val minDimension = minOf(width, height).coerceAtLeast(1).toFloat()
-                    boardRenderer.rotateBy(-dx * (2.4f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
+                    boardRenderer.rotateBy(-dx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
                     if (kotlin.math.abs(dy) > 0.5f) {
-                        boardRenderer.tiltBy(dy * (36f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
+                        boardRenderer.tiltBy(dy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                     }
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan) * (6f / minDimension) * cameraTouchSensitivity)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan) * (4.5f / minDimension) * cameraTouchSensitivity)
                     }
                     lastRotateX = currentX
                     lastRotateY = currentY
@@ -233,9 +233,9 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         // Avoid clipping normal swipe events; clipping caused fast drags to lose movement.
                         val dragDx = dx.coerceIn(-width.toFloat(), width.toFloat())
                         val dragDy = dy.coerceIn(-height.toFloat(), height.toFloat())
-                        boardRenderer.rotateBy(-dragDx * (2.4f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
+                        boardRenderer.rotateBy(-dragDx * (1.65f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
                         if (kotlin.math.abs(dragDy) > 0.5f) {
-                            boardRenderer.tiltBy(dragDy * (36f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
+                            boardRenderer.tiltBy(dragDy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                         }
                         requestRender()
                     }
