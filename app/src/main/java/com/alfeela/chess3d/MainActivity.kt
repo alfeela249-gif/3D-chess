@@ -162,10 +162,7 @@ class MainActivity : Activity() {
                 typeface = Typeface.create("serif", Typeface.BOLD)
                 setOnClickListener { action() }
             }
-            barProfileAdd(item, width)
-        }
-        fun barProfileAdd(item: View, weight: Float) {
-            profileBar.addView(item, LinearLayout.LayoutParams(0, dp(42), weight))
+            profileBar.addView(item, LinearLayout.LayoutParams(0, dp(42), width))
         }
         profileAction("♙  ملفي") { showAccountDialog() }
         profileBar.addView(View(this).apply { setBackgroundColor(Color.rgb(119, 89, 45)) },
