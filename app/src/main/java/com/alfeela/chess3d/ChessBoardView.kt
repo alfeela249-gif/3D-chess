@@ -794,7 +794,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
         GLES20.glEnableVertexAttribArray(normalHandle)
-        GLES20.glVertexAttribPointer(normalHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
+        GLES20.glVertexAttribPointer(normalHandle,3,GLES20.GL_FLOAT,false,12,cubeNormalBuffer)
         GLES20.glDrawElements(GLES20.GL_TRIANGLES,indices.size,GLES20.GL_UNSIGNED_SHORT,indexBuffer)
     }
 
