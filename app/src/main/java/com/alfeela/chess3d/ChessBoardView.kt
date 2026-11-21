@@ -500,14 +500,18 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
             } ?: false
             val isCheckedKing = checkedKing == square
             drawCube(file-3.5f,0f,rank-3.5f,0.98f,0.12f,0.98f,
-                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.88f else 0.40f,
-                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.89f else 0.44f,
-                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.92f else 0.49f)
+                if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else if(light) 0.94f else 0.42f,
+                if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else if(light) 0.95f else 0.45f,
+                if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else if(light) 0.97f else 0.52f)
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
             }
             val piece = game.pieceAt(file, rank) ?: continue
             val white = piece.side == Side.WHITE
+            // Turn each Staunton horse inward toward the center of the board.
+            activePieceYaw = if (piece.type == PieceType.KNIGHT) {
+                if (piece.side == Side.WHITE) 90f else -90f
+            } else 0f
             // Reference finish: glossy piano-black versus warm ivory.
             val r = if (white) 0.94f else 0.035f
             val g = if (white) 0.90f else 0.038f
