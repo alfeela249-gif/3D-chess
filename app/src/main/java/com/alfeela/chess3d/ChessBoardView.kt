@@ -542,99 +542,78 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 }
                 if (progress >= 1f) animatedMove = null
             }
-            // Six deliberately different royal silhouettes, each with its own crown/profile.
+            // Contemporary sculptural collection: clean geometry, restrained metal accents,
+// negative space and six silhouettes designed as one coherent modern set.
             val ar = (r*0.72f + 0.24f).coerceAtMost(1f)
             val ag = (g*0.72f + 0.18f).coerceAtMost(1f)
             val ab = (b*0.72f + 0.08f).coerceAtMost(1f)
-            // Shared sculpted, stepped plinth with bright inlaid bands.
-            drawCylinder(x,0.105f,z,0.345f,0.12f,r*0.48f,g*0.48f,b*0.48f)
-            drawCylinder(x,0.18f,z,0.325f,0.045f,ar,ag,ab)
-            drawCylinder(x,0.235f,z,0.285f,0.10f,r*0.82f,g*0.82f,b*0.82f)
-            drawCylinder(x,0.315f,z,0.245f,0.045f,ar,ag,ab)
-            drawCylinder(x,0.405f,z,0.18f,0.16f,r*0.90f,g*0.90f,b*0.90f)
+            // Low, precision-machined circular plinth shared by the full collection.
+            drawCylinder(x,0.105f,z,0.345f,0.12f,r*0.42f,g*0.42f,b*0.42f)
+            drawCylinder(x,0.175f,z,0.315f,0.035f,ar,ag,ab)
+            drawCylinder(x,0.235f,z,0.275f,0.09f,r*0.78f,g*0.78f,b*0.78f)
+            drawCylinder(x,0.315f,z,0.205f,0.055f,ar,ag,ab)
             when(piece.type) {
                 PieceType.PAWN -> {
-                    // Compact armored infantry: layered cuirass, helmet, plume and shield.
-                    drawCylinder(x,0.53f,z,0.145f,0.20f,r,g,b)
-                    drawSphere(x,0.61f,z,0.135f,r*0.88f,g*0.88f,b*0.88f)
-                    drawCylinder(x,0.70f,z,0.115f,0.075f,ar,ag,ab)
-                    drawSphere(x,0.805f,z,0.132f,r*0.92f,g*0.92f,b*0.92f)
-                    drawCylinder(x,0.91f,z,0.095f,0.075f,ar,ag,ab)
-                    drawSphere(x,0.965f,z,0.045f,ar,ag,ab)
-                    // Small heraldic shield on the front of the breastplate.
-                    drawSphere(x,0.60f,z-0.135f,0.072f,ar,ag,ab)
-                    drawCube(x,0.60f,z-0.175f,0.105f,0.13f,0.035f,ar,ag,ab)
+                    // Minimal capsule-like pawn with a floating spherical crown.
+                    drawCylinder(x,0.55f,z,0.145f,0.38f,r,g,b)
+                    drawCylinder(x,0.76f,z,0.105f,0.12f,ar,ag,ab)
+                    drawSphere(x,0.965f,z,0.145f,r*0.94f,g*0.94f,b*0.94f)
+                    drawSphere(x,0.965f,z-0.135f,0.026f,ar,ag,ab)
                 }
                 PieceType.ROOK -> {
-                    // A real fortress profile: broad masonry foot, tower shaft and crenellated crown.
-                    drawCylinder(x,0.55f,z,0.225f,0.22f,r,g,b)
-                    drawCylinder(x,0.68f,z,0.245f,0.065f,ar,ag,ab)
-                    drawCylinder(x,0.81f,z,0.215f,0.20f,r*0.90f,g*0.90f,b*0.90f)
-                    drawCylinder(x,0.93f,z,0.265f,0.075f,ar,ag,ab)
-                    drawCylinder(x,1.015f,z,0.235f,0.10f,r,g,b)
-                    for(dx in listOf(-0.16f,0.16f)) for(dz in listOf(-0.16f,0.16f))
-                        drawCube(x+dx,1.105f,z+dz,0.105f,0.15f,0.105f,ar,ag,ab)
-                    // Recessed-looking dark entrance and stone course accents.
-                    drawCube(x,0.57f,z-0.226f,0.115f,0.18f,0.025f,0.075f,0.065f,0.055f)
-                    drawSphere(x,0.66f,z-0.229f,0.057f,0.075f,0.065f,0.055f)
+                    // Architectural tower: square shoulders, open crown and four slim corner fins.
+                    drawCylinder(x,0.57f,z,0.215f,0.38f,r,g,b)
+                    drawCylinder(x,0.82f,z,0.245f,0.075f,ar,ag,ab)
+                    drawCylinder(x,0.98f,z,0.205f,0.22f,r,g,b)
+                    drawCylinder(x,1.105f,z,0.255f,0.055f,ar,ag,ab)
+                    for(dx in listOf(-0.17f,0.17f)) for(dz in listOf(-0.17f,0.17f))
+                        drawCube(x+dx,1.19f,z+dz,0.065f,0.18f,0.065f,r,g,b)
+                    drawCube(x,0.61f,z-0.218f,0.10f,0.20f,0.025f,ar,ag,ab)
                 }
                 PieceType.KNIGHT -> {
-                    // Distinct rearing horse: chest, raised neck, head, muzzle, ears and mane.
-                    drawSphere(x,0.60f,z,0.205f,r*0.88f,g*0.88f,b*0.88f)
-                    drawSphere(x-0.025f,0.755f,z-0.025f,0.145f,r,g,b)
-                    drawSphere(x+0.045f,0.895f,z-0.085f,0.135f,r*0.94f,g*0.94f,b*0.94f)
-                    drawSphere(x+0.13f,0.85f,z-0.17f,0.085f,r*0.82f,g*0.82f,b*0.82f)
-                    drawSphere(x+0.025f,1.015f,z-0.055f,0.052f,ar,ag,ab)
-                    drawSphere(x+0.105f,1.005f,z-0.075f,0.048f,ar,ag,ab)
-                    drawSphere(x+0.19f,0.89f,z-0.20f,0.022f,0.035f,0.025f,0.02f)
-                    // Flowing mane ridge and a small armored chest medallion.
-                    drawCube(x-0.075f,0.89f,z+0.015f,0.055f,0.23f,0.075f,ar,ag,ab)
-                    drawSphere(x,0.59f,z-0.19f,0.06f,ar,ag,ab)
+                    // Abstract forward-leaning horse profile, intentionally faceted and compact.
+                    drawCylinder(x,0.54f,z,0.205f,0.34f,r,g,b)
+                    drawSphere(x-0.015f,0.73f,z,0.17f,r,g,b)
+                    drawSphere(x+0.075f,0.91f,z-0.055f,0.135f,r*0.92f,g*0.92f,b*0.92f)
+                    drawSphere(x+0.18f,0.87f,z-0.15f,0.085f,r,g,b)
+                    drawCube(x+0.045f,1.075f,z-0.045f,0.075f,0.22f,0.065f,ar,ag,ab)
+                    drawCube(x+0.14f,1.055f,z-0.075f,0.06f,0.16f,0.055f,ar,ag,ab)
+                    drawSphere(x+0.22f,0.89f,z-0.215f,0.022f,0.025f,0.025f,0.03f)
+                    drawCube(x-0.075f,0.90f,z+0.04f,0.045f,0.22f,0.06f,ar,ag,ab)
                 }
                 PieceType.BISHOP -> {
-                    // Tall cleric silhouette, split mitre, ceremonial staff and shield.
-                    drawCylinder(x,0.56f,z,0.205f,0.25f,r,g,b)
-                    drawCylinder(x,0.735f,z,0.155f,0.22f,r*0.92f,g*0.92f,b*0.92f)
-                    drawSphere(x,0.91f,z,0.12f,r,g,b)
-                    drawSphere(x,1.035f,z,0.105f,r*0.92f,g*0.92f,b*0.92f)
-                    drawCube(x,1.055f,z,0.045f,0.20f,0.045f,ar,ag,ab)
-                    drawCube(x,1.055f,z,0.19f,0.045f,0.045f,ar,ag,ab)
-                    drawSphere(x,1.18f,z,0.045f,ar,ag,ab)
-                    // Staff at the side and a small ceremonial shield.
-                    drawCylinder(x+0.205f,0.78f,z,0.026f,0.58f,ar,ag,ab)
-                    drawSphere(x+0.205f,1.09f,z,0.055f,ar,ag,ab)
-                    drawCube(x-0.16f,0.69f,z-0.12f,0.12f,0.18f,0.045f,ar,ag,ab)
+                    // Slender obelisk with a diagonal-looking split made by offset upper geometry.
+                    drawCylinder(x,0.56f,z,0.205f,0.34f,r,g,b)
+                    drawCylinder(x,0.79f,z,0.145f,0.20f,ar,ag,ab)
+                    drawSphere(x,0.965f,z,0.12f,r,g,b)
+                    drawCylinder(x+0.015f,1.105f,z,0.09f,0.22f,r*0.92f,g*0.92f,b*0.92f)
+                    drawSphere(x+0.015f,1.235f,z,0.065f,ar,ag,ab)
+                    // Signature vertical light-line inset.
+                    drawCube(x,0.80f,z-0.151f,0.035f,0.38f,0.025f,ar,ag,ab)
                 }
                 PieceType.QUEEN -> {
-                    // Flowing royal gown, shoulders, neck and a low pearl diadem.
-                    drawCylinder(x,0.57f,z,0.245f,0.29f,r,g,b)
-                    drawCylinder(x,0.77f,z,0.175f,0.19f,r*0.92f,g*0.92f,b*0.92f)
-                    drawSphere(x,0.94f,z,0.115f,r,g,b)
-                    drawCylinder(x,1.045f,z,0.205f,0.065f,ar,ag,ab)
-                    drawSphere(x,1.105f,z,0.085f,r,g,b)
-                    drawCylinder(x,1.18f,z,0.205f,0.065f,ar,ag,ab)
+                    // Elegant tapered column crowned by a floating five-point halo.
+                    drawCylinder(x,0.57f,z,0.245f,0.34f,r,g,b)
+                    drawCylinder(x,0.82f,z,0.155f,0.22f,r*0.92f,g*0.92f,b*0.92f)
+                    drawSphere(x,0.985f,z,0.095f,ar,ag,ab)
+                    drawCylinder(x,1.105f,z,0.205f,0.045f,ar,ag,ab)
                     for(k in 0..4) {
                         val angle=(k*1.256637f)-1.570796f
-                        val cx=x+kotlin.math.cos(angle)*0.17f
-                        val cz=z+kotlin.math.sin(angle)*0.17f
-                        drawSphere(cx,1.245f,cz,0.052f,ar,ag,ab)
+                        val cx=x+kotlin.math.cos(angle)*0.19f
+                        val cz=z+kotlin.math.sin(angle)*0.19f
+                        drawSphere(cx,1.22f,cz,0.045f,ar,ag,ab)
                     }
-                    drawSphere(x,1.265f,z,0.072f,0.98f,0.82f,0.48f)
-                    drawSphere(x,1.34f,z,0.032f,0.98f,0.92f,0.70f)
-                    // Front-facing jewel on the gown.
-                    drawSphere(x,0.70f,z-0.235f,0.045f,ar,ag,ab)
+                    drawSphere(x,1.205f,z,0.065f,0.98f,0.82f,0.48f)
                 }
                 PieceType.KING -> {
-                    // Broad royal mantle, armored shoulders, orb and unmistakable cross.
-                    drawCylinder(x,0.58f,z,0.25f,0.30f,r,g,b)
-                    drawCylinder(x,0.80f,z,0.17f,0.19f,r*0.92f,g*0.92f,b*0.92f)
-                    drawSphere(x,0.965f,z,0.115f,r,g,b)
-                    drawCylinder(x,1.08f,z,0.20f,0.065f,ar,ag,ab)
-                    drawSphere(x,1.15f,z,0.085f,r,g,b)
-                    drawCylinder(x,1.25f,z,0.055f,0.22f,ar,ag,ab)
-                    drawCube(x,1.30f,z,0.24f,0.055f,0.055f,ar,ag,ab)
-                    drawSphere(x,1.40f,z,0.035f,ar,ag,ab)
-                    drawSphere(x,0.73f,z-0.245f,0.05f,ar,ag,ab)
+                    // Strong central monolith, broad shoulders and a clean illuminated crossbar.
+                    drawCylinder(x,0.58f,z,0.255f,0.38f,r,g,b)
+                    drawCylinder(x,0.84f,z,0.175f,0.20f,r*0.92f,g*0.92f,b*0.92f)
+                    drawSphere(x,1.035f,z,0.105f,ar,ag,ab)
+                    drawCylinder(x,1.16f,z,0.19f,0.055f,ar,ag,ab)
+                    drawCylinder(x,1.34f,z,0.045f,0.34f,r,g,b)
+                    drawCube(x,1.39f,z,0.29f,0.055f,0.07f,ar,ag,ab)
+                    drawSphere(x,1.54f,z,0.04f,ar,ag,ab)
                 }
             }
         }
