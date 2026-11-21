@@ -212,7 +212,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         boardRenderer.tiltBy(dy * (27f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                     }
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan) * 0.02f * cameraTouchSensitivity)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan) * 0.045f * cameraTouchSensitivity)
                     }
                     lastRotateX = currentX
                     lastRotateY = currentY
@@ -349,10 +349,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var animationStart = 0L
     // Current camera values are eased toward touch-controlled targets on the GL thread.
     @Volatile private var boardRotation = 0f
-    @Volatile private var cameraDistance = 15.0f
+    @Volatile private var cameraDistance = 17.0f
     @Volatile private var cameraElevation = 38f
     @Volatile private var targetBoardRotation = 0f
-    @Volatile private var targetCameraDistance = 15.0f
+    @Volatile private var targetCameraDistance = 17.0f
     @Volatile private var targetCameraElevation = 38f
     private var lastCameraFrameNanos = 0L
     @Volatile private var whitePieceColor = 0xF0E6D2.toInt()
@@ -373,7 +373,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private fun green(color: Int) = android.graphics.Color.green(color) / 255f
     private fun blue(color: Int) = android.graphics.Color.blue(color) / 255f
 
-    private val animationDuration = 420L
+    private val animationDuration = 300L
     private var activePieceLift = 0f
     private var activePieceGlow = 0f
     private var activePieceYaw = 0f
@@ -443,11 +443,11 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         targetCameraElevation = (targetCameraElevation + delta).coerceIn(24f, 62f)
     }
     fun zoomBy(delta: Float) {
-        targetCameraDistance = (targetCameraDistance + delta).coerceIn(9.5f, 22f)
+        targetCameraDistance = (targetCameraDistance + delta).coerceIn(8f, 30f)
     }
     fun resetCamera() {
         targetBoardRotation = 0f
-        targetCameraDistance = 15.0f
+        targetCameraDistance = 17.0f
         targetCameraElevation = 38f
     }
 
@@ -460,7 +460,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         lastCameraFrameNanos = now
         // A shorter response constant reduces the feeling of the camera dragging
         // behind the finger while retaining frame-rate-independent easing.
-        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 24_000_000.0)).toFloat()
+        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 14_000_000.0)).toFloat()
         boardRotation += (targetBoardRotation - boardRotation) * alpha
         cameraDistance += (targetCameraDistance - cameraDistance) * alpha
         cameraElevation += (targetCameraElevation - cameraElevation) * alpha
@@ -639,7 +639,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 val eased = progress * progress * progress * (progress * (progress * 6f - 15f) + 10f)
                 // Lift the moving piece along a smooth arc to avoid scraping across
                 // neighboring pieces while retaining exact square-to-square travel.
-                val arc = kotlin.math.sin(Math.PI.toFloat() * eased) * 0.38f
+                val arc = kotlin.math.sin(Math.PI.toFloat() * eased) * 0.22f
                 // Animate the moved piece from its source square to its destination.
                 if (moving.toFile == file && moving.toRank == rank) {
                     x = (moving.fromFile-3.5f) + ((moving.toFile-moving.fromFile)*eased)
