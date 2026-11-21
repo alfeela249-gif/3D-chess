@@ -5,6 +5,7 @@ on:
     paths:
       - 'docs/index.html'
       - 'docs/home.html'
+      - 'docs/chess.glb'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
