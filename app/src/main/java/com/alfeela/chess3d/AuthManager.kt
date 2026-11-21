@@ -9,7 +9,8 @@ import java.net.URLEncoder
 
 /** Small REST-based Supabase Auth client. The publishable key is intended for mobile clients. */
 class AuthManager(context: Context) {
-    private val prefs = context.getSharedPreferences("chess_auth", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("chess_auth", Context.MODE_PRIVATE)
     private val base = BuildConfig.SUPABASE_URL.trimEnd('/')
     private val apiKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY
 
@@ -125,10 +126,53 @@ class AuthManager(context: Context) {
             if (response.second in 200..299) Result(true, if (accept) "تم قبول طلب الصداقة." else "تم رفض طلب الصداقة.") else Result(false, "تعذر تحديث طلب الصداقة.")
         } catch (e: Exception) { Result(false, e.message ?: "تعذر الرد على الطلب") }
     }
-    fun savePlayerProfile(username: String, nickname: String): Result {
+    data class PlayerProfile(val username: String, val nickname: String, val avatarUrl: String?)
+
+    fun loadPlayerProfile(): PlayerProfile? {
+        return try {
+            val userId = currentUserId() ?: return null
+            val response = authorizedRequest("GET", "/rest/v1/player_profiles?select=username,nickname,avatar_url&user_id=eq.$userId", null)
+            if (response.second !in 200..299) return null
+            val rows = org.json.JSONArray(response.first)
+            if (rows.length() == 0) null else {
+                val row = rows.getJSONObject(0)
+                PlayerProfile(row.optString("username"), row.optString("nickname"), row.optString("avatar_url").takeIf { it.isNotBlank() })
+            }
+        } catch (_: Exception) { null }
+    }
+
+    fun uploadPlayerAvatar(bytes: ByteArray): Pair<Result, String?> {
+        return try {
+            val userId = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.") to null
+            val token = accessToken() ?: return Result(false, "انتهت الجلسة. سجّل الدخول مجدداً.") to null
+            val objectPath = "$userId/avatar.jpg"
+            val connection = (URL("$base/storage/v1/object/player-avatars/$objectPath").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 20000
+                readTimeout = 20000
+                doOutput = true
+                setRequestProperty("apikey", apiKey)
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("Content-Type", "image/jpeg")
+                setRequestProperty("x-upsert", "true")
+                setFixedLengthStreamingMode(bytes.size)
+            }
+            connection.outputStream.use { it.write(bytes) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            stream?.bufferedReader()?.use { it.readText() }
+            connection.disconnect()
+            if (code !in 200..299) return Result(false, "تعذر رفع الصورة إلى التخزين ($code).") to null
+            val publicUrl = "$base/storage/v1/object/public/player-avatars/$objectPath"
+            Result(true, "تم رفع الصورة.") to publicUrl
+        } catch (e: Exception) { Result(false, e.message ?: "تعذر رفع صورة الملف الشخصي") to null }
+    }
+
+    fun savePlayerProfile(username: String, nickname: String, avatarUrl: String? = null): Result {
         return try {
             val userId = currentUserId() ?: return Result(false, "سجّل الدخول أولاً.")
             val body = JSONObject().put("user_id", userId).put("username", username.trim()).put("nickname", nickname.trim())
+            if (avatarUrl != null) body.put("avatar_url", avatarUrl)
             val response = authorizedRequest("POST", "/rest/v1/player_profiles?on_conflict=user_id", body.toString(), "resolution=merge-duplicates,return=minimal")
             if (response.second in 200..299) Result(true, "تم حفظ الملف الشخصي.") else Result(false, "تعذر حفظ الاسم. يجب أن يكون فريداً ومن 3 إلى 20 حرفاً.")
         } catch (e: Exception) { Result(false, e.message ?: "تعذر حفظ الملف الشخصي") }
