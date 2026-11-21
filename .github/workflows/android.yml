@@ -24,6 +24,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Include approved Staunton GLB asset
+        run: |
+          mkdir -p app/src/main/assets
+          curl --fail --location --retry 3 --retry-delay 2 \\
+            https://raw.githubusercontent.com/alfeela249-gif/3D-chess/main/docs/chess.glb \\
+            --output app/src/main/assets/staunton-chess.glb
+          test -s app/src/main/assets/staunton-chess.glb
+          echo "Bundled Staunton GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
       - name: Run chess engine unit tests
         run: gradle testDebugUnitTest
       - name: Build debug APK
