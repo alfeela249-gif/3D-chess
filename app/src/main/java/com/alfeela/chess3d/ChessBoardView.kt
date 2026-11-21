@@ -351,7 +351,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         val viewProjection = FloatArray(16)
         val inverse = FloatArray(16)
         val aspect = screenWidth.toFloat() / screenHeight.toFloat()
-        Matrix.perspectiveM(p, 0, 52f, aspect, 0.1f, 60f)
+        Matrix.perspectiveM(p, 0, 36f, aspect, 0.1f, 60f)
         val distance = cameraDistance
         val elevation = Math.toRadians(cameraElevation.toDouble())
         Matrix.setLookAtM(v, 0, 0f,
@@ -444,12 +444,17 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         void main(){
             vec3 n = normalize(vNormal);
             vec3 lightDir = normalize(vec3(-0.45, 0.85, 0.55));
+            vec3 fillDir = normalize(vec3(0.65, 0.42, -0.55));
             float diffuse = max(dot(n, lightDir), 0.0);
+            float fill = max(dot(n, fillDir), 0.0);
             vec3 viewDir = normalize(vec3(0.0, 1.2, 2.0) - vPosition);
             vec3 halfDir = normalize(lightDir + viewDir);
-            float specular = pow(max(dot(n, halfDir), 0.0), 72.0);
-            float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0) * 0.16;
-            vec3 lit = uColor.rgb * (0.28 + diffuse * 0.78 + rim) + vec3(1.0,0.96,0.88) * specular * 0.72;
+            vec3 fillHalf = normalize(fillDir + viewDir);
+            float specular = pow(max(dot(n, halfDir), 0.0), 64.0);
+            float fillSpecular = pow(max(dot(n, fillHalf), 0.0), 42.0);
+            float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0) * 0.20;
+            vec3 lit = uColor.rgb * (0.34 + diffuse * 0.72 + fill * 0.24 + rim)
+                + vec3(1.0,0.96,0.88) * (specular * 0.62 + fillSpecular * 0.18);
             gl_FragColor = vec4(lit, uColor.a);
         }
     """
@@ -465,6 +470,17 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         .order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(cube); position(0) }
     private val indexBuffer = ByteBuffer.allocateDirect(indices.size*2)
         .order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(indices); position(0) }
+    // Unit corner normals keep cube lighting consistent instead of incorrectly
+    // reusing raw position coordinates as normals.
+    private val cubeNormalBuffer: FloatBuffer = ByteBuffer.allocateDirect(cube.size*4)
+        .order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            for (i in cube.indices step 3) {
+                val nx = cube[i]; val ny = cube[i+1]; val nz = cube[i+2]
+                val length = kotlin.math.sqrt(nx*nx + ny*ny + nz*nz).coerceAtLeast(0.0001f)
+                put(nx/length); put(ny/length); put(nz/length)
+            }
+            position(0)
+        }
 
     fun setSelection(value: Pair<Int, Int>?, targets: Set<Pair<Int, Int>>) {
         selected = value
@@ -472,7 +488,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.12f,0.045f,0.025f,1f)
+        GLES20.glClearColor(0.035f,0.032f,0.030f,1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         val vs = compile(GLES20.GL_VERTEX_SHADER, vertexShader)
         val fs = compile(GLES20.GL_FRAGMENT_SHADER, fragmentShader)
@@ -496,7 +512,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
 
     private fun updateProjection() {
         val aspect = viewportWidth.toFloat() / viewportHeight.coerceAtLeast(1)
-        Matrix.perspectiveM(projection, 0, 52f, aspect, 0.1f, 60f)
+        Matrix.perspectiveM(projection, 0, 36f, aspect, 0.1f, 60f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
