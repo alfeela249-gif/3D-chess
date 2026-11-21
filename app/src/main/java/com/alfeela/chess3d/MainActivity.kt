@@ -1007,12 +1007,12 @@ class MainActivity : Activity() {
         val username = EditText(this).apply {
             hint = "اسم المستخدم بالإنجليزية (3-20 حرفاً أو رقم أو _)"
             setText(profilePrefs.getString("username", ""))
-            singleLine = true
+            setSingleLine(true)
         }
         val nickname = EditText(this).apply {
             hint = "الاسم الظاهر"
             setText(profilePrefs.getString("nickname", ""))
-            singleLine = true
+            setSingleLine(true)
         }
         panel.addView(username)
         panel.addView(nickname)
@@ -1281,7 +1281,7 @@ class MainActivity : Activity() {
             val tone = when (event) {
                 "capture" -> ToneGenerator.TONE_PROP_ACK
                 "check" -> ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD
-                "mate" -> ToneGenerator.TONE_CDMA_ALERT_INCALL_L
+                "mate" -> ToneGenerator.TONE_PROP_NACK
                 else -> ToneGenerator.TONE_PROP_BEEP
             }
             generator.startTone(tone, if (event == "move") 65 else 180)
