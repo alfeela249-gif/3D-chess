@@ -23,6 +23,8 @@ import android.widget.EditText
 import android.app.AlertDialog
 import android.widget.FrameLayout
 import android.widget.Toast
+import android.media.AudioManager
+import android.media.ToneGenerator
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
@@ -42,6 +44,8 @@ class MainActivity : Activity() {
     private var pendingHotspotSettingsReturn = false
     private var activeMatchMode: String? = null
     private var activeMatchStartedAt: Long = 0L
+    private var soundEnabled = true
+    private var toneGenerator: ToneGenerator? = null
 
     private val wood = Color.rgb(10, 10, 12)
     private val gold = Color.rgb(220, 178, 91)
@@ -85,6 +89,7 @@ class MainActivity : Activity() {
         board = ChessBoardView(this)
         getSharedPreferences("game_settings", MODE_PRIVATE).let { prefs ->
             board.cameraTouchSensitivity = prefs.getFloat("camera_sensitivity", 1.0f)
+            soundEnabled = prefs.getBoolean("sound_enabled", true)
             board.setPieceStyle(prefs.getInt("piece_style", 0))
         }
         getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
@@ -118,6 +123,8 @@ class MainActivity : Activity() {
                 updateGameStatus()
             }
         }
+
+        board.onSound = { event -> playGameSound(event) }
 
         board.onPromotionRequested = { side, complete ->
             val choices = arrayOf("الملكة", "القلعة", "الفيل", "الحصان")
@@ -501,7 +508,7 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق")
+        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇")
         AlertDialog.Builder(this).setTitle("إعدادات اللعبة")
             .setItems(options) { _, which ->
                 when (which) {
@@ -549,8 +556,13 @@ class MainActivity : Activity() {
                     }
                     4 -> showAccountDialog()
                     5 -> AlertDialog.Builder(this).setTitle("3D Chess")
-                        .setMessage("خصص صعوبة الكمبيوتر وألوان الرقعة وأشكال القطع والتحكم بالكاميرا.")
+                        .setMessage("خصص صعوبة الكمبيوتر وألوان الرقعة وأشكال القطع والتحكم بالكاميرا والصوت.")
                         .setPositiveButton("حسناً", null).show()
+                    6 -> {
+                        soundEnabled = !soundEnabled
+                        prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                        Toast.makeText(this, if (soundEnabled) "تم تشغيل أصوات اللعبة" else "تم كتم أصوات اللعبة", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }.setNegativeButton("إغلاق", null).show()
     }
@@ -1036,7 +1048,25 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun playGameSound(event: String) {
+        if (!soundEnabled) return
+        try {
+            val generator = toneGenerator ?: ToneGenerator(AudioManager.STREAM_MUSIC, 75).also { toneGenerator = it }
+            val tone = when (event) {
+                "capture" -> ToneGenerator.TONE_PROP_ACK
+                "check" -> ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD
+                "mate" -> ToneGenerator.TONE_CDMA_ALERT_INCALL_L
+                else -> ToneGenerator.TONE_PROP_BEEP
+            }
+            generator.startTone(tone, if (event == "move") 65 else 180)
+        } catch (_: Exception) {
+            // Audio is optional; never interrupt a chess move if unavailable.
+        }
+    }
+
     override fun onDestroy() {
+        toneGenerator?.release()
+        toneGenerator = null
         stopOnlinePolling()
         lan.close()
         super.onDestroy()
