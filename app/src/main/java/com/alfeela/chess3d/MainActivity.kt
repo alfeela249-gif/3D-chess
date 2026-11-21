@@ -54,6 +54,9 @@ class MainActivity : Activity() {
         lan = LanConnection(
             onState = { message ->
                 runOnUiThread {
+                    if (::board.isInitialized) {
+                        board.isEnabled = message == "Opponent connected" || message.startsWith("Connected to ")
+                    }
                     status.text = when {
                         message.startsWith("Waiting for opponent") ->
                             "بانتظار الصديق • عنوانك ${localWifiAddress() ?: "غير متاح"} • المنفذ 45454"
@@ -519,12 +522,13 @@ class MainActivity : Activity() {
     private fun showLanDialog() {
         AlertDialog.Builder(this)
             .setTitle("اللعب مع الأصدقاء بدون إنترنت")
-            .setMessage("اتصل أنت وصديقك بشبكة Wi-Fi نفسها أو بنقطة اتصال أحد الهاتفين. لا تحتاج هذه المباراة إلى إنترنت أو تسجيل دخول.")
+            .setMessage("1) اتصل أنت وصديقك بشبكة Wi-Fi نفسها أو Hotspot.\n2) المضيف يختار إنشاء مباراة ويرسل عنوان IP الظاهر له.\n3) الصديق يختار انضمام ويدخل العنوان.\nلن تبدأ الحركة حتى يتصل الهاتفان بنجاح.")
             .setPositiveButton("إنشاء مباراة • الأبيض") { _, _ ->
                 stopOnlinePolling()
                 playVsComputer = false
                 board.localSide = Side.WHITE
                 board.resetBoard()
+                board.isEnabled = false
                 lan.host()
                 showGameScreen()
                 val address = localWifiAddress()
@@ -545,6 +549,7 @@ class MainActivity : Activity() {
                             playVsComputer = false
                             board.localSide = Side.BLACK
                             board.resetBoard()
+                            board.isEnabled = false
                             status.text = "جارٍ الاتصال بصديقك عبر Wi-Fi..."
                             lan.join(address)
                             showGameScreen()
