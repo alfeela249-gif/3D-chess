@@ -204,14 +204,16 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val currentX = pointerCenterX(event)
                     val currentY = pointerCenterY(event)
                     val currentSpan = pointerSpan(event)
-                    val dx = (currentX - lastRotateX).coerceIn(-80f, 80f)
-                    val dy = (currentY - lastRotateY).coerceIn(-80f, 80f)
-                    boardRenderer.rotateBy(-dx * 0.0045f * cameraTouchSensitivity)
+                    // Normalize gesture deltas to the view size for consistent control on phones and tablets.
+                    val dx = (currentX - lastRotateX).coerceIn(-width.toFloat(), width.toFloat())
+                    val dy = (currentY - lastRotateY).coerceIn(-height.toFloat(), height.toFloat())
+                    val minDimension = minOf(width, height).coerceAtLeast(1).toFloat()
+                    boardRenderer.rotateBy(-dx * (2.4f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
                     if (kotlin.math.abs(dy) > 0.5f) {
-                        boardRenderer.tiltBy(dy * 0.10f * cameraTouchSensitivity)
+                        boardRenderer.tiltBy(dy * (36f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                     }
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
-                        boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f*cameraTouchSensitivity)
+                        boardRenderer.zoomBy((lastPointerSpan-currentSpan) * (6f / minDimension) * cameraTouchSensitivity)
                     }
                     lastRotateX = currentX
                     lastRotateY = currentY
@@ -227,11 +229,12 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         oneFingerCameraDrag = true
                         cameraGestureConsumed = true
                         downSquare = null
-                        val smoothDx = dx.coerceIn(-80f, 80f)
-                        val smoothDy = dy.coerceIn(-60f, 60f)
-                        boardRenderer.rotateBy(-smoothDx * 0.0045f * cameraTouchSensitivity)
-                        if (kotlin.math.abs(smoothDy) > 1.5f) {
-                            boardRenderer.tiltBy(smoothDy * 0.12f * cameraTouchSensitivity)
+                        // Avoid clipping normal swipe events; clipping caused fast drags to lose movement.
+                        val dragDx = dx.coerceIn(-width.toFloat(), width.toFloat())
+                        val dragDy = dy.coerceIn(-height.toFloat(), height.toFloat())
+                        boardRenderer.rotateBy(-dragDx * (2.4f / width.coerceAtLeast(1)) * cameraTouchSensitivity)
+                        if (kotlin.math.abs(dragDy) > 0.5f) {
+                            boardRenderer.tiltBy(dragDy * (36f / height.coerceAtLeast(1)) * cameraTouchSensitivity)
                         }
                         requestRender()
                     }
@@ -450,7 +453,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         lastCameraFrameNanos = now
         // A shorter response constant reduces the feeling of the camera dragging
         // behind the finger while retaining frame-rate-independent easing.
-        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 38_000_000.0)).toFloat()
+        val alpha = (1.0 - kotlin.math.exp(-elapsed.toDouble() / 24_000_000.0)).toFloat()
         boardRotation += (targetBoardRotation - boardRotation) * alpha
         cameraDistance += (targetCameraDistance - cameraDistance) * alpha
         cameraElevation += (targetCameraElevation - cameraElevation) * alpha
