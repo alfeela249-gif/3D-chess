@@ -1267,10 +1267,13 @@ class MainActivity : Activity() {
         finishDialogShown = true
         saveActiveMatch()
         val localWon = winner != null && winner == board.localSide
+        val playerName = profilePrefs.getString("nickname", null)?.takeIf { it.isNotBlank() }
+            ?: profilePrefs.getString("username", null)?.takeIf { it.isNotBlank() }
+            ?: "أنت"
         val heading = when {
             draw -> "تعادل!"
-            localWon -> "مبروك! لقد انتصرت 🏆"
-            else -> "انتهت المباراة • هزيمة"
+            localWon -> "انتصار $playerName 🏆"
+            else -> "هزيمة $playerName"
         }
         val detail = if (draw) "انتهت المباراة بالتعادل." else
             "الفائز: ${sideName(winner!!)}\n${if (localWon) "أحسنت اللعب!" else "حظاً أوفر في المباراة القادمة."}"
@@ -1287,6 +1290,15 @@ class MainActivity : Activity() {
             setTextColor(gold)
         }
         panel.addView(emblem, LinearLayout.LayoutParams(-1, dp(66)))
+        val resultTitle = TextView(this).apply {
+            text = heading
+            textSize = 23f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setPadding(0, dp(4), 0, dp(8))
+        }
+        panel.addView(resultTitle, LinearLayout.LayoutParams(-1, -2))
         val message = TextView(this).apply {
             text = detail
             textSize = 17f
@@ -1297,7 +1309,6 @@ class MainActivity : Activity() {
         }
         panel.addView(message, LinearLayout.LayoutParams(-1, -2))
         val dialog = AlertDialog.Builder(this)
-            .setTitle(heading)
             .setView(panel)
             .setNeutralButton("العودة إلى الصفحة الرئيسية", null)
             .setNegativeButton("مراجعة المباراة السابقة", null)
@@ -1306,10 +1317,9 @@ class MainActivity : Activity() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
                 dialog.dismiss()
-                stopOnlinePolling()
+                onlinePoll?.let { mainHandler.removeCallbacks(it) }
                 lan.close()
-                setContentView(homeRoot)
-                status = homeStatus
+                showHome()
             }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener {
                 dialog.dismiss()
