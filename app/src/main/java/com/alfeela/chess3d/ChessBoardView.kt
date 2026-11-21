@@ -568,14 +568,24 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                         drawCube(x+dx,1.245f,z+dz,0.105f,0.18f,0.105f,r,g,b)
                 }
                 PieceType.KNIGHT -> {
+                    // Traditional Staunton knight: a recognizable raised horse head,
+                    // long arched neck, swept mane, muzzle, ears and a visible eye.
                     drawCylinder(x,0.50f,z,0.20f,0.42f,r,g,b)
-                    // Sculpted horse neck, head, muzzle and swept-back mane.
-                    drawSphere(x,0.83f,z,0.205f,r,g,b)
-                    drawSphere(x-0.035f,1.055f,z-0.015f,0.155f,r,g,b)
-                    drawSphere(x+0.085f,0.99f,z-0.13f,0.105f,r,g,b)
-                    drawCube(x-0.11f,1.19f,z+0.015f,0.10f,0.29f,0.16f,r,g,b)
-                    drawCube(x-0.13f,1.34f,z+0.045f,0.075f,0.16f,0.12f,r,g,b)
-                    drawSphere(x+0.16f,1.04f,z-0.13f,0.025f,hi,hg,hb)
+                    drawSphere(x+0.035f,0.76f,z,0.17f,r,g,b,0.92f,1.55f,0.88f)
+                    drawSphere(x-0.035f,1.02f,z,0.145f,r,g,b,0.90f,1.18f,0.90f)
+                    drawSphere(x-0.145f,0.99f,z-0.015f,0.105f,r,g,b,1.30f,0.72f,0.82f)
+                    // Sculpted tapered ears and a swept-back mane, angled in profile.
+                    drawTriangles(floatArrayOf(
+                        -0.13f,1.12f,-0.10f, -0.08f,1.12f,-0.10f, -0.105f,1.39f,-0.10f,
+                        -0.105f,1.39f,-0.10f, -0.08f,1.12f,-0.10f, -0.015f,1.16f,-0.10f,
+                        0.035f,1.12f,-0.10f, 0.12f,1.12f,-0.10f, 0.205f,1.39f,-0.10f,
+                        0.205f,1.39f,-0.10f, 0.12f,1.12f,-0.10f, 0.075f,1.16f,-0.10f,
+                        0.12f,1.03f,-0.12f, 0.24f,1.19f,-0.12f, 0.20f,0.83f,-0.12f,
+                        0.20f,0.83f,-0.12f, 0.24f,1.19f,-0.12f, 0.12f,0.96f,-0.12f
+                    ),x,0f,z,r*0.88f,g*0.88f,b*0.88f)
+                    // Eye and nostril catch the highlights on the polished finish.
+                    drawSphere(x-0.105f,1.075f,z-0.105f,0.027f,hi,hg,hb)
+                    drawSphere(x-0.235f,0.985f,z-0.065f,0.018f,hi,hg,hb)
                 }
                 PieceType.BISHOP -> {
                     drawCylinder(x,0.52f,z,0.17f,0.44f,r,g,b)
