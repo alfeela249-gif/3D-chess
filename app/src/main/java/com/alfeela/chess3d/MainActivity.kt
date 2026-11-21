@@ -251,27 +251,24 @@ class MainActivity : Activity() {
             bottomMargin = dp(8)
         })
 
-        fun tileRow(first: View, second: View) {
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-            }
-            row.addView(first, LinearLayout.LayoutParams(0, dp(78), 1f).apply {
-                setMargins(dp(3), dp(3), dp(5), dp(3))
+        fun addHomeAction(tile: View, height: Int = 66) {
+            content.addView(tile, LinearLayout.LayoutParams(-1, dp(height)).apply {
+                topMargin = dp(5)
+                bottomMargin = dp(5)
             })
-            row.addView(second, LinearLayout.LayoutParams(0, dp(78), 1f).apply {
-                setMargins(dp(5), dp(3), dp(3), dp(3))
-            })
-            content.addView(row, LinearLayout.LayoutParams(-1, dp(84)))
         }
-        tileRow(
-            homeTile("♟  أصدقاء • Wi-Fi", "اللعب محلياً بلا إنترنت") { showLanDialog() },
-            homeTile("♜  اللعب عبر الإنترنت", "اتصل بصديقك") { showOnlineDialog() }
-        )
-        tileRow(
-            homeTile("♙  قائمة الأصدقاء", "إضافة وإدارة الأصدقاء") { showFriendsDialog() },
-            homeTile("⚙  الإعدادات", "الحساب وتفضيلات اللعبة") { showSettingsDialog() }
-        )
+        addHomeAction(homeTile("♟  اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
+            showLanDialog()
+        }, 72)
+        addHomeAction(homeTile("🌐  اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
+            showOnlineDialog()
+        }, 72)
+        addHomeAction(homeTile("⚙  الإعدادات", "الألوان • الصوت • تفضيلات اللعبة") {
+            showSettingsDialog()
+        }, 62)
+        addHomeAction(homeTile("♟  الأصدقاء", "إضافة الأصدقاء وإدارة قائمتك") {
+            showFriendsDialog()
+        }, 62)
 
         val utilityRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
