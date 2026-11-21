@@ -54,7 +54,7 @@ settings:{title:'إعدادات اللعبة',html:`<p>خصص مظهر الوا�
 <button class="dialogBtn" id="saveSettings">حفظ الإعدادات</button><div id="settingsStatus" class="status" hidden></div>`},
 profile:{title:'ملفي الشخصي',html:`<p>اكتب الاسم الذي تريد ظهوره في الواجهة.</p><input class="field" id="playerName" maxlength="24" placeholder="اسم اللاعب"><button class="dialogBtn" id="saveProfile">حفظ الاسم</button><div id="profileStatus" class="status" hidden></div>`},
 friends:{title:'الأصدقاء',html:`<p>أضف أسماء أصدقائك إلى قائمة المتابعة على هذا الجهاز.</p><input class="field" id="friendName" maxlength="24" placeholder="اسم الصديق"><button class="dialogBtn" id="addFriend">إضافة صديق</button><div id="friendList" class="setting">لا توجد أسماء مضافة بعد.</div>`},
-wifi:{title:'اللعب عبر Wi-Fi',html:`<p>اللعب المحلي متاح في تطبيق Android عند اتصال الهاتفين بالشبكة نفسها أو بنقطة اتصال واحدة.</p><div class="setting"><b>طريقة الاتصال</b><small>من الهاتف الأول اختر استضافة مباراة، ثم أدخل عنوان IP الظاهر في الهاتف الثاني.</small></div><div class="status">معاينة الويب لا تنشئ اتصال Wi-Fi فعلياً. استخدم نسخة Android لهذه الميزة.</div>`},
+wifi:{title:'اللعب مع صديق عبر Wi-Fi',html:`<p>اختر طريقة الاتصال بين الهاتفين. يجب أن يكون الهاتفان على نفس شبكة Wi-Fi أو نقطة الاتصال.</p><button class="dialogBtn" id="openHotspot">فتح نقطة اتصال</button><button class="dialogBtn alt" id="joinHotspot">انضمام إلى نقطة اتصال</button><div id="wifiDetails" class="setting" hidden></div><div class="status">هذه معاينة للواجهة فقط؛ تشغيل نقطة الاتصال والاتصال الفعلي يتمان من تطبيق Android.</div>`},
 online:{title:'اللعب عبر الإنترنت',html:`<p>اللعب من مدينتين مختلفتين يحتاج خادماً لمزامنة النقلات وربط اللاعبين.</p><div class="status">ميزة اللعب عبر الإنترنت غير مفعّلة في معاينة الويب حالياً. لن نعرض اتصالاً وهمياً أو نعلن عن مباراة غير متصلة.</div>`}
 };
 function openPage(key){const page=pages[key];if(!page)return;title.textContent=page.title;body.innerHTML=page.html;modal.classList.add('open');wirePage(key)}
@@ -69,6 +69,13 @@ function wirePage(key){
   const saved=JSON.parse(localStorage.getItem('chessSettings')||'{}');
   for(const id of ['white','black','light','dark','level','sound'])if(saved[id])document.getElementById(id).value=saved[id];
   document.querySelector('#saveSettings').onclick=()=>{const data={};for(const id of ['white','black','light','dark','level','sound'])data[id]=document.getElementById(id).value;localStorage.setItem('chessSettings',JSON.stringify(data));const s=document.querySelector('#settingsStatus');s.hidden=false;s.textContent='تم حفظ اختياراتك على هذا المتصفح.'};
+ }
+ if(key==='wifi'){
+  const details=document.querySelector('#wifiDetails');
+  document.querySelector('#openHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>فتح نقطة اتصال</b><small>1. اضغط فتح إعدادات نقطة الاتصال في هاتفك من إعدادات Android. 2. فعّل نقطة الاتصال. 3. ارجع إلى اللعبة لبدء استضافة المباراة. 4. أعطِ عنوان IP الظاهر لصديقك.</small><div class="status">ملاحظة: Android يتطلب تفعيل نقطة الاتصال يدوياً على معظم الأجهزة.</div>'};
+  document.querySelector('#joinHotspot').onclick=()=>{details.hidden=false;details.innerHTML='<b>الانضمام إلى نقطة اتصال</b><small>1. اتصل أولاً بنقطة اتصال صديقك من إعدادات Wi-Fi. 2. أدخل عنوان IP الخاص بالهاتف المضيف داخل تطبيق Android. 3. اضغط انضمام لبدء المباراة.</small><input class="field" id="previewHostIp" placeholder="مثال: 192.168.43.1" inputmode="decimal"><button class="dialogBtn" id="previewJoin">متابعة المعاينة</button><div id="previewJoinStatus" class="status" hidden></div>';
+   document.querySelector('#previewJoin').onclick=()=>{const ip=document.querySelector('#previewHostIp').value.trim(),status=document.querySelector('#previewJoinStatus');status.hidden=false;status.textContent=ip?'تم إدخال العنوان '+ip+' — أكمل الاتصال الفعلي من تطبيق Android.':'يرجى إدخال عنوان IP أولاً.'};
+  };
  }
  if(key==='profile'){
   const input=document.querySelector('#playerName');input.value=localStorage.getItem('chessPlayerName')||'';
