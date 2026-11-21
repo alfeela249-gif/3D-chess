@@ -921,7 +921,7 @@ class MainActivity : Activity() {
         }
         panel.addView(choosePhoto, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(10) })
         val username = EditText(this).apply {
-            hint = "اسم المستخدم (3-20 حرفاً)"
+            hint = "اسم المستخدم بالإنجليزية (3-20 حرفاً أو رقم أو _)"
             setText(profilePrefs.getString("username", ""))
             singleLine = true
         }
@@ -949,8 +949,8 @@ class MainActivity : Activity() {
             .setPositiveButton("حفظ الملف الشخصي") { _, _ ->
                 val user = username.text.toString().trim()
                 val display = nickname.text.toString().trim().ifBlank { user }
-                if (user.length !in 3..20) {
-                    Toast.makeText(this, "اسم المستخدم يجب أن يكون من 3 إلى 20 حرفاً", Toast.LENGTH_LONG).show()
+                if (!user.matches(Regex("[A-Za-z0-9_]{3,20}"))) {
+                    Toast.makeText(this, "استخدم 3 إلى 20 حرفاً إنجليزياً أو رقماً أو _ لاسم المستخدم", Toast.LENGTH_LONG).show()
                     return@setPositiveButton
                 }
                 status.text = "جارٍ حفظ الملف الشخصي..."
