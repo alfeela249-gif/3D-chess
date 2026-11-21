@@ -137,6 +137,24 @@ function makePiece(type,material){
 const black=mat(colorChoices.black[savedAppearance.black]??0x09090b,.22,.16),ivory=mat(colorChoices.white[savedAppearance.white]??0xeee5d2,.08,.26);
 const back=['rook','knight','bishop','queen','king','bishop','knight','rook'];
 for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[6,'pawn',black],[7,back[x],black]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);if(type==='knight')p.rotation.y=(m===ivory?1:-1)*Math.PI/2;board.add(p)}}
+// Optional production GLB: when the approved asset is added at this path it replaces
+// the procedural preview automatically; until then the current preview remains visible.
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+const approvedModelUrl='./assets/staunton-chess.glb';
+new GLTFLoader().load(approvedModelUrl,(gltf)=>{
+ const imported=gltf.scene;
+ imported.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(imported);
+ const size=bounds.getSize(new THREE.Vector3());
+ const center=bounds.getCenter(new THREE.Vector3());
+ const maxDim=Math.max(size.x,size.y,size.z);
+ if(maxDim>0){const scale=8.5/maxDim;imported.scale.setScalar(scale);imported.position.set(-center.x*scale,-bounds.min.y*scale+.02,-center.z*scale);}
+ imported.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.needsUpdate=true;}}});
+ scene.add(imported);board.visible=false;
+ targetDist=Math.max(11,Math.min(20,Math.max(size.x,size.z)*1.75));distance=targetDist;syncCameraAfterModel();
+ document.querySelector('#renderState').textContent='GLB نشط';
+},undefined,()=>{document.querySelector('#renderState').textContent='عرض احتياطي';});
+function syncCameraAfterModel(){cameraUpdate(1);}
 function cameraUpdate(dt){if(spin)targetAz+=dt*.25*speed;const a=smooth?1-Math.exp(-dt/(smoothMs/1000)):1;azimuth+=(targetAz-azimuth)*a;elevation+=(targetEl-elevation)*a;distance+=(targetDist-distance)*a;const ce=Math.cos(elevation);camera.position.set(Math.sin(azimuth)*distance*ce,Math.sin(elevation)*distance,Math.cos(azimuth)*distance*ce);camera.lookAt(0,.25,0)}
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
 function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;cameraUpdate(dt);renderer.render(scene,camera);frames++;if(now-fpsTime>600){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsTime))+' FPS';frames=0;fpsTime=now}}requestAnimationFrame(animate);
