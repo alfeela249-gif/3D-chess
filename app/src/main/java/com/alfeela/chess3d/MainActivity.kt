@@ -171,7 +171,7 @@ class MainActivity : Activity() {
             profileBar.addView(item, LinearLayout.LayoutParams(dp(44), dp(42)))
         }
         quickAction("♟") { showFriendsDialog() }
-        quickAction("⚙") { showSettingsDialog() }
+        quickAction("⚙️") { showSettingsDialog() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
 
         val hero = LinearLayout(this).apply {
@@ -290,7 +290,7 @@ class MainActivity : Activity() {
         addHomeAction(homeTile("🌐  اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
         }, 72)
-        addHomeAction(homeTile("📜  سجل المباريات", "مباريات الكمبيوتر • الأصدقاء • الإنترنت") {
+        addHomeAction(homeTile("📜  سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت", true) {
             showMatchHistory()
         }, 62)
         addHomeAction(homeTile("♟  الأصدقاء", "إضافة الأصدقاء وإدارة قائمتك") {
