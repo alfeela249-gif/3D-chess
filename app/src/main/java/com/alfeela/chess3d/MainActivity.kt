@@ -454,6 +454,7 @@ class MainActivity : Activity() {
         board.onCapturedPiecesChanged?.invoke(board.game.capturedPieces(Side.WHITE), board.game.capturedPieces(Side.BLACK))
         val boardFrame = FrameLayout(this).apply { background = rounded(Color.rgb(10, 12, 15), gold, 2); clipToPadding = true }
         (board.parent as? android.view.ViewGroup)?.removeView(board)
+        board.set2DMode(getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("board_2d_mode", false))
         boardFrame.addView(board, FrameLayout.LayoutParams(-1, -1))
         boardArea.addView(capturedPanel, LinearLayout.LayoutParams(dp(70), -1).apply { rightMargin = dp(6) })
         boardArea.addView(boardFrame, LinearLayout.LayoutParams(0, -1, 1f))
@@ -472,6 +473,17 @@ class MainActivity : Activity() {
         zoomControls.addView(makeButton("إعادة الضبط", false).apply {
             setOnClickListener { board.resetCamera() }
         }, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+        val displayModeButton = makeButton(if (board.is2DMode()) "عرض 3D" else "عرض 2D", false).apply {
+            textSize = 11f
+            setOnClickListener {
+                val use2D = !board.is2DMode()
+                board.set2DMode(use2D)
+                getSharedPreferences("game_settings", MODE_PRIVATE).edit().putBoolean("board_2d_mode", use2D).apply()
+                text = if (use2D) "عرض 3D" else "عرض 2D"
+                Toast.makeText(this@MainActivity, if (use2D) "تم تحويل الرقعة إلى العرض ثنائي الأبعاد" else "تمت العودة إلى العرض ثلاثي الأبعاد", Toast.LENGTH_SHORT).show()
+            }
+        }
+        zoomControls.addView(displayModeButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
         gameRoot.addView(zoomControls, LinearLayout.LayoutParams(-1, dp(48)))
         gameRoot.addView(TextView(this).apply {
             text = "اسحب بإصبع واحد لتدوير الرقعة وإمالتها • استخدم إصبعين أو أزرار التكبير والتصغير"
