@@ -242,13 +242,15 @@ class MainActivity : Activity() {
             return tile
         }
 
-        val computerTile = homeTile("▶  العب ضد الكمبيوتر", "مستوى متوسط • دون إنترنت", true) {
+        val savedDepth = getSharedPreferences("game_settings", MODE_PRIVATE).getInt("computer_depth", 3)
+        val savedLevel = when (savedDepth) { 1 -> "سهل"; 4 -> "صعب"; 5 -> "خبير"; else -> "متوسط" }
+        val computerTile = homeTile("▶  العب ضد الكمبيوتر", "مستوى $savedLevel • دون إنترنت", true) {
             stopOnlinePolling()
             playVsComputer = true
             board.localSide = Side.WHITE
             board.resetBoard()
             lan.close()
-            status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى متوسط"
+            status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى $savedLevel"
             showGameScreen()
         }
         content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(66)).apply {
@@ -268,7 +270,7 @@ class MainActivity : Activity() {
         addHomeAction(homeTile("🌐  اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
         }, 72)
-        addHomeAction(homeTile("⚙  الإعدادات", "الألوان • الصوت • تفضيلات اللعبة") {
+        addHomeAction(homeTile("⚙  الإعدادات", "الصعوبة • الألوان • الأشكال • التحكم") {
             showSettingsDialog()
         }, 62)
         addHomeAction(homeTile("♟  الأصدقاء", "إضافة الأصدقاء وإدارة قائمتك") {
