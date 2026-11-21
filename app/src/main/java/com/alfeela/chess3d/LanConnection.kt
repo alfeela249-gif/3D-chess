@@ -1,5 +1,9 @@
 package com.alfeela.chess3d
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
@@ -18,9 +22,32 @@ import kotlin.concurrent.thread
  * then the actual chess session uses TCP (45454). No IP entry is required.
  */
 class LanConnection(
+    context: Context,
     private val onState: (String) -> Unit,
     private val onMessage: (String) -> Unit
 ) {
+    private val appContext = context.applicationContext
+
+    /** Keep local-game sockets on Wi-Fi even when Android prefers mobile data
+     * because the hotspot has no internet access. */
+    @Suppress("DEPRECATION")
+    private fun activeWifiNetwork(): Network? {
+        return try {
+            val manager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            manager.allNetworks.firstOrNull { network ->
+                manager.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            }
+        } catch (_: Exception) { null }
+    }
+
+    private fun bindToWifi(socket: DatagramSocket) {
+        runCatching { activeWifiNetwork()?.bindSocket(socket) }
+    }
+
+    private fun bindToWifi(socket: Socket) {
+        runCatching { activeWifiNetwork()?.bindSocket(socket) }
+    }
+
     companion object {
         const val PORT = 45454
         private const val DISCOVERY_PORT = 45455
@@ -72,6 +99,7 @@ class LanConnection(
                     bind(InetSocketAddress(DISCOVERY_PORT))
                 }
                 udp = responder
+                bindToWifi(responder)
                 discoverySocket = responder
                 val buffer = ByteArray(128)
                 while (!responder.isClosed) {
@@ -107,6 +135,7 @@ class LanConnection(
                     soTimeout = 850
                 }
                 udp = discovery
+                bindToWifi(discovery)
                 discoverySocket = discovery
                 val requestBytes = DISCOVERY_REQUEST.toByteArray(Charsets.UTF_8)
                 val broadcasts = discoverBroadcastAddresses()
@@ -143,6 +172,7 @@ class LanConnection(
                 try {
                     peer.tcpNoDelay = true
                     peer.keepAlive = true
+                    bindToWifi(peer)
                     peer.connect(InetSocketAddress(hostAddress, PORT), 10_000)
                     attach(peer)
                     onState("Connected to $hostAddress")
@@ -185,6 +215,7 @@ class LanConnection(
             try {
                 peer.tcpNoDelay = true
                 peer.keepAlive = true
+                bindToWifi(peer)
                 peer.connect(InetSocketAddress(hostIp.trim(), PORT), 10_000)
                 attach(peer)
                 onState("Connected to $hostIp")
