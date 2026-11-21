@@ -35,7 +35,6 @@ class LanConnection(
 
     fun host() {
         close()
-        startDiscoveryResponder()
         thread(name = "chess-lan-host") {
             var listener: ServerSocket? = null
             try {
@@ -44,6 +43,7 @@ class LanConnection(
                     bind(InetSocketAddress(PORT))
                 }
                 server = listener
+                startDiscoveryResponder()
                 onState("Waiting for opponent on port $PORT")
                 val peer = listener.accept()
                 runCatching { listener.close() }
@@ -65,22 +65,23 @@ class LanConnection(
         thread(name = "chess-lan-discovery-host") {
             var udp: DatagramSocket? = null
             try {
-                udp = DatagramSocket(null).apply {
+                val responder = DatagramSocket(null).apply {
                     reuseAddress = true
                     broadcast = true
                     soTimeout = 1000
                     bind(InetSocketAddress(DISCOVERY_PORT))
                 }
-                discoverySocket = udp
+                udp = responder
+                discoverySocket = responder
                 val buffer = ByteArray(128)
-                while (!udp.isClosed) {
+                while (!responder.isClosed) {
                     try {
                         val request = DatagramPacket(buffer, buffer.size)
-                        udp.receive(request)
+                        responder.receive(request)
                         val message = String(request.data, request.offset, request.length, Charsets.UTF_8)
                         if (message == DISCOVERY_REQUEST) {
                             val responseBytes = DISCOVERY_RESPONSE.toByteArray(Charsets.UTF_8)
-                            udp.send(DatagramPacket(responseBytes, responseBytes.size, request.address, request.port))
+                            responder.send(DatagramPacket(responseBytes, responseBytes.size, request.address, request.port))
                         }
                     } catch (_: java.net.SocketTimeoutException) {
                         // Check whether the room has been closed.
@@ -101,27 +102,28 @@ class LanConnection(
         thread(name = "chess-lan-discovery-client") {
             var udp: DatagramSocket? = null
             try {
-                udp = DatagramSocket().apply {
+                val discovery = DatagramSocket().apply {
                     broadcast = true
                     soTimeout = 850
                 }
-                discoverySocket = udp
+                udp = discovery
+                discoverySocket = discovery
                 val requestBytes = DISCOVERY_REQUEST.toByteArray(Charsets.UTF_8)
                 val broadcasts = discoverBroadcastAddresses()
                 val startedAt = System.currentTimeMillis()
                 onState("Searching for nearby rooms")
                 var hostAddress: String? = null
 
-                while (!udp.isClosed && System.currentTimeMillis() - startedAt < 20_000 && hostAddress == null) {
+                while (!discovery.isClosed && System.currentTimeMillis() - startedAt < 20_000 && hostAddress == null) {
                     broadcasts.forEach { address ->
                         runCatching {
-                            udp.send(DatagramPacket(requestBytes, requestBytes.size, address, DISCOVERY_PORT))
+                            discovery.send(DatagramPacket(requestBytes, requestBytes.size, address, DISCOVERY_PORT))
                         }
                     }
                     try {
                         val buffer = ByteArray(128)
                         val reply = DatagramPacket(buffer, buffer.size)
-                        udp.receive(reply)
+                        discovery.receive(reply)
                         val message = String(reply.data, reply.offset, reply.length, Charsets.UTF_8)
                         if (message == DISCOVERY_RESPONSE) hostAddress = reply.address.hostAddress
                     } catch (_: java.net.SocketTimeoutException) {
@@ -134,8 +136,8 @@ class LanConnection(
                     return@thread
                 }
 
-                runCatching { udp.close() }
-                if (discoverySocket === udp) discoverySocket = null
+                runCatching { discovery.close() }
+                if (discoverySocket === discovery) discoverySocket = null
                 onState("Found room at $hostAddress • connecting")
                 val peer = Socket()
                 try {
