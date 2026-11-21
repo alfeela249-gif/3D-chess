@@ -353,9 +353,21 @@ class MainActivity : Activity() {
                 status = homeStatus
             }
         }
-        topBar.addView(back, LinearLayout.LayoutParams(0, dp(48), 1f))
-        val title = TextView(this).apply { text = "♛  3D CHESS  ♚"; setTextColor(gold); textSize = 20f; gravity = Gravity.CENTER; typeface = Typeface.create("serif", Typeface.BOLD) }
-        topBar.addView(title, LinearLayout.LayoutParams(0, dp(48), 1f))
+        topBar.addView(back, LinearLayout.LayoutParams(0, dp(46), 1.15f))
+        val title = TextView(this).apply { text = "♛  3D CHESS  ♚"; setTextColor(gold); textSize = 18f; gravity = Gravity.CENTER; typeface = Typeface.create("serif", Typeface.BOLD) }
+        topBar.addView(title, LinearLayout.LayoutParams(0, dp(46), 1f))
+        val historyButton = makeButton("النقلات", false).apply {
+            textSize = 11f
+            setOnClickListener { showMoveHistory() }
+        }
+        topBar.addView(historyButton, LinearLayout.LayoutParams(0, dp(42), 0.72f).apply {
+            setMargins(dp(3), 0, dp(3), 0)
+        })
+        val settingsButton = makeButton("⚙", false).apply {
+            textSize = 17f
+            setOnClickListener { showSettingsDialog() }
+        }
+        topBar.addView(settingsButton, LinearLayout.LayoutParams(dp(44), dp(42)))
         gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(52)))
         val gameStatus = TextView(this).apply { setTextColor(cream); textSize = 14f; gravity = Gravity.CENTER; text = homeStatus.text; setPadding(dp(4), dp(8), dp(4), dp(8)) }
         status = gameStatus
@@ -751,7 +763,6 @@ class MainActivity : Activity() {
             val result = auth.createOnlineRoom()
             runOnUiThread {
                 if (!result.ok || result.id == null) { status.text = result.message; return@runOnUiThread }
-                beginMatch("online")
                 beginMatch("online")
                 onlineMode = true; playVsComputer = false; onlineRoomId = result.id; onlineMoves = JSONArray()
                 board.localSide = Side.WHITE; board.resetBoard(); board.isEnabled = false
