@@ -30,11 +30,11 @@ footer{text-align:center;color:#817967;font-size:11px;padding:14px}
 @media(max-width:390px){.panel{grid-template-columns:1fr}.panel h2,.note,.actions,.stats{grid-column:auto}}
 </style></head>
 <body>
-<header><div><div class="brand">3D <span>CHESS</span></div><div class="sub">معاينة تفاعلية لتطوير الكاميرا والرسومات</div></div><div class="pill">نسخة ويب تجريبية</div></header>
+<header><div><div class="brand">3D <span>CHESS</span></div><div class="sub">معاينة تفاعلية للقطع الملكية والكاميرا</div></div><div class="pill">نسخة ويب تجريبية</div></header>
 <main>
-<section class="intro"><h1>استكشف الرقعة من كل زاوية</h1><p>حرّك الكاميرا باللمس أو بالفأرة، وجرّب إعدادات السلاسة مباشرة دون تثبيت APK.</p></section>
+<section class="intro"><h1>راجع أشكال القطع من كل زاوية</h1><p>القطع الست بتصاميم مختلفة وفريقي الفضة والذهب. حرّك الكاميرا باللمس أو بالفأرة دون تثبيت APK.</p></section>
 <div class="layout">
-<div class="stage" id="stage"><div class="overlay"><span class="tag">مشهد ثلاثي الأبعاد تفاعلي</span><span class="tag" id="modeTag">تنعيم الحركة: مفعّل</span></div><div class="hint">اسحب للتدوير • إصبعان للتقريب والإمالة</div></div>
+<div class="stage" id="stage"><div class="overlay"><span class="tag">نماذج قطع ثلاثية الأبعاد محسّنة</span><span class="tag" id="modeTag">تنعيم الحركة: مفعّل</span></div><div class="hint">اسحب للتدوير • إصبعان للتقريب والإمالة</div></div>
 <aside class="panel">
 <h2>إعدادات الكاميرا</h2>
 <div class="group"><div class="label"><span>سرعة الدوران</span><span class="value" id="rotVal">1.0×</span></div><input id="rot" type="range" min=".3" max="2" step=".1" value="1"></div>
@@ -62,23 +62,81 @@ const board=new THREE.Group();scene.add(board);
 const dark=new THREE.MeshStandardMaterial({color:0x30251a,roughness:.32,metalness:.25});
 const light=new THREE.MeshStandardMaterial({color:0xd8c6a4,roughness:.48,metalness:.12});
 const edgeMat=new THREE.MeshStandardMaterial({color:0x8b642e,metalness:.72,roughness:.28});
-const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),new THREE.BoxGeometry?dark:dark);base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
+const base=new THREE.Mesh(new THREE.BoxGeometry(8.45,.34,8.45),dark);base.position.y=-.02;base.castShadow=true;base.receiveShadow=true;board.add(base);
 const trim=new THREE.Mesh(new THREE.BoxGeometry(8.58,.09,8.58),edgeMat);trim.position.y=-.2;board.add(trim);
 for(let z=0;z<8;z++)for(let x=0;x<8;x++){const tile=new THREE.Mesh(new THREE.BoxGeometry(.99,.12,.99),(x+z)%2?dark:light);tile.position.set(x-3.5,.19,z-3.5);tile.receiveShadow=true;tile.castShadow=true;board.add(tile)}
 function mat(color,metal=0.55,rough=.28){return new THREE.MeshStandardMaterial({color,metalness:metal,roughness:rough})}
 function lathe(points,m){const mesh=new THREE.Mesh(new THREE.LatheGeometry(points.map(p=>new THREE.Vector2(...p)),48),m);mesh.castShadow=true;mesh.receiveShadow=true;return mesh}
 function sphere(r,m,y){const o=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),m);o.position.y=y;o.castShadow=true;return o}
+function addLathe(g,profile,m){const o=lathe(profile,m);g.add(o);return o}
+function addBox(g,x,y,z,sx,sy,sz,m,rx=0,ry=0,rz=0){const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
+function addSphere(g,x,y,z,r,m,sx=1,sy=1,sz=1){const o=new THREE.Mesh(new THREE.SphereGeometry(r,32,24),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
+function addBand(g,y,r,t,m){const o=new THREE.Mesh(new THREE.TorusGeometry(r,t,12,64),m);o.rotation.x=Math.PI/2;o.position.y=y;o.castShadow=true;g.add(o);return o}
 function makePiece(type,material){
- const g=new THREE.Group(),goldLine=edgeMat;
- const profile=[[0,.08],[.3,.08],[.34,.13],[.29,.19],[.23,.22],[.19,.28],[.16,.48],[.22,.55],[.24,.61],[.18,.66],[.13,.7]];
- g.add(lathe(profile,material));
- const ring=new THREE.Mesh(new THREE.TorusGeometry(.27,.035,10,40),goldLine);ring.rotation.x=Math.PI/2;ring.position.y=.16;g.add(ring);
- if(type==='pawn'){g.add(sphere(.16,material,.84));}
- if(type==='rook'){const cap=new THREE.Mesh(new THREE.CylinderGeometry(.23,.18,.22,12),material);cap.position.y=.82;g.add(cap);for(let i=0;i<8;i++){let a=i*Math.PI/4;let b=new THREE.Mesh(new THREE.BoxGeometry(.1,.16,.13),material);b.position.set(Math.cos(a)*.18,.98,Math.sin(a)*.18);g.add(b)}}
- if(type==='bishop'){g.add(lathe([[0,.69],[.17,.72],[.13,.82],[.09,.96],[.04,1.05],[0,1.12]],material));g.add(sphere(.08,edgeMat,1.12));}
- if(type==='queen'){g.add(lathe([[0,.69],[.2,.73],[.17,.84],[.12,.94],[.22,1.02],[.2,1.08]],material));for(let i=0;i<5;i++){let a=i*Math.PI*2/5;g.add(sphere(.075,edgeMat,1.12));g.children[g.children.length-1].position.x=Math.cos(a)*.19;g.children[g.children.length-1].position.z=Math.sin(a)*.19;}g.add(sphere(.07,edgeMat,1.22));}
- if(type==='king'){g.add(lathe([[0,.69],[.18,.74],[.13,.88],[.1,1.03],[.16,1.1]],material));const v=new THREE.Mesh(new THREE.BoxGeometry(.07,.48,.07),edgeMat);v.position.y=1.28;g.add(v);const h=new THREE.Mesh(new THREE.BoxGeometry(.28,.07,.07),edgeMat);h.position.y=1.32;g.add(h);}
- if(type==='knight'){const head=new THREE.Mesh(new THREE.ConeGeometry(.23,.58,5),material);head.position.set(0,.93,0);head.rotation.z=-.35;g.add(head);const ear=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),material);ear.position.set(.08,1.2,0);g.add(ear);}
+ const g=new THREE.Group(), bright=edgeMat, darkMetal=mat(0x493a27,.82,.3);
+ // Turned, layered pedestal shared by every sculpted piece.
+ addLathe(g,[[0,.06],[.27,.06],[.34,.10],[.35,.15],[.31,.19],[.27,.22],[.25,.27],[.20,.31],[.17,.36],[0,.36]],material);
+ addBand(g,.17,.30,.025,bright);addBand(g,.285,.22,.018,bright);
+ if(type==='pawn'){
+  addLathe(g,[[0,.34],[.19,.37],[.23,.43],[.21,.49],[.16,.55],[.13,.65],[.17,.70],[.15,.75],[0,.75]],material);
+  addBand(g,.48,.205,.018,bright);
+  addSphere(g,0,.88,0,.145,material,1,1.12,1);
+  addLathe(g,[[0,.98],[.11,1.0],[.13,1.05],[.10,1.10],[.04,1.13],[0,1.13]],bright);
+  addSphere(g,0,1.15,0,.045,bright);
+  addSphere(g,0,.62,-.145,.105,bright,.86,1.15,.45);
+  addSphere(g,0,.62,-.19,.035,darkMetal);
+ }
+ if(type==='rook'){
+  addLathe(g,[[0,.34],[.22,.38],[.25,.43],[.23,.49],[.21,.54],[.22,.60],[.22,.83],[.27,.87],[.28,.93],[.24,.97],[.24,1.03],[0,1.03]],material);
+  addBand(g,.57,.225,.022,bright);addBand(g,.88,.265,.025,bright);
+  const crown=new THREE.Mesh(new THREE.CylinderGeometry(.27,.24,.12,8),material);crown.position.y=1.08;crown.castShadow=true;g.add(crown);
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;addBox(g,Math.cos(a)*.205,1.19,Math.sin(a)*.205,.105,.16,.105,bright,0,a,0)}
+  addBox(g,0,.61,-.226,.12,.20,.035,darkMetal);
+  addSphere(g,0,.70,-.25,.045,bright,.8,1.3,.5);
+ }
+ if(type==='knight'){
+  addLathe(g,[[0,.34],[.22,.37],[.25,.44],[.22,.51],[.18,.59],[.13,.66],[.1,.72],[0,.72]],material);
+  // Sculpted rearing horse: chest, arched neck, muzzle, ears and flowing mane.
+  addSphere(g,-.015,.66,0,.205,material,1.05,1.0,1.12);
+  addSphere(g,.015,.82,-.015,.145,material,.92,1.35,.92);
+  addSphere(g,.105,1.00,-.065,.145,material,1.0,1.22,.82);
+  addSphere(g,.205,.96,-.14,.095,material,1.25,.72,.75);
+  addSphere(g,.275,.985,-.145,.045,bright,1.0,.8,.8);
+  addBox(g,.045,1.18,-.055,.065,.19,.08,material,0,0,-.25);
+  addBox(g,.15,1.17,-.07,.06,.16,.07,material,0,0,-.4);
+  addSphere(g,.13,1.035,-.132,.022,darkMetal);
+  addLathe(g,[[0,.78],[.10,.82],[.14,.92],[.11,1.05],[.04,1.16],[0,1.16]],bright).position.set(-.11,0,.055);
+  addBand(g,.49,.21,.018,bright);
+ }
+ if(type==='bishop'){
+  addLathe(g,[[0,.34],[.23,.38],[.24,.46],[.20,.55],[.15,.67],[.13,.78],[.16,.83],[.12,.89],[0,.89]],material);
+  addBand(g,.54,.19,.02,bright);
+  addLathe(g,[[0,.84],[.15,.88],[.17,.94],[.13,1.00],[.095,1.10],[.045,1.20],[0,1.24]],material);
+  addSphere(g,0,1.22,0,.055,bright);
+  addBox(g,0,1.015,0,.045,.25,.05,bright);
+  addBox(g,0,1.04,0,.20,.045,.05,bright);
+  addBox(g,.22,.78,0,.035,.57,.035,bright);
+  addSphere(g,.22,1.08,0,.06,bright);
+  addSphere(g,-.15,.70,-.12,.09,bright,.8,1.2,.45);
+ }
+ if(type==='queen'){
+  addLathe(g,[[0,.34],[.26,.38],[.29,.45],[.27,.51],[.23,.59],[.19,.69],[.15,.80],[.13,.91],[.17,.96],[.22,1.00],[.20,1.05],[0,1.05]],material);
+  addBand(g,.53,.25,.022,bright);addBand(g,.96,.19,.025,bright);
+  addLathe(g,[[0,1.02],[.19,1.06],[.21,1.10],[.18,1.14],[0,1.14]],bright);
+  for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2;addSphere(g,Math.cos(a)*.19,1.20,Math.sin(a)*.19,.06,bright)}
+  addSphere(g,0,1.24,0,.075,mat(0xf0c66e,.9,.15));
+  addSphere(g,0,.74,-.235,.055,bright,.8,1.1,.55);
+ }
+ if(type==='king'){
+  addLathe(g,[[0,.34],[.29,.38],[.31,.46],[.28,.54],[.23,.65],[.18,.78],[.15,.91],[.19,.97],[.22,1.02],[.20,1.08],[0,1.08]],material);
+  addBand(g,.55,.27,.025,bright);addBand(g,1.00,.19,.025,bright);
+  addLathe(g,[[0,1.04],[.19,1.08],[.21,1.13],[.16,1.17],[0,1.17]],bright);
+  addBox(g,0,1.34,0,.075,.38,.075,bright);
+  addBox(g,0,1.39,0,.30,.075,.075,bright);
+  addSphere(g,0,1.57,0,.045,bright);
+  addSphere(g,0,.76,-.26,.055,bright,.9,1.15,.5);
+ }
+ g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
  return g;
 }
 const gold=mat(0xc18a3e,.82,.22),silver=mat(0x9da8b8,.78,.24);
