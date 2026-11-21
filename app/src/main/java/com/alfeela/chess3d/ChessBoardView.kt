@@ -602,7 +602,8 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             val isSelected = selected == square
             val isTarget = legalTargets.contains(square)
             val isLastMove = previousMove?.let {                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
-            } ?: false            val isCheckedKing = checkedKing == square
+            } ?: false
+            val isCheckedKing = checkedKing == square
             if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
                 drawCube(file-3.5f,if (glbBoardReady) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady) 0.025f else 0.12f,0.98f,
                     if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
