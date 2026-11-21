@@ -20,6 +20,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     var localSide: Side = Side.WHITE
     var onMove: ((ChessMove) -> Unit)? = null
     var onSound: ((String) -> Unit)? = null
+    var onCapturedPiecesChanged: ((List<ChessPiece>, List<ChessPiece>) -> Unit)? = null
     var onPromotionRequested: ((Side, (PieceType) -> Unit) -> Unit)? = null
     private var selected: Pair<Int, Int>? = null
     private var downSquare: Pair<Int, Int>? = null
@@ -82,10 +83,15 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         requestRender()
     }
 
+    private fun notifyCapturedPieces() {
+        onCapturedPiecesChanged?.invoke(game.capturedPieces(Side.WHITE), game.capturedPieces(Side.BLACK))
+    }
+
     private fun completeMove(move: ChessMove) {
         val captured = game.pieceAt(move.toFile, move.toRank) != null
         if (game.makeMove(move)) {
             notifyMoveSound(captured)
+            notifyCapturedPieces()
             selected = null
             boardRenderer.setSelection(null, emptySet())
             animate(move)
@@ -150,6 +156,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun resetBoard() {
         game.reset()
         selected = null
+        notifyCapturedPieces()
         boardRenderer.setSelection(null, emptySet())
         requestRender()
     }
@@ -157,7 +164,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     fun applySyncedMove(move: ChessMove): Boolean {
         val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured); notifyCapturedPieces() }
         return applied
     }
 
@@ -165,7 +172,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         if (game.sideToMove == localSide) return false
         val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured); notifyCapturedPieces() }
         return applied
     }
 
@@ -173,7 +180,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         if (game.sideToMove == localSide) return false
         val captured = game.pieceAt(move.toFile, move.toRank) != null
         val applied = game.makeMove(move)
-        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured) }
+        if (applied) { selected = null; boardRenderer.setSelection(null, emptySet()); animate(move); notifyMoveSound(captured); notifyCapturedPieces() }
         return applied
     }
 
