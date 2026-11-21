@@ -9,6 +9,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.egl.EGL10
+import javax.microedition.khronos.egl.EGLDisplay
 import javax.microedition.khronos.opengles.GL10
 
 class ChessBoardView(context: Context) : GLSurfaceView(context) {
@@ -103,7 +105,33 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         // Request a full 8-bit-per-channel framebuffer with a depth buffer.
         // The actual drawable resolution remains the device's native surface size.
         setEGLContextClientVersion(2)
-        setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        // Prefer a 4x multisampled EGL surface for smoother piece and board edges.
+        // Fall back gracefully on GPUs that do not expose a multisampled config.
+        setEGLConfigChooser(object : EGLConfigChooser {
+            override fun chooseConfig(egl: EGL10, display: EGLDisplay): EGLConfig {
+                fun choose(samples: Int): EGLConfig? {
+                    val attrs = if (samples > 0) intArrayOf(
+                        EGL10.EGL_RED_SIZE, 8, EGL10.EGL_GREEN_SIZE, 8,
+                        EGL10.EGL_BLUE_SIZE, 8, EGL10.EGL_ALPHA_SIZE, 8,
+                        EGL10.EGL_DEPTH_SIZE, 24, EGL10.EGL_STENCIL_SIZE, 8,
+                        EGL10.EGL_RENDERABLE_TYPE, 4,
+                        EGL10.EGL_SAMPLE_BUFFERS, 1, EGL10.EGL_SAMPLES, samples,
+                        EGL10.EGL_NONE
+                    ) else intArrayOf(
+                        EGL10.EGL_RED_SIZE, 8, EGL10.EGL_GREEN_SIZE, 8,
+                        EGL10.EGL_BLUE_SIZE, 8, EGL10.EGL_ALPHA_SIZE, 8,
+                        EGL10.EGL_DEPTH_SIZE, 24, EGL10.EGL_STENCIL_SIZE, 8,
+                        EGL10.EGL_RENDERABLE_TYPE, 4, EGL10.EGL_NONE
+                    )
+                    val configs = arrayOfNulls<EGLConfig>(1)
+                    val count = IntArray(1)
+                    return if (egl.eglChooseConfig(display, attrs, configs, 1, count) && count[0] > 0)
+                        configs[0] else null
+                }
+                return choose(4) ?: choose(0)
+                    ?: throw IllegalArgumentException("No compatible OpenGL ES 2.0 EGL config")
+            }
+        })
         setPreserveEGLContextOnPause(true)
         setRenderer(boardRenderer)
         // Keep the scene rendering continuously so camera motion and piece
@@ -176,8 +204,7 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     val currentX = pointerCenterX(event)
                     val currentY = pointerCenterY(event)
                     val currentSpan = pointerSpan(event)
-                    boardRenderer.rotateBy((currentX-lastRotateX)*0.009f*cameraTouchSensitivity)
-                    boardRenderer.tiltBy((lastRotateY-currentY)*0.15f*cameraTouchSensitivity)
+                    boardRenderer.rotateBy(-(currentX-lastRotateX)*0.006f*cameraTouchSensitivity)
                     if (lastPointerSpan > 0f && currentSpan > 0f) {
                         boardRenderer.zoomBy((lastPointerSpan-currentSpan)*0.018f*cameraTouchSensitivity)
                     }
@@ -195,8 +222,8 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                         oneFingerCameraDrag = true
                         cameraGestureConsumed = true
                         downSquare = null
-                        boardRenderer.rotateBy(dx * 0.009f * cameraTouchSensitivity)
-                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(-dy * 0.15f * cameraTouchSensitivity)
+                        boardRenderer.rotateBy(-dx * 0.006f * cameraTouchSensitivity)
+                        if (kotlin.math.abs(dy) > 1.5f) boardRenderer.tiltBy(dy * 0.229f * cameraTouchSensitivity)
                         requestRender()
                     }
                     lastTouchX = event.x
@@ -501,6 +528,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
         // Keep both sides visible while generated procedural meshes use per-face normals.
         GLES20.glDisable(GLES20.GL_CULL_FACE)
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -601,6 +630,8 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
                 }
                 if (progress >= 1f) animatedMove = null
             }
+            // Soft layered contact shadows visually ground each piece on its square.
+            drawContactShadow(x, z)
             // Classic Staunton-inspired silhouettes based on the user's approved
             // glossy black and ivory reference photograph.
             val hi = (r * 1.13f).coerceAtMost(1f)
@@ -685,6 +716,26 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         }
     }
 
+    private fun drawContactShadow(x: Float, z: Float) {
+        // Concentric translucent discs approximate soft PCF contact shadows
+        // without a costly per-frame shadow-map pass on mobile GPUs.
+        val rings = listOf(0.42f to 0.025f, 0.34f to 0.035f, 0.25f to 0.045f)
+        GLES20.glDepthMask(false)
+        for ((radius, alpha) in rings) {
+            val vertices = FloatArray(32 * 9)
+            var offset = 0
+            for (i in 0 until 32) {
+                val a = i * (2.0 * Math.PI / 32.0)
+                val b = (i + 1) * (2.0 * Math.PI / 32.0)
+                vertices[offset++] = 0f; vertices[offset++] = 0f; vertices[offset++] = 0f
+                vertices[offset++] = (kotlin.math.cos(a) * radius).toFloat(); vertices[offset++] = 0f; vertices[offset++] = (kotlin.math.sin(a) * radius * 0.72f).toFloat()
+                vertices[offset++] = (kotlin.math.cos(b) * radius).toFloat(); vertices[offset++] = 0f; vertices[offset++] = (kotlin.math.sin(b) * radius * 0.72f).toFloat()
+            }
+            drawTriangles(vertices, x, 0.067f, z, 0.012f, 0.010f, 0.009f, alpha)
+        }
+        GLES20.glDepthMask(true)
+    }
+
     private fun drawCylinder(x:Float,y:Float,z:Float,radius:Float,height:Float,r:Float,g:Float,b:Float) {
         val vertices = ArrayList<Float>()
         val segments = 64
@@ -738,7 +789,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         drawTriangles(vertices.toFloatArray(),x,y,z,r,g,b)
     }
 
-    private fun drawTriangles(vertices:FloatArray,x:Float,y:Float,z:Float,r:Float,g:Float,b:Float) {
+    private fun drawTriangles(vertices:FloatArray,x:Float,y:Float,z:Float,r:Float,g:Float,b:Float,alpha:Float = 1f) {
         val buffer = ByteBuffer.allocateDirect(vertices.size*4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         buffer.put(vertices); buffer.position(0)
         // Calculate a real geometric normal for every triangle (rather than
@@ -776,7 +827,7 @@ private class BoardRenderer(private val game: ChessGame) : GLSurfaceView.Rendere
         Matrix.multiplyMM(mvp,0,vp,0,model,0)
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
-        GLES20.glUniform4f(colorHandle,r,g,b,1f)
+        GLES20.glUniform4f(colorHandle,r,g,b,alpha.coerceIn(0f,1f))
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,buffer)
         GLES20.glEnableVertexAttribArray(normalHandle)
