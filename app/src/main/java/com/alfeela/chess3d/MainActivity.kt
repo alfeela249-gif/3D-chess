@@ -1398,7 +1398,7 @@ class MainActivity : Activity() {
     private fun rounded(fill: Int, stroke: Int, width: Int) = GradientDrawable().apply {
         setColor(fill)
         setStroke(dp(width), stroke)
-        cornerRadius = dp(5).toFloat()
+        cornerRadius = dp(12).toFloat()
     }
 
     /**
