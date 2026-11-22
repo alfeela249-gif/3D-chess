@@ -430,7 +430,7 @@ class MainActivity : Activity() {
         // Keep status updates available to game logic without showing the status strip.
         gameStatus.visibility = View.GONE
         val boardArea = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
@@ -441,13 +441,6 @@ class MainActivity : Activity() {
             }
             elevation = dp(8).toFloat()
             setPadding(dp(5), dp(5), dp(5), dp(5))
-        }
-        // Captured pieces sit in a slim rail on the far right: white above, black below.
-        // Show only the captured piece symbols, with no player labels or captions.
-        val captureRail = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(2), 0, 0, 0)
         }
         val whiteCaptures = TextView(this).apply {
             textSize = 22f
@@ -478,21 +471,26 @@ class MainActivity : Activity() {
                     }
                 }
             runOnUiThread {
-                whiteCaptures.text = symbols(white).replace(" ", "\n")
-                blackCaptures.text = symbols(black).replace(" ", "\n")
+                whiteCaptures.text = symbols(white)
+                blackCaptures.text = symbols(black)
             }
         }
         board.onCapturedPiecesChanged?.invoke(board.game.capturedPieces(Side.WHITE), board.game.capturedPieces(Side.BLACK))
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         board.set2DMode(getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("board_2d_mode", false))
-        boardArea.addView(board, LinearLayout.LayoutParams(0, -1, 1f).apply {
-            topMargin = dp(3)
-            bottomMargin = dp(3)
+        // Split captured pieces into two full-width trays: black above the board, white below it.
+        blackCaptures.gravity = Gravity.CENTER
+        blackCaptures.maxLines = 1
+        blackCaptures.setPadding(dp(4), dp(2), dp(4), dp(2))
+        boardArea.addView(blackCaptures, LinearLayout.LayoutParams(-1, dp(42)))
+        boardArea.addView(board, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            topMargin = dp(2)
+            bottomMargin = dp(2)
         })
-        // Captured black pieces at the top; captured white pieces at the bottom.
-        captureRail.addView(blackCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
-        captureRail.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
-        boardArea.addView(captureRail, LinearLayout.LayoutParams(dp(68), -1))
+        whiteCaptures.gravity = Gravity.CENTER
+        whiteCaptures.maxLines = 1
+        whiteCaptures.setPadding(dp(4), dp(2), dp(4), dp(2))
+        boardArea.addView(whiteCaptures, LinearLayout.LayoutParams(-1, dp(42)))
         gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply {
             setMargins(0, dp(8), 0, dp(8))
         })
