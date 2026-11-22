@@ -189,13 +189,13 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
     }
 
     fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
-        queueEvent {
-            boardRenderer.setAppearance(whitePiece, blackPiece, lightSquare, darkSquare)
-        }
+        // Appearance values are volatile renderer state; update them immediately.
+        // queueEvent can be delayed while the settings screen detaches the GLSurfaceView.
+        boardRenderer.setAppearance(whitePiece, blackPiece, lightSquare, darkSquare)
         requestRender()
     }
     fun setSceneBackground(color: Int) {
-        queueEvent { boardRenderer.setSceneBackground(color) }
+        boardRenderer.setSceneBackground(color)
         requestRender()
     }
     fun setPieceStyle(style: Int) {
@@ -1153,11 +1153,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         // Imported GLB pieces previously kept baked ivory/black colors, so the material selector
         // only affected procedural fallback pieces. Apply the same independent palette here.
         val white = piece.side == Side.WHITE
-        val pieceColor = when (pieceMaterialStyle) {
-            0 -> if (white) 0xF0E8D8.toInt() else 0x25242A // marble
-            1 -> if (white) 0xD2A879.toInt() else 0x4A2C1D // wood
-            else -> if (white) 0xF2F2F2.toInt() else 0x252A32 // plastic
-        }
+        // Use the live user-selected colors for imported GLB meshes too.
+        // These renderer fields are volatile so changes appear on the next frame.
+        val pieceColor = if (white) whitePieceColor else blackPieceColor
         val body = floatArrayOf(red(pieceColor), green(pieceColor), blue(pieceColor), 1f)
         val gold = floatArrayOf(0.78f, 0.58f, 0.25f, 1f)
         Matrix.setIdentityM(model, 0)
@@ -1217,11 +1215,8 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         // The source mesh color identifies each square as light or dark.
         for (mesh in glbBoardMeshes) {
             val lightSquare = mesh.color[0] > 0.4f
-            val squareColor = when (boardMaterialStyle) {
-                0 -> if (lightSquare) 0xE7E0D2.toInt() else 0x55515A // marble
-                1 -> if (lightSquare) 0xC49A6C.toInt() else 0x51331F // wood
-                else -> if (lightSquare) 0xE8E8E8.toInt() else 0x30343B // plastic
-            }
+            // Respect the currently selected square palette on the imported board.
+            val squareColor = if (lightSquare) lightSquareColor else darkSquareColor
             GLES20.glUniform1f(glossHandle, if (boardGlossEnabled) 1f else 0f)
             GLES20.glUniform4f(colorHandle, red(squareColor), green(squareColor), blue(squareColor), 1f)
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.vertices)
