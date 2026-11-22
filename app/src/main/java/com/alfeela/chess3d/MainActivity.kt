@@ -741,7 +741,6 @@ class MainActivity : Activity() {
                         board.cameraTouchSensitivity = values[selected]; dialog.dismiss()
                     }.setNegativeButton("إغلاق", null).show()
             },
-            if (soundEnabled) "الصوت: تشغيل" else "الصوت: إيقاف" to { }
         )
         extras.take(4).forEach { (label, action) ->
             content.addView(makeButton(label, false).apply {
