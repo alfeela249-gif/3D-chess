@@ -34,9 +34,23 @@ class LanConnection(
     private fun activeWifiNetwork(): Network? {
         return try {
             val manager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            manager.allNetworks.firstOrNull { network ->
-                manager.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-            }
+            // Prefer Android's active Wi-Fi network. allNetworks ordering is
+            // unspecified and can return a secondary or stale Wi-Fi interface.
+            val active = manager.activeNetwork
+            if (active != null &&
+                manager.getNetworkCapabilities(active)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            ) return active
+
+            manager.allNetworks
+                .filter { network ->
+                    manager.getNetworkCapabilities(network)
+                        ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+                }
+                .maxByOrNull { network ->
+                    val caps = manager.getNetworkCapabilities(network)
+                    (if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED) == true) 1 else 0) +
+                    (if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) == true) 1 else 0)
+                }
         } catch (_: Exception) { null }
     }
 
@@ -168,11 +182,12 @@ class LanConnection(
                 runCatching { discovery.close() }
                 if (discoverySocket === discovery) discoverySocket = null
                 onState("Found room at $hostAddress • connecting")
-                val peer = Socket()
+                val wifi = activeWifiNetwork()
+                val peer = if (wifi != null) wifi.socketFactory.createSocket() else Socket()
                 try {
                     peer.tcpNoDelay = true
                     peer.keepAlive = true
-                    bindToWifi(peer)
+                    // Pin this TCP session to Wi-Fi, not Android's default route.
                     peer.connect(InetSocketAddress(hostAddress, PORT), 10_000)
                     attach(peer)
                     onState("Connected to $hostAddress")
@@ -211,11 +226,11 @@ class LanConnection(
     fun join(hostIp: String) {
         close()
         thread(name = "chess-lan-join") {
-            val peer = Socket()
+            val wifi = activeWifiNetwork()
+            val peer = if (wifi != null) wifi.socketFactory.createSocket() else Socket()
             try {
                 peer.tcpNoDelay = true
                 peer.keepAlive = true
-                bindToWifi(peer)
                 peer.connect(InetSocketAddress(hostIp.trim(), PORT), 10_000)
                 attach(peer)
                 onState("Connected to $hostIp")
