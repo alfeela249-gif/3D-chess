@@ -6,6 +6,7 @@ on:
       - 'docs/index.html'
       - 'docs/home.html'
       - 'docs/chess.glb'
+      - 'docs/materials-preview.html'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
