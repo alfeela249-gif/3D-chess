@@ -909,7 +909,6 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         glbPieceTemplates.clear()
         glbPiecesReady = false
         try {
-            val scene = GlbAsset.parse(assets.open("staunton-chess.glb").use { it.readBytes() })
             val assetName = pieceSetAssetName
             val scene = GlbAsset.parse(assets.open(assetName).use { it.readBytes() })
             if (assetName == "alternate-chess-set.glb") {
@@ -1057,7 +1056,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 for (i in source.indices step 3) {
                     val p = transformGlbPoint(node, source[i], source[i + 1], source[i + 2])
                     local[i] = (p[0] - centerX) / xStep
-                    local[i + 1] = p[1] / xStep
+                    local[i + 1] = (p[1] - node.translation.getOrElse(1) { 0f }) / xStep + 0.08f
                     local[i + 2] = -(p[2] - centerZ) / zStep
                 }
                 val normals = FloatArray(local.size)
