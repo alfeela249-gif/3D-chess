@@ -1519,16 +1519,19 @@ class MainActivity : Activity() {
                     when (event) {
                         "move" -> {
                             val decay = Math.exp(-t * 34.0)
-                            val body = toneAt(t, 185.0) * 0.42 + toneAt(t, 310.0) * 0.16
-                            val click = (random.nextDouble() * 2.0 - 1.0) * Math.exp(-t * 95.0) * 0.30
+                            val body = toneAt(t, 155.0) * 0.48 +
+                                toneAt(t, 235.0) * 0.24 + toneAt(t, 465.0) * 0.10
+                            val click = (random.nextDouble() * 2.0 - 1.0) *
+                                Math.exp(-t * 82.0) * 0.22
                             value = (body + click) * decay
                         }
                         "capture" -> {
                             val first = Math.exp(-t * 24.0)
                             val secondTime = (t - 0.075).coerceAtLeast(0.0)
                             val second = if (t >= 0.075) Math.exp(-secondTime * 30.0) else 0.0
-                            val knock = toneAt(t, 145.0) * first * 0.48 +
-                                toneAt(secondTime, 205.0) * second * 0.40
+                            val knock = toneAt(t, 118.0) * first * 0.52 +
+                                toneAt(secondTime, 174.0) * second * 0.44 +
+                                toneAt(t, 350.0) * first * 0.12
                             val texture = (random.nextDouble() * 2.0 - 1.0) *
                                 Math.exp(-t * 70.0) * 0.22
                             value = knock + texture
@@ -1543,9 +1546,10 @@ class MainActivity : Activity() {
                             val fadeIn = (progress / 0.06).coerceAtMost(1.0)
                             val fadeOut = ((1.0 - progress) / 0.30).coerceAtMost(1.0)
                             val envelope = fadeIn * fadeOut
-                            val chord = toneAt(t, 392.0) * 0.34 +
-                                toneAt(t, 494.0) * 0.30 +
-                                toneAt(t, 587.0) * 0.24
+                            val chord = toneAt(t, 330.0) * 0.30 +
+                                toneAt(t, 392.0) * 0.32 +
+                                toneAt(t, 494.0) * 0.28 +
+                                toneAt(t, 659.0) * 0.12
                             value = chord * envelope
                         }
                     }
@@ -1553,7 +1557,7 @@ class MainActivity : Activity() {
                     // Gentle attack/release envelope prevents clicks at sample edges.
                     val edge = (i.toDouble() / (sampleRate * 0.008)).coerceAtMost(1.0) *
                         ((count - 1 - i).toDouble() / (sampleRate * 0.025)).coerceAtMost(1.0)
-                    val normalized = (value * edge * 0.48).coerceIn(-0.92, 0.92)
+                    val normalized = (value * edge * 0.82).coerceIn(-0.98, 0.98)
                     samples[i] = (normalized * Short.MAX_VALUE).toInt().toShort()
                 }
 
@@ -1569,7 +1573,7 @@ class MainActivity : Activity() {
                     AudioTrack.MODE_STREAM
                 )
                 if (track.state == AudioTrack.STATE_INITIALIZED) {
-                    track.setVolume(0.9f)
+                    track.setVolume(1.0f)
                     track.play()
                     var offset = 0
                     while (offset < samples.size) {
