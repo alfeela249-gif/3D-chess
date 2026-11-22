@@ -463,9 +463,49 @@ class MainActivity : Activity() {
                 Toast.makeText(this@MainActivity, if (use2D) "تم تحويل الرقعة إلى العرض ثنائي الأبعاد" else "تمت العودة إلى العرض ثلاثي الأبعاد", Toast.LENGTH_SHORT).show()
             }
         }
-        gameRoot.addView(displayModeButton, LinearLayout.LayoutParams(-1, dp(42)).apply {
-            setMargins(dp(4), dp(2), dp(4), dp(2))
+        val pieceSetButton = makeButton(
+            if (getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("piece_set_alternate", false))
+                "الطقم الجديد" else "الطقم الأصلي", false
+        ).apply {
+            textSize = 11f
+            setOnClickListener {
+                val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+                val useAlternate = !prefs.getBoolean("piece_set_alternate", false)
+                prefs.edit().putBoolean("piece_set_alternate", useAlternate).apply()
+                board.setPieceSet(useAlternate)
+                text = if (useAlternate) "الطقم الجديد" else "الطقم الأصلي"
+                Toast.makeText(this@MainActivity,
+                    if (useAlternate) "تم تبديل الطقم أثناء المباراة" else "تمت العودة للطقم الأصلي",
+                    Toast.LENGTH_SHORT).show()
+            }
+        }
+        val soundButton = makeButton(if (soundEnabled) "الصوت 🔊" else "الصوت 🔇", false).apply {
+            textSize = 11f
+            setOnClickListener {
+                soundEnabled = !soundEnabled
+                getSharedPreferences("game_settings", MODE_PRIVATE).edit()
+                    .putBoolean("sound_enabled", soundEnabled).apply()
+                text = if (soundEnabled) "الصوت 🔊" else "الصوت 🔇"
+                if (soundEnabled) playGameSound("move")
+                Toast.makeText(this@MainActivity,
+                    if (soundEnabled) "تم تشغيل الصوت" else "تم إيقاف الصوت",
+                    Toast.LENGTH_SHORT).show()
+            }
+        }
+        val inGameControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        inGameControls.addView(displayModeButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+            setMargins(dp(3), dp(2), dp(3), dp(2))
         })
+        inGameControls.addView(pieceSetButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+            setMargins(dp(3), dp(2), dp(3), dp(2))
+        })
+        inGameControls.addView(soundButton, LinearLayout.LayoutParams(0, dp(44), 0.82f).apply {
+            setMargins(dp(3), dp(2), dp(3), dp(2))
+        })
+        gameRoot.addView(inGameControls, LinearLayout.LayoutParams(-1, dp(48)))
         gameRoot.addView(TextView(this).apply {
             text = "اسحب بإصبع واحد لتحريك زاوية الرؤية • قرّب أو أبعد بإصبعين"
             setTextColor(Color.rgb(218, 190, 145))
@@ -1454,18 +1494,27 @@ class MainActivity : Activity() {
                     samples[i] = (normalized * Short.MAX_VALUE).toInt().toShort()
                 }
 
+                val minimumBuffer = AudioTrack.getMinBufferSize(
+                    sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                ).coerceAtLeast(2048)
                 track = AudioTrack(
                     AudioManager.STREAM_MUSIC,
                     sampleRate,
                     AudioFormat.CHANNEL_OUT_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
-                    samples.size * 2,
-                    AudioTrack.MODE_STATIC
+                    maxOf(minimumBuffer, samples.size * 2),
+                    AudioTrack.MODE_STREAM
                 )
                 if (track.state == AudioTrack.STATE_INITIALIZED) {
-                    track.write(samples, 0, samples.size)
+                    track.setVolume(0.9f)
                     track.play()
-                    Thread.sleep(durationMs.toLong() + 45L)
+                    var offset = 0
+                    while (offset < samples.size) {
+                        val written = track.write(samples, offset, samples.size - offset)
+                        if (written <= 0) break
+                        offset += written
+                    }
+                    if (offset == samples.size) Thread.sleep(35L)
                 }
             } catch (_: Exception) {
                 // Audio is optional; never interrupt a chess move if unavailable.
