@@ -32,6 +32,37 @@ jobs:
           magic=$(od -An -tx1 -N4 app/src/main/assets/staunton-chess.glb | tr -d '[:space:]')
           test "$magic" = "676c5446"
           echo "Bundled valid GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
+      - name: Inspect and bundle optional second chess set
+        run: |
+          curl --fail --location --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/alfeela249-gif/3D-chess/main/docs/chess-set-new.glb" --output app/src/main/assets/alternate-chess-set.glb
+          test -s app/src/main/assets/alternate-chess-set.glb
+          magic=$(od -An -tx1 -N4 app/src/main/assets/alternate-chess-set.glb | tr -d '[:space:]')
+          test "$magic" = "676c5446"
+          python3 - <<'PY'
+          import json, struct
+          path = "app/src/main/assets/alternate-chess-set.glb"
+          data = open(path, "rb").read()
+          magic, version, total = struct.unpack_from("<III", data, 0)
+          assert magic == 0x46546C67 and version == 2 and total <= len(data)
+          offset = 12
+          doc = None
+          while offset + 8 <= total:
+              length, kind = struct.unpack_from("<II", data, offset)
+              offset += 8
+              chunk = data[offset:offset + length]
+              offset += length
+              if kind == 0x4E4F534A:
+                  doc = json.loads(chunk.decode("utf-8").rstrip("\\0 "))
+          assert doc is not None, "Missing GLB JSON chunk"
+          nodes = doc.get("nodes", [])
+          meshes = doc.get("meshes", [])
+          print("Alternate GLB bytes:", len(data))
+          print("Node count:", len(nodes), "Mesh count:", len(meshes))
+          for i, node in enumerate(nodes):
+              if "mesh" in node:
+                  mesh = meshes[node["mesh"]]
+                  print(f"NODE {i}: {node.get('name', '(unnamed)')} | mesh={node['mesh']} | primitives={len(mesh.get('primitives', []))} | translation={node.get('translation', [0,0,0])}")
+          PY
       - name: Run chess engine unit tests
         run: gradle testDebugUnitTest
       - name: Build debug APK
