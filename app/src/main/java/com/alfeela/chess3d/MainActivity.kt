@@ -104,6 +104,7 @@ class MainActivity : Activity() {
             soundEnabled = prefs.getBoolean("sound_enabled", true)
             board.setPieceStyle(prefs.getInt("piece_style", 0))
             board.setPieceSet(prefs.getBoolean("piece_set_alternate", false))
+            board.setMaterialOptions(prefs.getInt("piece_material", 0), prefs.getBoolean("piece_gloss", true), prefs.getInt("board_material", 0), prefs.getBoolean("board_gloss", true))
         }
         getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
             board.setAppearance(
@@ -629,7 +630,7 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇", "طقم قطع الشطرنج")
+        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇", "طقم قطع الشطرنج", "خامات القطع والرقعة واللمعة")
         AlertDialog.Builder(this).setTitle("إعدادات اللعبة")
             .setItems(options) { _, which ->
                 when (which) {
@@ -685,8 +686,42 @@ class MainActivity : Activity() {
                         Toast.makeText(this, if (soundEnabled) "تم تشغيل أصوات اللعبة" else "تم كتم أصوات اللعبة", Toast.LENGTH_SHORT).show()
                     }
                     7 -> showPieceSetDialog()
+                    8 -> showMaterialOptionsDialog()
                 }
             }.setNegativeButton("إغلاق", null).show()
+    }
+
+    private fun showMaterialOptionsDialog() {
+        val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+        val options = arrayOf("خامة القطع", "لمعة القطع", "خامة الرقعة", "لمعة الرقعة")
+        AlertDialog.Builder(this).setTitle("تخصيص الخامات واللمعة").setItems(options) { _, which ->
+            val choices = when (which) {
+                0 -> arrayOf("رخام", "خشب")
+                1 -> arrayOf("بلمعة", "بدون لمعة")
+                2 -> arrayOf("زجاج", "رخام", "خشب")
+                else -> arrayOf("بلمعة", "بدون لمعة")
+            }
+            val key = when (which) { 0 -> "piece_material"; 1 -> "piece_gloss"; 2 -> "board_material"; else -> "board_gloss" }
+            val current = when (which) {
+                0 -> prefs.getInt(key, 0)
+                1 -> if (prefs.getBoolean(key, true)) 0 else 1
+                2 -> prefs.getInt(key, 0)
+                else -> if (prefs.getBoolean(key, true)) 0 else 1
+            }
+            AlertDialog.Builder(this).setTitle(options[which]).setSingleChoiceItems(choices, current) { dialog, selected ->
+                if (which == 1 || which == 3) prefs.edit().putBoolean(key, selected == 0).apply()
+                else prefs.edit().putInt(key, selected).apply()
+                applyMaterialOptions()
+                dialog.dismiss()
+                Toast.makeText(this, "تم حفظ اختيارك", Toast.LENGTH_SHORT).show()
+            }.setNegativeButton("إغلاق", null).show()
+        }.setNegativeButton("إغلاق", null).show()
+    }
+
+    private fun applyMaterialOptions() {
+        val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+        board.setMaterialOptions(prefs.getInt("piece_material", 0), prefs.getBoolean("piece_gloss", true),
+            prefs.getInt("board_material", 0), prefs.getBoolean("board_gloss", true))
     }
 
     private fun showPieceSetDialog() {
