@@ -170,7 +170,7 @@ class MainActivity : Activity() {
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.CENTER
         }
 
         val profileBar = LinearLayout(this).apply {
@@ -197,7 +197,26 @@ class MainActivity : Activity() {
         profileBar.addView(View(this).apply { setBackgroundColor(Color.rgb(119, 89, 45)) },
             LinearLayout.LayoutParams(dp(1), dp(30)))
         profileAction("⚙", 0.7f) { showSettingsDialog() }
-        content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(54)))
+        content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(46)))
+        val homePanel = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(2), dp(3), dp(2), dp(2))
+        }
+        val brandColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val actionsColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        homePanel.addView(brandColumn, LinearLayout.LayoutParams(0, -1, 0.92f).apply {
+            setMargins(dp(3), 0, dp(5), 0)
+        })
+        homePanel.addView(actionsColumn, LinearLayout.LayoutParams(0, -1, 1.08f).apply {
+            setMargins(dp(5), 0, dp(3), 0)
+        })
 
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -242,9 +261,9 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         hero.addView(subtitle, LinearLayout.LayoutParams(-1, dp(30)))
-        content.addView(hero, LinearLayout.LayoutParams(-1, dp(194)).apply {
-            topMargin = dp(16)
-            bottomMargin = dp(8)
+        brandColumn.addView(hero, LinearLayout.LayoutParams(-1, dp(132)).apply {
+            topMargin = dp(2)
+            bottomMargin = dp(4)
         })
 
         status = TextView(this).apply {
@@ -257,7 +276,7 @@ class MainActivity : Activity() {
             setShadowLayer(3f, 1f, 1f, Color.BLACK)
         }
         homeStatus = status
-        content.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
+        brandColumn.addView(status, LinearLayout.LayoutParams(-1, dp(34)))
 
         fun homeTile(icon: String, label: String, detail: String, highlighted: Boolean = false, action: () -> Unit): LinearLayout {
             val tile = LinearLayout(this).apply {
@@ -324,26 +343,26 @@ class MainActivity : Activity() {
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى $savedLevel"
             showGameScreen()
         }
-        content.addView(computerTile, LinearLayout.LayoutParams(-1, dp(76)).apply {
-            topMargin = dp(5)
-            bottomMargin = dp(5)
+        actionsColumn.addView(computerTile, LinearLayout.LayoutParams(-1, dp(66)).apply {
+            topMargin = dp(3)
+            bottomMargin = dp(3)
         })
 
         fun addHomeAction(tile: View, height: Int = 66) {
-            content.addView(tile, LinearLayout.LayoutParams(-1, dp(height)).apply {
-                topMargin = dp(5)
-                bottomMargin = dp(5)
+            actionsColumn.addView(tile, LinearLayout.LayoutParams(-1, dp(height - 10)).apply {
+                topMargin = dp(3)
+                bottomMargin = dp(3)
             })
         }
         addHomeAction(homeTile("📶", "اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
             showLanDialog()
-        }, 76)
+        }, 70)
         addHomeAction(homeTile("🌐", "اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
-        }, 76)
+        }, 70)
         addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت") {
             showMatchHistory()
-        }, 76)
+        }, 70)
 
         val footer = TextView(this).apply {
             text = "BLACK  •  GOLD  •  STRATEGY"
@@ -352,7 +371,8 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             letterSpacing = 0.18f
         }
-        content.addView(footer, LinearLayout.LayoutParams(-1, dp(30)))
+        brandColumn.addView(footer, LinearLayout.LayoutParams(-1, dp(24)))
+        content.addView(homePanel, LinearLayout.LayoutParams(-1, -1))
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         homeRoot = root
