@@ -204,6 +204,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         queueEvent { boardRenderer.setPieceSet(alternate) }
         requestRender()
     }
+    fun setMaterialOptions(pieceMaterial: Int, pieceGloss: Boolean, boardMaterial: Int, boardGloss: Boolean) {
+        queueEvent { boardRenderer.setMaterialOptions(pieceMaterial, pieceGloss, boardMaterial, boardGloss) }
+        requestRender()
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
@@ -385,6 +389,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     private var colorHandle = 0
     private var normalHandle = 0
     private var glowHandle = 0
+    private var glossHandle = 0
     @Volatile private var selected: Pair<Int, Int>? = null
     @Volatile private var legalTargets: Set<Pair<Int, Int>> = emptySet()
     @Volatile private var animatedMove: ChessMove? = null
@@ -405,6 +410,17 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var sceneBackgroundColor = android.graphics.Color.rgb(9, 10, 13)
     @Volatile private var pieceStyle = 0
     @Volatile private var pieceSetAssetName = "staunton-chess.glb"
+    @Volatile private var pieceMaterialStyle = 0
+    @Volatile private var pieceGlossEnabled = true
+    @Volatile private var boardMaterialStyle = 0
+    @Volatile private var boardGlossEnabled = true
+    @Volatile private var activeGloss = true
+    fun setMaterialOptions(pieceMaterial: Int, pieceGloss: Boolean, boardMaterial: Int, boardGloss: Boolean) {
+        pieceMaterialStyle = pieceMaterial.coerceIn(0, 1)
+        pieceGlossEnabled = pieceGloss
+        boardMaterialStyle = boardMaterial.coerceIn(0, 2)
+        boardGlossEnabled = boardGloss
+    }
     fun setSceneBackground(color: Int) { sceneBackgroundColor = color }
     fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
         whitePieceColor = whitePiece
@@ -556,6 +572,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         precision mediump float;
         uniform vec4 uColor;
         uniform float uGlow;
+        uniform float uGloss;
         varying vec3 vNormal;
         varying vec3 vPosition;
         void main(){
@@ -570,8 +587,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             float specular = pow(max(dot(n, halfDir), 0.0), 64.0);
             float fillSpecular = pow(max(dot(n, fillHalf), 0.0), 42.0);
             float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0) * 0.20;
+            float glossFactor = mix(0.06, 1.0, uGloss);
             vec3 lit = uColor.rgb * (0.34 + diffuse * 0.72 + fill * 0.24 + rim)
-                + vec3(1.0,0.96,0.88) * (specular * 0.62 + fillSpecular * 0.18)
+                + vec3(1.0,0.96,0.88) * (specular * 0.62 + fillSpecular * 0.18) * glossFactor
                 + vec3(1.0,0.58,0.12) * uGlow;
             gl_FragColor = vec4(lit, uColor.a);
         }
@@ -618,6 +636,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         colorHandle = GLES20.glGetUniformLocation(program,"uColor")
         normalHandle = GLES20.glGetAttribLocation(program,"aNormal")
         glowHandle = GLES20.glGetUniformLocation(program,"uGlow")
+        glossHandle = GLES20.glGetUniformLocation(program,"uGloss")
         // Keep both sides visible while generated procedural meshes use per-face normals.
         GLES20.glDisable(GLES20.GL_CULL_FACE)
         loadGlbBoard()
@@ -667,12 +686,23 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             Matrix.rotateM(view,0,Math.toDegrees(boardRotation.toDouble()).toFloat(),0f,1f,0f)
         }
         Matrix.multiplyMM(vp,0,projection,0,view,0)
-        // Thick polished black plinth gives the board a real raised edge.
-        drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,0.025f,0.028f,0.032f)
-        drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,0.11f,0.105f,0.10f)
+        // Board material and finish are controlled independently from the pieces.
+        activeGloss = boardGlossEnabled
+        val boardColors = when (boardMaterialStyle) {
+            1 -> intArrayOf(0xE7E0D2.toInt(), 0x55515A)
+            2 -> intArrayOf(0xC49A6C.toInt(), 0x51331F)
+            else -> intArrayOf(0xDDEBF0.toInt(), 0x526B78)
+        }
+        val frame = when (boardMaterialStyle) {
+            1 -> floatArrayOf(0.22f, 0.20f, 0.19f)
+            2 -> floatArrayOf(0.24f, 0.13f, 0.07f)
+            else -> floatArrayOf(0.10f, 0.16f, 0.19f)
+        }
+        drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,frame[0],frame[1],frame[2])
+        drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,frame[0]*1.35f,frame[1]*1.35f,frame[2]*1.35f)
         // The approved GLB supplies the actual 64 square meshes when its asset
         // is present. Procedural squares remain the safe fallback on load errors.
-        if (glbBoardReady) drawGlbBoard()
+        if (glbBoardReady && boardMaterialStyle == 0) drawGlbBoard()
         val previousMove = game.lastMove
         val checkedKing = if (game.isInCheck(game.sideToMove)) {
             (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
@@ -689,11 +719,12 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             val isLastMove = previousMove?.let {                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
             } ?: false
             val isCheckedKing = checkedKing == square
-            if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
-                drawCube(file-3.5f,if (glbBoardReady) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady) 0.025f else 0.12f,0.98f,
-                    if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(if (light) lightSquareColor else darkSquareColor),
-                    if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else green(if (light) lightSquareColor else darkSquareColor),
-                    if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else blue(if (light) lightSquareColor else darkSquareColor))
+            if (!glbBoardReady || boardMaterialStyle != 0 || isCheckedKing || isSelected || isTarget || isLastMove) {
+                val squareColor = if (boardMaterialStyle == 0) (if (light) lightSquareColor else darkSquareColor) else boardColors[if (light) 0 else 1]
+                drawCube(file-3.5f,if (glbBoardReady && boardMaterialStyle == 0) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady && boardMaterialStyle == 0) 0.025f else 0.12f,0.98f,
+                    if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(squareColor),
+                    if (isCheckedKing) 0.12f else if (isSelected) 0.48f else if (isTarget) 0.48f else if (isLastMove) 0.38f else green(squareColor),
+                    if (isCheckedKing) 0.10f else if (isSelected) 0.16f else if (isTarget) 0.14f else if (isLastMove) 0.12f else blue(squareColor))
             }
             if (isTarget && game.pieceAt(file, rank) == null) {
                 drawCube(file-3.5f,0.075f,rank-3.5f,0.22f,0.035f,0.22f,0.95f,0.70f,0.28f)
@@ -710,7 +741,12 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 if (piece.side == Side.WHITE) 90f else -90f
             } else 0f
             // Reference finish: glossy piano-black versus warm ivory.
-            val pieceColor = if (white) whitePieceColor else blackPieceColor
+            val pieceColor = if (pieceMaterialStyle == 0) {
+                if (white) 0xF0E8D8.toInt() else 0x25242A
+            } else {
+                if (white) 0xD2A879.toInt() else 0x4A2C1D
+            }
+            activeGloss = pieceGlossEnabled
             val r = red(pieceColor)
             val g = green(pieceColor)
             val b = blue(pieceColor)
@@ -1118,6 +1154,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvp, 0)
         GLES20.glUniform1f(glowHandle, activePieceGlow)
+        GLES20.glUniform1f(glossHandle, if (activeGloss) 1f else 0f)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(normalHandle)
         for (part in parts) {
@@ -1161,6 +1198,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(normalHandle)
         for (mesh in glbBoardMeshes) {
+            GLES20.glUniform1f(glossHandle, if (activeGloss) 1f else 0f)
             GLES20.glUniform4f(colorHandle, mesh.color[0], mesh.color[1], mesh.color[2], mesh.color[3])
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.vertices)
             GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.normals)
@@ -1280,6 +1318,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
         GLES20.glUniform1f(glowHandle,activePieceGlow)
+        GLES20.glUniform1f(glossHandle, if (activeGloss) 1f else 0f)
         GLES20.glUniform4f(colorHandle,r,g,b,alpha.coerceIn(0f,1f))
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,buffer)
@@ -1295,6 +1334,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpHandle,1,false,mvp,0)
         GLES20.glUniform1f(glowHandle,activePieceGlow)
+        GLES20.glUniform1f(glossHandle, if (activeGloss) 1f else 0f)
         GLES20.glUniform4f(colorHandle,r,g,b,1f)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,vertexBuffer)
