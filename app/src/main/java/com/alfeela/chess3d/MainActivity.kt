@@ -626,7 +626,7 @@ class MainActivity : Activity() {
         }
         header.addView(back, LinearLayout.LayoutParams(dp(92), dp(44)))
         header.addView(TextView(this).apply {
-            text = "⚙  إعدادات اللعبة"
+            text = "⚙  إعدادات الخامات"
             textSize = 21f
             gravity = Gravity.CENTER
             setTextColor(gold)
@@ -647,49 +647,92 @@ class MainActivity : Activity() {
         fun selector(label: String, values: List<String>, initial: Int, onSelect: (Int) -> Unit) {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
-                background = rounded(Color.rgb(22, 20, 17), Color.rgb(126, 94, 49), 1)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(39, 28, 17), Color.rgb(15, 13, 11))).apply {
+                    cornerRadius = dp(16).toFloat()
+                    setStroke(dp(1), Color.rgb(157, 117, 55))
+                }
             }
             card.addView(TextView(this).apply {
                 text = label
-                textSize = 14f
+                textSize = 15f
                 gravity = Gravity.CENTER
                 setTextColor(cream)
             }, LinearLayout.LayoutParams(-1, dp(28)))
             val current = TextView(this).apply {
-                text = values[initial.coerceIn(values.indices)]
                 textSize = 18f
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(255, 220, 155))
                 typeface = Typeface.create("serif", Typeface.BOLD)
             }
             var selected = initial.coerceIn(values.indices)
-            val controls = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
+            val symbols = if (label.contains("القطع")) listOf("♔", "♔", "♟", "♟", "♛", "♛")
+                else listOf("▦", "▦", "▤", "▤", "▥", "▥")
+            val horizontal = android.widget.HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false
+                clipToPadding = false
             }
+            val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+            val tileViews = mutableListOf<LinearLayout>()
+            values.forEachIndexed { index, value ->
+                val tile = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(5), dp(4), dp(5), dp(4))
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener { selected = index; refresh(); onSelect(selected) }
+                }
+                tile.addView(TextView(this).apply {
+                    text = symbols[index]
+                    textSize = 27f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(255, 226, 176))
+                }, LinearLayout.LayoutParams(dp(70), dp(52)))
+                tile.addView(TextView(this).apply {
+                    text = value
+                    textSize = 11f
+                    gravity = Gravity.CENTER
+                    setTextColor(cream)
+                }, LinearLayout.LayoutParams(dp(70), dp(36)))
+                tiles.addView(tile, LinearLayout.LayoutParams(dp(78), dp(96)).apply {
+                    setMargins(dp(3), dp(3), dp(3), dp(3))
+                })
+                tileViews.add(tile)
+            }
+            horizontal.addView(tiles)
+            card.addView(horizontal, LinearLayout.LayoutParams(-1, dp(104)))
+            val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
             val previous = makeButton("‹", true)
             val next = makeButton("›", true)
             fun refresh() {
                 current.text = values[selected]
+                tileViews.forEachIndexed { index, tile ->
+                    tile.background = rounded(
+                        if (index == selected) Color.rgb(75, 52, 24) else Color.rgb(34, 29, 23),
+                        if (index == selected) Color.rgb(255, 195, 83) else Color.rgb(105, 83, 55),
+                        if (index == selected) 2 else 1
+                    )
+                }
                 previous.isEnabled = selected > 0
                 next.isEnabled = selected < values.lastIndex
                 previous.alpha = if (previous.isEnabled) 1f else 0.35f
                 next.alpha = if (next.isEnabled) 1f else 0.35f
             }
             previous.setOnClickListener {
-                if (selected > 0) { selected--; refresh(); onSelect(selected) }
+                if (selected > 0) { selected--; refresh(); onSelect(selected); horizontal.post { horizontal.smoothScrollTo(tileViews[selected].left, 0) } }
             }
             next.setOnClickListener {
-                if (selected < values.lastIndex) { selected++; refresh(); onSelect(selected) }
+                if (selected < values.lastIndex) { selected++; refresh(); onSelect(selected); horizontal.post { horizontal.smoothScrollTo(tileViews[selected].left, 0) } }
             }
-            controls.addView(previous, LinearLayout.LayoutParams(dp(64), dp(42)))
-            controls.addView(current, LinearLayout.LayoutParams(0, dp(42), 1f))
-            controls.addView(next, LinearLayout.LayoutParams(dp(64), dp(42)))
-            card.addView(controls, LinearLayout.LayoutParams(-1, dp(46)))
+            controls.addView(previous, LinearLayout.LayoutParams(dp(58), dp(40)))
+            controls.addView(current, LinearLayout.LayoutParams(0, dp(40), 1f))
+            controls.addView(next, LinearLayout.LayoutParams(dp(58), dp(40)))
+            card.addView(controls, LinearLayout.LayoutParams(-1, dp(42)))
             refresh()
-            content.addView(card, LinearLayout.LayoutParams(-1, dp(88)).apply {
-                topMargin = dp(4); bottomMargin = dp(4)
+            content.addView(card, LinearLayout.LayoutParams(-1, dp(164)).apply {
+                topMargin = dp(5); bottomMargin = dp(5)
             })
         }
 
