@@ -422,7 +422,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         is2D = enabled
         if (enabled) {
             targetBoardRotation = 0f
-            targetCameraElevation = 89.5f
+            targetCameraElevation = 67.5f
+            targetCameraDistance = 15.2f
+            cameraDistance = 15.2f
         } else {
             targetBoardRotation = 0f
             targetCameraElevation = 38f
@@ -646,7 +648,16 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         val distance = cameraDistance
         if (is2D) {
-            Matrix.setLookAtM(view, 0, 0f, distance, 0f, 0f, 0f, 0f, 0f, 0f, -1f)
+            // Keep an orthographic board, but tilt slightly so piece silhouettes
+            // retain visible height instead of collapsing into indistinct circles.
+            val flatElevation = Math.toRadians(67.5)
+            Matrix.setLookAtM(
+                view, 0,
+                0f, distance * kotlin.math.sin(flatElevation).toFloat(),
+                distance * kotlin.math.cos(flatElevation).toFloat(),
+                0f, 0.22f, 0f,
+                0f, 1f, 0f
+            )
         } else {
             val elevation = Math.toRadians(cameraElevation.toDouble())
             Matrix.setLookAtM(view,0,0f,
@@ -689,9 +700,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             }
             val piece = game.pieceAt(file, rank) ?: continue
             when (pieceStyle) {
-                1 -> { activePieceScaleX = 0.88f; activePieceScaleY = 1.04f; activePieceScaleZ = 0.88f }
-                2 -> { activePieceScaleX = 1.08f; activePieceScaleY = 1.10f; activePieceScaleZ = 1.08f }
-                else -> { activePieceScaleX = 1f; activePieceScaleY = 1f; activePieceScaleZ = 1f }
+                1 -> { activePieceScaleX = if (is2D) 0.96f else 0.88f; activePieceScaleY = 1.08f; activePieceScaleZ = if (is2D) 0.96f else 0.88f }
+                2 -> { activePieceScaleX = if (is2D) 1.14f else 1.08f; activePieceScaleY = 1.16f; activePieceScaleZ = if (is2D) 1.14f else 1.08f }
+                else -> { activePieceScaleX = if (is2D) 1.08f else 1f; activePieceScaleY = 1.10f; activePieceScaleZ = if (is2D) 1.08f else 1f }
             }
             val white = piece.side == Side.WHITE
             // Turn each Staunton horse inward toward the center of the board.
