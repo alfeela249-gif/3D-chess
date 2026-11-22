@@ -394,30 +394,33 @@ class MainActivity : Activity() {
         status = gameStatus
         gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
         val boardArea = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             background = rounded(Color.rgb(10, 12, 15), gold, 2)
             setPadding(dp(3), dp(3), dp(3), dp(3))
         }
+        // Captured pieces sit in a slim rail on the far right: white above, black below.
+        // Show only the captured piece symbols, with no player labels or captions.
+        val captureRail = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(2), 0, 0, 0)
+        }
         val whiteCaptures = TextView(this).apply {
-            text = "الأبيض: —"
-            textSize = 15f
+            textSize = 22f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(246, 239, 222))
             typeface = Typeface.create("serif", Typeface.BOLD)
-            maxLines = 1
-            setPadding(dp(4), dp(2), dp(4), dp(2))
-            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
+            maxLines = 5
+            setPadding(dp(2), dp(4), dp(2), dp(4))
         }
         val blackCaptures = TextView(this).apply {
-            text = "الأسود: —"
-            textSize = 15f
+            textSize = 22f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(205, 205, 205))
             typeface = Typeface.create("serif", Typeface.BOLD)
-            maxLines = 1
-            setPadding(dp(4), dp(2), dp(4), dp(2))
-            background = rounded(Color.rgb(18, 16, 13), Color.rgb(125, 93, 48), 1)
+            maxLines = 5
+            setPadding(dp(2), dp(4), dp(2), dp(4))
         }
         board.onCapturedPiecesChanged = { white, black ->
             fun symbols(pieces: List<ChessPiece>): String = if (pieces.isEmpty()) "—" else
@@ -432,19 +435,20 @@ class MainActivity : Activity() {
                     }
                 }
             runOnUiThread {
-                whiteCaptures.text = "الأبيض: ${symbols(white)}"
-                blackCaptures.text = "الأسود: ${symbols(black)}"
+                whiteCaptures.text = symbols(white).replace(" ", "\n")
+                blackCaptures.text = symbols(black).replace(" ", "\n")
             }
         }
         board.onCapturedPiecesChanged?.invoke(board.game.capturedPieces(Side.WHITE), board.game.capturedPieces(Side.BLACK))
         (board.parent as? android.view.ViewGroup)?.removeView(board)
         board.set2DMode(getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("board_2d_mode", false))
-        boardArea.addView(blackCaptures, LinearLayout.LayoutParams(-1, dp(34)))
-        boardArea.addView(board, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+        boardArea.addView(board, LinearLayout.LayoutParams(0, -1, 1f).apply {
             topMargin = dp(3)
             bottomMargin = dp(3)
         })
-        boardArea.addView(whiteCaptures, LinearLayout.LayoutParams(-1, dp(34)))
+        captureRail.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        captureRail.addView(blackCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        boardArea.addView(captureRail, LinearLayout.LayoutParams(dp(68), -1))
         gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply {
             setMargins(0, dp(8), 0, dp(8))
         })
