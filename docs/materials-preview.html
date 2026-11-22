@@ -22,3 +22,4 @@ function apply(){let ptype=po[pi].split(' ')[0],pg=pi%2===0;pieces.forEach((g,i)
 function refresh(){document.querySelector('#pv').textContent=po[pi];document.querySelector('#bv').textContent=bo[bi];dots('pd',6,pi);dots('bd',6,bi);apply()}
 [['pp',()=>pi=(pi+5)%6],['pn',()=>pi=(pi+1)%6],['bp',()=>bi=(bi+5)%6],['bn',()=>bi=(bi+1)%6]].forEach(([id,fn])=>document.getElementById(id).onclick=()=>{fn();refresh()});refresh();function loop(){requestAnimationFrame(loop);renderer.render(scene,camera)}loop();
 </script></body></html>
+<!-- refresh GitHub Pages deployment -->
