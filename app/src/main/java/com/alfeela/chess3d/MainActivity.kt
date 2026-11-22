@@ -199,9 +199,9 @@ class MainActivity : Activity() {
         profileAction("⚙", 0.7f) { showSettingsDialog() }
         content.addView(profileBar, LinearLayout.LayoutParams(-1, dp(46)))
         val homePanel = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(2), dp(3), dp(2), dp(2))
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(2), dp(10), dp(2), dp(8))
         }
         val brandColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -211,11 +211,11 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
         }
-        homePanel.addView(brandColumn, LinearLayout.LayoutParams(0, -1, 0.92f).apply {
-            setMargins(dp(3), 0, dp(5), 0)
+        homePanel.addView(brandColumn, LinearLayout.LayoutParams(-1, -2).apply {
+            setMargins(dp(3), 0, dp(3), 0)
         })
-        homePanel.addView(actionsColumn, LinearLayout.LayoutParams(0, -1, 1.08f).apply {
-            setMargins(dp(5), 0, dp(3), 0)
+        homePanel.addView(actionsColumn, LinearLayout.LayoutParams(-1, -2).apply {
+            setMargins(dp(3), dp(8), dp(3), 0)
         })
 
         val hero = LinearLayout(this).apply {
@@ -261,9 +261,9 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         hero.addView(subtitle, LinearLayout.LayoutParams(-1, dp(30)))
-        brandColumn.addView(hero, LinearLayout.LayoutParams(-1, dp(132)).apply {
-            topMargin = dp(2)
-            bottomMargin = dp(4)
+        brandColumn.addView(hero, LinearLayout.LayoutParams(-1, dp(190)).apply {
+            topMargin = dp(8)
+            bottomMargin = dp(10)
         })
 
         status = TextView(this).apply {
@@ -343,26 +343,26 @@ class MainActivity : Activity() {
             status.text = "أنت الأبيض • الكمبيوتر الأسود • مستوى $savedLevel"
             showGameScreen()
         }
-        actionsColumn.addView(computerTile, LinearLayout.LayoutParams(-1, dp(66)).apply {
-            topMargin = dp(3)
-            bottomMargin = dp(3)
+        actionsColumn.addView(computerTile, LinearLayout.LayoutParams(-1, dp(76)).apply {
+            topMargin = dp(4)
+            bottomMargin = dp(4)
         })
 
-        fun addHomeAction(tile: View, height: Int = 66) {
-            actionsColumn.addView(tile, LinearLayout.LayoutParams(-1, dp(height - 10)).apply {
-                topMargin = dp(3)
-                bottomMargin = dp(3)
+        fun addHomeAction(tile: View, height: Int = 76) {
+            actionsColumn.addView(tile, LinearLayout.LayoutParams(-1, dp(height)).apply {
+                topMargin = dp(4)
+                bottomMargin = dp(4)
             })
         }
         addHomeAction(homeTile("📶", "اللعب مع صديق عبر Wi-Fi", "اتصال محلي • دون إنترنت") {
             showLanDialog()
-        }, 70)
+        })
         addHomeAction(homeTile("🌐", "اللعب عبر الإنترنت", "تحدَّ أصدقاءك أينما كانوا") {
             showOnlineDialog()
-        }, 70)
+        })
         addHomeAction(homeTile("📜", "سجل المباريات", "تفاصيل مباريات الكمبيوتر • Wi-Fi • الإنترنت") {
             showMatchHistory()
-        }, 70)
+        })
 
         val footer = TextView(this).apply {
             text = "BLACK  •  GOLD  •  STRATEGY"
@@ -372,7 +372,7 @@ class MainActivity : Activity() {
             letterSpacing = 0.18f
         }
         brandColumn.addView(footer, LinearLayout.LayoutParams(-1, dp(24)))
-        content.addView(homePanel, LinearLayout.LayoutParams(-1, -1))
+        content.addView(homePanel, LinearLayout.LayoutParams(-1, -2))
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         homeRoot = root
@@ -415,15 +415,31 @@ class MainActivity : Activity() {
         topBar.addView(historyButton, LinearLayout.LayoutParams(0, dp(42), 0.72f).apply {
             setMargins(dp(3), 0, dp(3), 0)
         })
-        gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(52)))
-        val gameStatus = TextView(this).apply { setTextColor(cream); textSize = 14f; gravity = Gravity.CENTER; text = homeStatus.text; setPadding(dp(4), dp(8), dp(4), dp(8)) }
+        gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(56)).apply {
+            bottomMargin = dp(5)
+        })
+        val gameStatus = TextView(this).apply {
+            setTextColor(Color.rgb(255, 224, 164))
+            textSize = 14f
+            gravity = Gravity.CENTER
+            text = homeStatus.text
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = rounded(Color.rgb(24, 20, 15), Color.rgb(118, 86, 43), 1)
+        }
         status = gameStatus
         gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
         val boardArea = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            background = rounded(Color.rgb(10, 12, 15), gold, 2)
-            setPadding(dp(3), dp(3), dp(3), dp(3))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(38, 28, 17), Color.rgb(10, 10, 12), Color.rgb(29, 22, 15))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(2), Color.rgb(210, 165, 83))
+            }
+            elevation = dp(8).toFloat()
+            setPadding(dp(5), dp(5), dp(5), dp(5))
         }
         // Captured pieces sit in a slim rail on the far right: white above, black below.
         // Show only the captured piece symbols, with no player labels or captions.
