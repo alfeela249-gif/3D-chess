@@ -702,7 +702,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,frame[0]*1.35f,frame[1]*1.35f,frame[2]*1.35f)
         // The approved GLB supplies the actual 64 square meshes when its asset
         // is present. Procedural squares remain the safe fallback on load errors.
-        if (glbBoardReady && boardMaterialStyle == 0) drawGlbBoard()
+        if (glbBoardReady) drawGlbBoard()
         val previousMove = game.lastMove
         val checkedKing = if (game.isInCheck(game.sideToMove)) {
             (0..7).asSequence().flatMap { r -> (0..7).asSequence().map { f -> f to r } }
@@ -719,7 +719,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             val isLastMove = previousMove?.let {                (it.fromFile == file && it.fromRank == rank) || (it.toFile == file && it.toRank == rank)
             } ?: false
             val isCheckedKing = checkedKing == square
-            if (!glbBoardReady || boardMaterialStyle != 0 || isCheckedKing || isSelected || isTarget || isLastMove) {
+            if (!glbBoardReady || isCheckedKing || isSelected || isTarget || isLastMove) {
                 val squareColor = if (boardMaterialStyle == 0) (if (light) lightSquareColor else darkSquareColor) else boardColors[if (light) 0 else 1]
                 drawCube(file-3.5f,if (glbBoardReady && boardMaterialStyle == 0) 0.075f else 0f,rank-3.5f,0.98f,if (glbBoardReady && boardMaterialStyle == 0) 0.025f else 0.12f,0.98f,
                     if (isCheckedKing) 0.82f else if (isSelected) 0.72f else if (isTarget) 0.58f else if (isLastMove) 0.58f else red(squareColor),
@@ -1144,7 +1144,14 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
 
     private fun drawGlbPiece(piece: ChessPiece, file: Int, x: Float, z: Float) {
         val parts = glbPieceTemplates[piece.side to piece.type] ?: return
-        val pieceColor = if (piece.side == Side.WHITE) whitePieceColor else blackPieceColor
+        // Imported GLB pieces previously kept baked ivory/black colors, so the material selector
+        // only affected procedural fallback pieces. Apply the same independent palette here.
+        val white = piece.side == Side.WHITE
+        val pieceColor = when (pieceMaterialStyle) {
+            0 -> if (white) 0xF0E8D8.toInt() else 0x25242A // marble
+            1 -> if (white) 0xD2A879.toInt() else 0x4A2C1D // wood
+            else -> if (white) 0xF2F2F2.toInt() else 0x252A32 // plastic
+        }
         val body = floatArrayOf(red(pieceColor), green(pieceColor), blue(pieceColor), 1f)
         val gold = floatArrayOf(0.78f, 0.58f, 0.25f, 1f)
         Matrix.setIdentityM(model, 0)
@@ -1197,9 +1204,17 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         GLES20.glUniformMatrix4fv(mvpHandle, 1, false, mvp, 0)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(normalHandle)
+        // Recolor imported board squares according to the current material selection.
+        // The source mesh color identifies each square as light or dark.
         for (mesh in glbBoardMeshes) {
-            GLES20.glUniform1f(glossHandle, if (activeGloss) 1f else 0f)
-            GLES20.glUniform4f(colorHandle, mesh.color[0], mesh.color[1], mesh.color[2], mesh.color[3])
+            val lightSquare = mesh.color[0] > 0.4f
+            val squareColor = when (boardMaterialStyle) {
+                0 -> if (lightSquare) 0xE7E0D2.toInt() else 0x55515A // marble
+                1 -> if (lightSquare) 0xC49A6C.toInt() else 0x51331F // wood
+                else -> if (lightSquare) 0xE8E8E8.toInt() else 0x30343B // plastic
+            }
+            GLES20.glUniform1f(glossHandle, if (boardGlossEnabled) 1f else 0f)
+            GLES20.glUniform4f(colorHandle, red(squareColor), green(squareColor), blue(squareColor), 1f)
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.vertices)
             GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT, false, 12, mesh.normals)
             GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.count, GLES20.GL_UNSIGNED_SHORT, mesh.indices)
