@@ -7,6 +7,8 @@ on:
       - 'docs/home.html'
       - 'docs/chess.glb'
       - 'docs/materials-preview.html'
+      - 'docs/sets-preview.html'
+      - 'docs/chess-set-new.glb'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
