@@ -667,12 +667,11 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        val back = makeButton("‹ رجوع", false).apply {
+        header.addView(makeButton("‹ رجوع", false).apply {
             setOnClickListener { showHomeScreen() }
-        }
-        header.addView(back, LinearLayout.LayoutParams(dp(92), dp(44)))
+        }, LinearLayout.LayoutParams(dp(92), dp(44)))
         header.addView(TextView(this).apply {
-            text = "⚙  إعدادات الخامات"
+            text = "⚙  الإعدادات"
             textSize = 21f
             gravity = Gravity.CENTER
             setTextColor(gold)
@@ -680,177 +679,56 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(0, dp(44), 1f))
         content.addView(header, LinearLayout.LayoutParams(-1, dp(50)))
 
-        fun sectionTitle(label: String) {
-            content.addView(TextView(this).apply {
-                text = label
-                textSize = 18f
-                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
-                setTextColor(gold)
-                typeface = Typeface.create("serif", Typeface.BOLD)
-                setPadding(dp(4), dp(8), dp(4), dp(4))
-            }, LinearLayout.LayoutParams(-1, dp(42)))
-        }
-        fun selector(label: String, values: List<String>, initial: Int, onSelect: (Int) -> Unit) {
-            val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(10), dp(8), dp(10), dp(8))
-                background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Color.rgb(39, 28, 17), Color.rgb(15, 13, 11))).apply {
-                    cornerRadius = dp(16).toFloat()
-                    setStroke(dp(1), Color.rgb(157, 117, 55))
-                }
-            }
-            card.addView(TextView(this).apply {
-                text = label
-                textSize = 15f
-                gravity = Gravity.CENTER
-                setTextColor(cream)
-            }, LinearLayout.LayoutParams(-1, dp(28)))
-            val current = TextView(this).apply {
-                textSize = 18f
-                gravity = Gravity.CENTER
-                setTextColor(Color.rgb(255, 220, 155))
-                typeface = Typeface.create("serif", Typeface.BOLD)
-            }
-            var selected = initial.coerceIn(values.indices)
-            val symbols = if (label.contains("القطع")) listOf("♔", "♔", "♟", "♟", "♛", "♛")
-                else listOf("▦", "▦", "▤", "▤", "▥", "▥")
-            val horizontal = android.widget.HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                clipToPadding = false
-            }
-            val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-            val tileViews = mutableListOf<LinearLayout>()
-            lateinit var refresh: () -> Unit
-            values.forEachIndexed { index, value ->
-                val tile = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    setPadding(dp(5), dp(4), dp(5), dp(4))
-                    isClickable = true
-                    isFocusable = true
-                    setOnClickListener { selected = index; refresh(); onSelect(selected) }
-                }
-                tile.addView(TextView(this).apply {
-                    text = symbols[index]
-                    textSize = 27f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.rgb(255, 226, 176))
-                }, LinearLayout.LayoutParams(dp(70), dp(52)))
-                tile.addView(TextView(this).apply {
-                    text = value
-                    textSize = 11f
-                    gravity = Gravity.CENTER
-                    setTextColor(cream)
-                }, LinearLayout.LayoutParams(dp(70), dp(36)))
-                tiles.addView(tile, LinearLayout.LayoutParams(dp(78), dp(96)).apply {
-                    setMargins(dp(3), dp(3), dp(3), dp(3))
-                })
-                tileViews.add(tile)
-            }
-            horizontal.addView(tiles)
-            card.addView(horizontal, LinearLayout.LayoutParams(-1, dp(104)))
-            val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-            val previous = makeButton("‹", true)
-            val next = makeButton("›", true)
-            refresh = {
-                current.text = values[selected]
-                tileViews.forEachIndexed { index, tile ->
-                    tile.background = rounded(
-                        if (index == selected) Color.rgb(75, 52, 24) else Color.rgb(34, 29, 23),
-                        if (index == selected) Color.rgb(255, 195, 83) else Color.rgb(105, 83, 55),
-                        if (index == selected) 2 else 1
-                    )
-                }
-                previous.isEnabled = selected > 0
-                next.isEnabled = selected < values.lastIndex
-                previous.alpha = if (previous.isEnabled) 1f else 0.35f
-                next.alpha = if (next.isEnabled) 1f else 0.35f
-            }
-            previous.setOnClickListener {
-                if (selected > 0) { selected--; refresh(); onSelect(selected); horizontal.post { horizontal.smoothScrollTo(tileViews[selected].left, 0) } }
-            }
-            next.setOnClickListener {
-                if (selected < values.lastIndex) { selected++; refresh(); onSelect(selected); horizontal.post { horizontal.smoothScrollTo(tileViews[selected].left, 0) } }
-            }
-            controls.addView(previous, LinearLayout.LayoutParams(dp(58), dp(40)))
-            controls.addView(current, LinearLayout.LayoutParams(0, dp(40), 1f))
-            controls.addView(next, LinearLayout.LayoutParams(dp(58), dp(40)))
-            card.addView(controls, LinearLayout.LayoutParams(-1, dp(42)))
-            refresh()
-            content.addView(card, LinearLayout.LayoutParams(-1, dp(164)).apply {
-                topMargin = dp(5); bottomMargin = dp(5)
+        fun settingButton(label: String, detail: String, action: () -> Unit) {
+            content.addView(makeButton("$label  •  $detail", false).apply {
+                setOnClickListener { action() }
+            }, LinearLayout.LayoutParams(-1, dp(54)).apply {
+                topMargin = dp(7)
+                bottomMargin = dp(3)
             })
         }
 
-        sectionTitle("♟  خامة القطع ولمعانها")
-        val pieceOptions = listOf("رخام لامع", "رخام مطفي", "خشب لامع", "خشب مطفي", "بلاستيك لامع", "بلاستيك مطفي")
-        val pieceInitial = (prefs.getInt("piece_material", 0).coerceIn(0, 2) * 2) +
-            (if (prefs.getBoolean("piece_gloss", true)) 0 else 1)
-        selector("اختر خامة القطع", pieceOptions, pieceInitial) { value ->
-            prefs.edit()
-                .putInt("piece_material", value / 2)
-                .putBoolean("piece_gloss", value % 2 == 0)
-                .apply()
-            applyMaterialOptions()
-        }
+        settingButton("ألوان القطع والرقعة", "تخصيص الألوان") { showAppearanceDialog() }
 
-        sectionTitle("▦  خامة الرقعة ولمعانها")
-        val boardOptions = listOf("رخام مطفي", "رخام لامع", "خشب مطفي", "خشب لامع", "بلاستيك مطفي", "بلاستيك لامع")
-        val oldBoardMaterial = prefs.getInt("board_material", 0).coerceIn(0, 2)
-        val boardInitial = oldBoardMaterial * 2 + (if (prefs.getBoolean("board_gloss", true)) 1 else 0)
-        selector("اختر خامة الرقعة", boardOptions, boardInitial) { value ->
-            prefs.edit()
-                .putInt("board_material", value / 2)
-                .putBoolean("board_gloss", value % 2 == 1)
-                .apply()
-            applyMaterialOptions()
-        }
-
-        sectionTitle("إعدادات أخرى")
-        val extras = listOf(
-            "ألوان القطع والرقعة" to { showAppearanceDialog() },
-            "أشكال القطع" to {
-                val styles = arrayOf("كلاسيكي", "عصري", "ملكي")
-                AlertDialog.Builder(this).setTitle("اختر شكل القطع").setSingleChoiceItems(styles,
-                    prefs.getInt("piece_style", 0).coerceIn(0, 2)) { dialog, selected ->
-                    prefs.edit().putInt("piece_style", selected).apply()
-                    board.setPieceStyle(selected); dialog.dismiss()
+        val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
+        val depths = intArrayOf(1, 3, 4, 5)
+        val currentDepth = prefs.getInt("computer_depth", 3)
+        val levelName = levels[depths.indexOf(currentDepth).takeIf { it >= 0 } ?: 1]
+        settingButton("مستوى الصعوبة", levelName) {
+            AlertDialog.Builder(this).setTitle("مستوى صعوبة الكمبيوتر")
+                .setSingleChoiceItems(levels, depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)) { dialog, selected ->
+                    prefs.edit().putInt("computer_depth", depths[selected]).apply()
+                    dialog.dismiss()
+                    showSettingsDialog()
                 }.setNegativeButton("إغلاق", null).show()
-            },
-            "صعوبة الكمبيوتر" to {
-                val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
-                val depths = intArrayOf(1, 3, 4, 5)
-                AlertDialog.Builder(this).setTitle("صعوبة الكمبيوتر")
-                    .setSingleChoiceItems(levels, depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)) { dialog, selected ->
-                        prefs.edit().putInt("computer_depth", depths[selected]).apply(); dialog.dismiss()
-                    }.setNegativeButton("إغلاق", null).show()
-            },
-            "حساسية الكاميرا" to {
-                val controls = arrayOf("هادئ", "متوازن", "سريع")
-                val values = floatArrayOf(0.65f, 1f, 1.4f)
-                AlertDialog.Builder(this).setTitle("حساسية الكاميرا")
-                    .setSingleChoiceItems(controls, 1) { dialog, selected ->
-                        prefs.edit().putFloat("camera_sensitivity", values[selected]).apply()
-                        board.cameraTouchSensitivity = values[selected]; dialog.dismiss()
-                    }.setNegativeButton("إغلاق", null).show()
-            },
-        )
-        extras.take(4).forEach { (label, action) ->
-            content.addView(makeButton(label, false).apply {
-                setOnClickListener { action() }
-            }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
         }
-        content.addView(makeButton(if (soundEnabled) "إيقاف الصوت 🔇" else "تشغيل الصوت 🔊", false).apply {
-            setOnClickListener {
-                soundEnabled = !soundEnabled
-                prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                text = if (soundEnabled) "إيقاف الصوت 🔇" else "تشغيل الصوت 🔊"
-            }
-        }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
-        content.addView(makeButton("الحساب وتسجيل الدخول", false).apply {
-            setOnClickListener { showAccountDialog() }
-        }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
+
+        val sensitivities = arrayOf("هادئ", "متوازن", "سريع")
+        val sensitivityValues = floatArrayOf(0.65f, 1f, 1.4f)
+        val currentSensitivity = prefs.getFloat("camera_sensitivity", 1f)
+        val sensitivityName = sensitivities.indices.minByOrNull {
+            kotlin.math.abs(sensitivityValues[it] - currentSensitivity)
+        }?.let { sensitivities[it] } ?: "متوازن"
+        settingButton("حساسية الكاميرا", sensitivityName) {
+            val selectedIndex = sensitivityValues.indices.minByOrNull {
+                kotlin.math.abs(sensitivityValues[it] - prefs.getFloat("camera_sensitivity", 1f))
+            } ?: 1
+            AlertDialog.Builder(this).setTitle("حساسية الكاميرا")
+                .setSingleChoiceItems(sensitivities, selectedIndex) { dialog, selected ->
+                    prefs.edit().putFloat("camera_sensitivity", sensitivityValues[selected]).apply()
+                    board.cameraTouchSensitivity = sensitivityValues[selected]
+                    dialog.dismiss()
+                    showSettingsDialog()
+                }.setNegativeButton("إغلاق", null).show()
+        }
+
+        settingButton("الصوت", if (soundEnabled) "مفعّل" else "متوقف") {
+            soundEnabled = !soundEnabled
+            prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
+            if (soundEnabled) playGameSound("move")
+            showSettingsDialog()
+        }
+
         scroll.addView(content)
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(page)
