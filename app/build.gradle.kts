@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -32,6 +34,8 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
     androidTestImplementation("junit:junit:4.13.2")
+}
+
 val generatedLauncherRes = layout.buildDirectory.dir("generated/res/launcherIcon")
 
 val generateLauncherIcon by tasks.registering {
@@ -43,7 +47,7 @@ val generateLauncherIcon by tasks.registering {
         outputDir.mkdirs()
         val encoded = encodedIcon.asFile.readText().trim()
         outputDir.resolve("ic_launcher_brand.jpg").writeBytes(
-            java.util.Base64.getDecoder().decode(encoded)
+            Base64.getDecoder().decode(encoded)
         )
     }
 }
@@ -51,4 +55,3 @@ val generateLauncherIcon by tasks.registering {
 android.sourceSets.getByName("main").res.srcDir(generatedLauncherRes)
 tasks.named("preBuild").configure { dependsOn(generateLauncherIcon) }
 
-}
