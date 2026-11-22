@@ -74,14 +74,19 @@ class LanConnection(
     @Volatile private var writer: BufferedWriter? = null
     @Volatile private var discoverySocket: DatagramSocket? = null
 
-    fun host() {
+    fun host(bindAddress: String? = null) {
         close()
         thread(name = "chess-lan-host") {
             var listener: ServerSocket? = null
             try {
                 listener = ServerSocket().apply {
                     reuseAddress = true
-                    bind(InetSocketAddress(PORT))
+                    // Bind the game listener to the phone's actual Wi-Fi/Hotspot
+                    // address so the accepted TCP socket stays on that LAN route.
+                    val wifiAddress = bindAddress?.trim()?.takeIf { it.isNotEmpty() }
+                        ?.let { java.net.InetAddress.getByName(it) }
+                    if (wifiAddress != null) bind(InetSocketAddress(wifiAddress, PORT))
+                    else bind(InetSocketAddress(PORT))
                 }
                 server = listener
                 startDiscoveryResponder()
