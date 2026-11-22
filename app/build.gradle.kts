@@ -32,4 +32,23 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
     androidTestImplementation("junit:junit:4.13.2")
+val generatedLauncherRes = layout.buildDirectory.dir("generated/res/launcherIcon")
+
+val generateLauncherIcon by tasks.registering {
+    val encodedIcon = layout.projectDirectory.file("src/main/icon/ic_launcher.jpg.b64")
+    inputs.file(encodedIcon)
+    outputs.dir(generatedLauncherRes)
+    doLast {
+        val outputDir = generatedLauncherRes.get().asFile.resolve("drawable-nodpi")
+        outputDir.mkdirs()
+        val encoded = encodedIcon.asFile.readText().trim()
+        outputDir.resolve("ic_launcher_brand.jpg").writeBytes(
+            java.util.Base64.getDecoder().decode(encoded)
+        )
+    }
+}
+
+android.sourceSets.getByName("main").res.srcDir(generatedLauncherRes)
+tasks.named("preBuild").configure { dependsOn(generateLauncherIcon) }
+
 }
