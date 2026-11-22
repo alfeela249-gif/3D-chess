@@ -416,7 +416,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var boardGlossEnabled = true
     @Volatile private var activeGloss = true
     fun setMaterialOptions(pieceMaterial: Int, pieceGloss: Boolean, boardMaterial: Int, boardGloss: Boolean) {
-        pieceMaterialStyle = pieceMaterial.coerceIn(0, 1)
+        pieceMaterialStyle = pieceMaterial.coerceIn(0, 2)
         pieceGlossEnabled = pieceGloss
         boardMaterialStyle = boardMaterial.coerceIn(0, 2)
         boardGlossEnabled = boardGloss
@@ -689,14 +689,14 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         // Board material and finish are controlled independently from the pieces.
         activeGloss = boardGlossEnabled
         val boardColors = when (boardMaterialStyle) {
-            1 -> intArrayOf(0xE7E0D2.toInt(), 0x55515A)
-            2 -> intArrayOf(0xC49A6C.toInt(), 0x51331F)
-            else -> intArrayOf(0xDDEBF0.toInt(), 0x526B78)
+            0 -> intArrayOf(0xE7E0D2.toInt(), 0x55515A) // marble
+            1 -> intArrayOf(0xC49A6C.toInt(), 0x51331F) // wood
+            else -> intArrayOf(0xE8E8E8.toInt(), 0x30343B) // plastic
         }
         val frame = when (boardMaterialStyle) {
-            1 -> floatArrayOf(0.22f, 0.20f, 0.19f)
-            2 -> floatArrayOf(0.24f, 0.13f, 0.07f)
-            else -> floatArrayOf(0.10f, 0.16f, 0.19f)
+            0 -> floatArrayOf(0.22f, 0.20f, 0.19f)
+            1 -> floatArrayOf(0.24f, 0.13f, 0.07f)
+            else -> floatArrayOf(0.12f, 0.13f, 0.15f)
         }
         drawCube(0f,-0.24f,0f,8.62f,0.42f,8.62f,frame[0],frame[1],frame[2])
         drawCube(0f,-0.015f,0f,8.48f,0.08f,8.48f,frame[0]*1.35f,frame[1]*1.35f,frame[2]*1.35f)
@@ -741,10 +741,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
                 if (piece.side == Side.WHITE) 90f else -90f
             } else 0f
             // Reference finish: glossy piano-black versus warm ivory.
-            val pieceColor = if (pieceMaterialStyle == 0) {
-                if (white) 0xF0E8D8.toInt() else 0x25242A
-            } else {
-                if (white) 0xD2A879.toInt() else 0x4A2C1D
+            val pieceColor = when (pieceMaterialStyle) {
+                0 -> if (white) 0xF0E8D8.toInt() else 0x25242A // marble
+                1 -> if (white) 0xD2A879.toInt() else 0x4A2C1D // wood
+                else -> if (white) 0xF2F2F2.toInt() else 0x252A32 // plastic
             }
             activeGloss = pieceGlossEnabled
             val r = red(pieceColor)
