@@ -389,11 +389,6 @@ class MainActivity : Activity() {
         topBar.addView(historyButton, LinearLayout.LayoutParams(0, dp(42), 0.72f).apply {
             setMargins(dp(3), 0, dp(3), 0)
         })
-        val settingsButton = makeButton("⚙", false).apply {
-            textSize = 17f
-            setOnClickListener { showSettingsDialog() }
-        }
-        topBar.addView(settingsButton, LinearLayout.LayoutParams(dp(44), dp(42)))
         gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(52)))
         val gameStatus = TextView(this).apply { setTextColor(cream); textSize = 14f; gravity = Gravity.CENTER; text = homeStatus.text; setPadding(dp(4), dp(8), dp(4), dp(8)) }
         status = gameStatus
@@ -464,22 +459,6 @@ class MainActivity : Activity() {
                 Toast.makeText(this@MainActivity, if (use2D) "تم تحويل الرقعة إلى العرض ثنائي الأبعاد" else "تمت العودة إلى العرض ثلاثي الأبعاد", Toast.LENGTH_SHORT).show()
             }
         }
-        val pieceSetButton = makeButton(
-            if (getSharedPreferences("game_settings", MODE_PRIVATE).getBoolean("piece_set_alternate", false))
-                "الطقم الجديد" else "الطقم الأصلي", false
-        ).apply {
-            textSize = 11f
-            setOnClickListener {
-                val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-                val useAlternate = !prefs.getBoolean("piece_set_alternate", false)
-                prefs.edit().putBoolean("piece_set_alternate", useAlternate).apply()
-                board.setPieceSet(useAlternate)
-                text = if (useAlternate) "الطقم الجديد" else "الطقم الأصلي"
-                Toast.makeText(this@MainActivity,
-                    if (useAlternate) "تم تبديل الطقم أثناء المباراة" else "تمت العودة للطقم الأصلي",
-                    Toast.LENGTH_SHORT).show()
-            }
-        }
         val soundButton = makeButton(if (soundEnabled) "الصوت 🔊" else "الصوت 🔇", false).apply {
             textSize = 11f
             setOnClickListener {
@@ -498,9 +477,6 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         inGameControls.addView(displayModeButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-            setMargins(dp(3), dp(2), dp(3), dp(2))
-        })
-        inGameControls.addView(pieceSetButton, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
             setMargins(dp(3), dp(2), dp(3), dp(2))
         })
         inGameControls.addView(soundButton, LinearLayout.LayoutParams(0, dp(44), 0.82f).apply {
@@ -630,65 +606,161 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇", "طقم قطع الشطرنج", "خامات القطع والرقعة واللمعة")
-        AlertDialog.Builder(this).setTitle("إعدادات اللعبة")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
-                        val depths = intArrayOf(1, 3, 4, 5)
-                        val current = depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)
-                        AlertDialog.Builder(this).setTitle("اختر صعوبة الكمبيوتر")
-                            .setSingleChoiceItems(levels, current) { dialog, selected ->
-                                prefs.edit().putInt("computer_depth", depths[selected]).apply()
-                                dialog.dismiss()
-                                AlertDialog.Builder(this).setMessage("تم حفظ مستوى ${levels[selected]}. سيُطبّق على المباراة التالية.")
-                                    .setPositiveButton("حسناً", null).show()
-                            }.setNegativeButton("إلغاء", null).show()
-                    }
-                    1 -> showAppearanceDialog()
-                    2 -> {
-                        val styles = arrayOf("كلاسيكي", "عصري", "ملكي")
-                        val current = prefs.getInt("piece_style", 0).coerceIn(0, 2)
-                        AlertDialog.Builder(this).setTitle("اختر شكل القطع")
-                            .setSingleChoiceItems(styles, current) { dialog, selected ->
-                                prefs.edit().putInt("piece_style", selected).apply()
-                                board.setPieceStyle(selected)
-                                dialog.dismiss()
-                                AlertDialog.Builder(this).setMessage("تم تطبيق تصميم ${styles[selected]} وحفظه.")
-                                    .setPositiveButton("حسناً", null).show()
-                            }.setNegativeButton("إلغاء", null).show()
-                    }
-                    3 -> {
-                        val controls = arrayOf("هادئ", "متوازن", "سريع")
-                        val values = floatArrayOf(0.65f, 1.0f, 1.4f)
-                        val current = when (prefs.getFloat("camera_sensitivity", 1.0f)) {
-                            in 0.0f..0.8f -> 0
-                            in 0.81f..1.15f -> 1
-                            else -> 2
-                        }
-                        AlertDialog.Builder(this).setTitle("حساسية حركة الكاميرا")
-                            .setSingleChoiceItems(controls, current) { dialog, selected ->
-                                prefs.edit().putFloat("camera_sensitivity", values[selected]).apply()
-                                board.cameraTouchSensitivity = values[selected]
-                                dialog.dismiss()
-                                AlertDialog.Builder(this).setMessage("تم ضبط التحكم على وضع ${controls[selected]}.")
-                                    .setPositiveButton("حسناً", null).show()
-                            }.setNegativeButton("إلغاء", null).show()
-                    }
-                    4 -> showAccountDialog()
-                    5 -> AlertDialog.Builder(this).setTitle("3D Chess")
-                        .setMessage("خصص صعوبة الكمبيوتر وألوان الرقعة وأشكال القطع والتحكم بالكاميرا والصوت.")
-                        .setPositiveButton("حسناً", null).show()
-                    6 -> {
-                        soundEnabled = !soundEnabled
-                        prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                        Toast.makeText(this, if (soundEnabled) "تم تشغيل أصوات اللعبة" else "تم كتم أصوات اللعبة", Toast.LENGTH_SHORT).show()
-                    }
-                    7 -> showPieceSetDialog()
-                    8 -> showMaterialOptionsDialog()
-                }
-            }.setNegativeButton("إغلاق", null).show()
+        val page = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(16))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(5, 6, 8), Color.rgb(24, 19, 13), Color.rgb(5, 6, 8)))
+        }
+        val scroll = android.widget.ScrollView(this).apply { isFillViewport = true }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val back = makeButton("‹ رجوع", false).apply {
+            setOnClickListener { setContentView(homeRoot); status = homeStatus }
+        }
+        header.addView(back, LinearLayout.LayoutParams(dp(92), dp(44)))
+        header.addView(TextView(this).apply {
+            text = "⚙  إعدادات اللعبة"
+            textSize = 21f
+            gravity = Gravity.CENTER
+            setTextColor(gold)
+            typeface = Typeface.create("serif", Typeface.BOLD)
+        }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        content.addView(header, LinearLayout.LayoutParams(-1, dp(50)))
+
+        fun sectionTitle(label: String) {
+            content.addView(TextView(this).apply {
+                text = label
+                textSize = 18f
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                setTextColor(gold)
+                typeface = Typeface.create("serif", Typeface.BOLD)
+                setPadding(dp(4), dp(8), dp(4), dp(4))
+            }, LinearLayout.LayoutParams(-1, dp(42)))
+        }
+        fun selector(label: String, values: List<String>, initial: Int, onSelect: (Int) -> Unit) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                background = rounded(Color.rgb(22, 20, 17), Color.rgb(126, 94, 49), 1)
+            }
+            card.addView(TextView(this).apply {
+                text = label
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(cream)
+            }, LinearLayout.LayoutParams(-1, dp(28)))
+            val current = TextView(this).apply {
+                text = values[initial.coerceIn(values.indices)]
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(255, 220, 155))
+                typeface = Typeface.create("serif", Typeface.BOLD)
+            }
+            var selected = initial.coerceIn(values.indices)
+            val controls = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            val previous = makeButton("‹", true)
+            val next = makeButton("›", true)
+            fun refresh() {
+                current.text = values[selected]
+                previous.isEnabled = selected > 0
+                next.isEnabled = selected < values.lastIndex
+                previous.alpha = if (previous.isEnabled) 1f else 0.35f
+                next.alpha = if (next.isEnabled) 1f else 0.35f
+            }
+            previous.setOnClickListener {
+                if (selected > 0) { selected--; refresh(); onSelect(selected) }
+            }
+            next.setOnClickListener {
+                if (selected < values.lastIndex) { selected++; refresh(); onSelect(selected) }
+            }
+            controls.addView(previous, LinearLayout.LayoutParams(dp(64), dp(42)))
+            controls.addView(current, LinearLayout.LayoutParams(0, dp(42), 1f))
+            controls.addView(next, LinearLayout.LayoutParams(dp(64), dp(42)))
+            card.addView(controls, LinearLayout.LayoutParams(-1, dp(46)))
+            refresh()
+            content.addView(card, LinearLayout.LayoutParams(-1, dp(88)).apply {
+                topMargin = dp(4); bottomMargin = dp(4)
+            })
+        }
+
+        sectionTitle("♟  شكل وخامة القطع")
+        selector("طقم القطع", listOf("الطقم الأصلي Staunton", "الطقم الجديد"), if (prefs.getBoolean("piece_set_alternate", false)) 1 else 0) { value ->
+            prefs.edit().putBoolean("piece_set_alternate", value == 1).apply()
+            board.setPieceSet(value == 1)
+        }
+        selector("خامة القطع", listOf("رخام", "خشب"), prefs.getInt("piece_material", 0)) { value ->
+            prefs.edit().putInt("piece_material", value).apply(); applyMaterialOptions()
+        }
+        selector("لمعة القطع", listOf("لامعة", "مطفيّة"), if (prefs.getBoolean("piece_gloss", true)) 0 else 1) { value ->
+            prefs.edit().putBoolean("piece_gloss", value == 0).apply(); applyMaterialOptions()
+        }
+
+        sectionTitle("▦  شكل الرقعة")
+        selector("خامة الرقعة", listOf("زجاج", "رخام", "خشب"), prefs.getInt("board_material", 0)) { value ->
+            prefs.edit().putInt("board_material", value).apply(); applyMaterialOptions()
+        }
+        selector("لمعة الرقعة", listOf("لامعة", "مطفيّة"), if (prefs.getBoolean("board_gloss", true)) 0 else 1) { value ->
+            prefs.edit().putBoolean("board_gloss", value == 0).apply(); applyMaterialOptions()
+        }
+
+        sectionTitle("إعدادات أخرى")
+        val extras = listOf(
+            "ألوان القطع والرقعة" to { showAppearanceDialog() },
+            "أشكال القطع" to {
+                val styles = arrayOf("كلاسيكي", "عصري", "ملكي")
+                AlertDialog.Builder(this).setTitle("اختر شكل القطع").setSingleChoiceItems(styles,
+                    prefs.getInt("piece_style", 0).coerceIn(0, 2)) { dialog, selected ->
+                    prefs.edit().putInt("piece_style", selected).apply()
+                    board.setPieceStyle(selected); dialog.dismiss()
+                }.setNegativeButton("إغلاق", null).show()
+            },
+            "صعوبة الكمبيوتر" to {
+                val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
+                val depths = intArrayOf(1, 3, 4, 5)
+                AlertDialog.Builder(this).setTitle("صعوبة الكمبيوتر")
+                    .setSingleChoiceItems(levels, depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)) { dialog, selected ->
+                        prefs.edit().putInt("computer_depth", depths[selected]).apply(); dialog.dismiss()
+                    }.setNegativeButton("إغلاق", null).show()
+            },
+            "حساسية الكاميرا" to {
+                val controls = arrayOf("هادئ", "متوازن", "سريع")
+                val values = floatArrayOf(0.65f, 1f, 1.4f)
+                AlertDialog.Builder(this).setTitle("حساسية الكاميرا")
+                    .setSingleChoiceItems(controls, 1) { dialog, selected ->
+                        prefs.edit().putFloat("camera_sensitivity", values[selected]).apply()
+                        board.cameraTouchSensitivity = values[selected]; dialog.dismiss()
+                    }.setNegativeButton("إغلاق", null).show()
+            },
+            if (soundEnabled) "الصوت: تشغيل" else "الصوت: إيقاف" to { }
+        )
+        extras.take(4).forEach { (label, action) ->
+            content.addView(makeButton(label, false).apply {
+                setOnClickListener { action() }
+            }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
+        }
+        content.addView(makeButton(if (soundEnabled) "إيقاف الصوت 🔇" else "تشغيل الصوت 🔊", false).apply {
+            setOnClickListener {
+                soundEnabled = !soundEnabled
+                prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                text = if (soundEnabled) "إيقاف الصوت 🔇" else "تشغيل الصوت 🔊"
+            }
+        }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
+        content.addView(makeButton("الحساب وتسجيل الدخول", false).apply {
+            setOnClickListener { showAccountDialog() }
+        }, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
+        scroll.addView(content)
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(page)
     }
 
     private fun showMaterialOptionsDialog() {
