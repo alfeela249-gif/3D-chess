@@ -675,6 +675,7 @@ class MainActivity : Activity() {
             }
             val tiles = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
             val tileViews = mutableListOf<LinearLayout>()
+            lateinit var refresh: () -> Unit
             values.forEachIndexed { index, value ->
                 val tile = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
@@ -706,7 +707,7 @@ class MainActivity : Activity() {
             val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
             val previous = makeButton("‹", true)
             val next = makeButton("›", true)
-            fun refresh() {
+            refresh = {
                 current.text = values[selected]
                 tileViews.forEachIndexed { index, tile ->
                     tile.background = rounded(
