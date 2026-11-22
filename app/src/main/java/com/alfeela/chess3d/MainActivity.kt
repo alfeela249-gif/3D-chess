@@ -103,6 +103,7 @@ class MainActivity : Activity() {
             board.cameraTouchSensitivity = prefs.getFloat("camera_sensitivity", 1.0f)
             soundEnabled = prefs.getBoolean("sound_enabled", true)
             board.setPieceStyle(prefs.getInt("piece_style", 0))
+            board.setPieceSet(prefs.getBoolean("piece_set_alternate", false))
         }
         getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
             board.setAppearance(
@@ -588,7 +589,7 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇")
+        val options = arrayOf("صعوبة الكمبيوتر", "ألوان القطع والرقعة", "أشكال القطع", "التحكم بالكاميرا", "الحساب وتسجيل الدخول", "معلومات التطبيق", if (soundEnabled) "الصوت: تشغيل 🔊" else "الصوت: إيقاف 🔇", "طقم قطع الشطرنج")
         AlertDialog.Builder(this).setTitle("إعدادات اللعبة")
             .setItems(options) { _, which ->
                 when (which) {
@@ -643,7 +644,22 @@ class MainActivity : Activity() {
                         prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
                         Toast.makeText(this, if (soundEnabled) "تم تشغيل أصوات اللعبة" else "تم كتم أصوات اللعبة", Toast.LENGTH_SHORT).show()
                     }
+                    7 -> showPieceSetDialog()
                 }
+            }.setNegativeButton("إغلاق", null).show()
+    }
+
+    private fun showPieceSetDialog() {
+        val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+        val alternate = prefs.getBoolean("piece_set_alternate", false)
+        val choices = arrayOf("الطقم الأصلي – Staunton", "الطقم الجديد – التصميم المضاف")
+        AlertDialog.Builder(this).setTitle("اختر طقم قطع الشطرنج")
+            .setSingleChoiceItems(choices, if (alternate) 1 else 0) { dialog, selected ->
+                val useAlternate = selected == 1
+                prefs.edit().putBoolean("piece_set_alternate", useAlternate).apply()
+                board.setPieceSet(useAlternate)
+                dialog.dismiss()
+                Toast.makeText(this, if (useAlternate) "تم اختيار الطقم الجديد" else "تمت العودة إلى الطقم الأصلي", Toast.LENGTH_LONG).show()
             }.setNegativeButton("إغلاق", null).show()
     }
 
