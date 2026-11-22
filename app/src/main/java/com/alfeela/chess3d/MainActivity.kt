@@ -927,7 +927,7 @@ class MainActivity : Activity() {
         }
         val back = makeButton("‹  القائمة الرئيسية", false).apply {
             textSize = 13f
-            setOnClickListener { setContentView(homeRoot); status = homeStatus }
+            setOnClickListener { showHomeScreen() }
         }
         root.addView(back, LinearLayout.LayoutParams(-1, dp(46)))
         val emblem = TextView(this).apply {
@@ -1545,8 +1545,7 @@ class MainActivity : Activity() {
                 dialog.dismiss()
                 onlinePoll?.let { mainHandler.removeCallbacks(it) }
                 lan.close()
-                setContentView(homeRoot)
-                status = homeStatus
+                showHomeScreen()
             }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener {
                 dialog.dismiss()
