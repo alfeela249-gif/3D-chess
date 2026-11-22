@@ -409,7 +409,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var darkSquareColor = 0x858B95.toInt()
     @Volatile private var sceneBackgroundColor = android.graphics.Color.rgb(9, 10, 13)
     @Volatile private var pieceStyle = 0
-    @Volatile private var pieceSetAssetName = "staunton-chess.glb"
+    @Volatile private var pieceSetAssetName = "approved-chess-set.glb"
     @Volatile private var pieceMaterialStyle = 0
     @Volatile private var pieceGlossEnabled = true
     @Volatile private var boardMaterialStyle = 0
@@ -430,7 +430,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     }
     fun setPieceStyle(style: Int) { pieceStyle = style.coerceIn(0, 2) }
     fun setPieceSet(alternate: Boolean) {
-        pieceSetAssetName = if (alternate) "alternate-chess-set.glb" else "staunton-chess.glb"
+        // The newly approved GLB is now the only playable piece set.
+        // Keep the parameter for source compatibility with existing callers.
+        pieceSetAssetName = "approved-chess-set.glb"
         loadGlbPieces()
     }
     fun is2DMode(): Boolean = is2D
@@ -958,7 +960,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         try {
             val assetName = pieceSetAssetName
             val scene = GlbAsset.parse(assets.open(assetName).use { it.readBytes() })
-            if (assetName == "alternate-chess-set.glb") {
+            if (assetName == "approved-chess-set.glb") {
                 loadNamedAlternateGlbPieces(scene)
                 return
             }

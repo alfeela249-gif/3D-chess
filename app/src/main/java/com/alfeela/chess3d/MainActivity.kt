@@ -103,7 +103,7 @@ class MainActivity : Activity() {
             board.cameraTouchSensitivity = prefs.getFloat("camera_sensitivity", 1.0f)
             soundEnabled = prefs.getBoolean("sound_enabled", true)
             board.setPieceStyle(prefs.getInt("piece_style", 0))
-            board.setPieceSet(prefs.getBoolean("piece_set_alternate", false))
+            board.setPieceSet(true)
             board.setMaterialOptions(prefs.getInt("piece_material", 0), prefs.getBoolean("piece_gloss", true), prefs.getInt("board_material", 0), prefs.getBoolean("board_gloss", true))
         }
         getSharedPreferences("board_appearance", MODE_PRIVATE).let { prefs ->
@@ -841,20 +841,6 @@ class MainActivity : Activity() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
         board.setMaterialOptions(prefs.getInt("piece_material", 0), prefs.getBoolean("piece_gloss", true),
             prefs.getInt("board_material", 0), prefs.getBoolean("board_gloss", true))
-    }
-
-    private fun showPieceSetDialog() {
-        val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
-        val alternate = prefs.getBoolean("piece_set_alternate", false)
-        val choices = arrayOf("الطقم الأصلي – Staunton", "الطقم الجديد – التصميم المضاف")
-        AlertDialog.Builder(this).setTitle("اختر طقم قطع الشطرنج")
-            .setSingleChoiceItems(choices, if (alternate) 1 else 0) { dialog, selected ->
-                val useAlternate = selected == 1
-                prefs.edit().putBoolean("piece_set_alternate", useAlternate).apply()
-                board.setPieceSet(useAlternate)
-                dialog.dismiss()
-                Toast.makeText(this, if (useAlternate) "تم اختيار الطقم الجديد" else "تمت العودة إلى الطقم الأصلي", Toast.LENGTH_LONG).show()
-            }.setNegativeButton("إغلاق", null).show()
     }
 
     private fun showAppearanceDialog() {
