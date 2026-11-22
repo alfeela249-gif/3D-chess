@@ -21,7 +21,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
 input[type=range]{width:100%;accent-color:#d9ad62;direction:ltr}
 .actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 button{background:linear-gradient(#3a2d1c,#211b13);border:1px solid #806239;color:#f5dfb7;border-radius:10px;padding:11px 8px;font:inherit;font-size:13px;cursor:pointer;min-height:42px}
-button:active{transform:scale(.98)}button.secondary{background:#19191a;border-color:#4b4439;color:#e4d8c5}
+button.selected{background:linear-gradient(#735326,#3a2914);border-color:#e0b766;color:#fff0ca;box-shadow:0 0 0 1px #d9ad6240 inset}button:active{transform:scale(.98)}button.secondary{background:#19191a;border-color:#4b4439;color:#e4d8c5}
 .switch{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#e7ddca}.switch input{accent-color:#d9ad62;width:18px;height:18px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:#0d0d0f;border:1px solid #383127;border-radius:10px;padding:10px}.stat small{display:block;color:#a99b84;font-size:11px}.stat b{display:block;color:#e9c984;font-size:18px;margin-top:3px;font-variant-numeric:tabular-nums}
 .note{font-size:11px;line-height:1.7;color:#a99f8f;margin:0}
@@ -37,6 +37,8 @@ footer{text-align:center;color:#817967;font-size:11px;padding:14px}
 <div class="stage" id="stage"><div class="overlay"><span class="tag">تصميم القطع — Staunton Edition</span><span class="tag" id="modeTag">تنعيم الحركة: مفعّل</span></div><div class="hint">اسحب للتدوير • إصبعان للتقريب والإمالة</div></div>
 <aside class="panel">
 <h2>إعدادات الكاميرا</h2>
+<div class="group"><div class="label"><span>طقم القطع</span><span class="value" id="modelStatus">تحميل الطقم الجديد…</span></div><div class="actions"><button id="newSet" class="selected">التصميم الجديد</button><button id="oldSet" class="secondary">التصميم الكلاسيكي</button></div></div>
+
 <div class="group"><div class="label"><span>سرعة الدوران</span><span class="value" id="rotVal">1.0×</span></div><input id="rot" type="range" min=".3" max="2" step=".1" value="1"></div>
 <div class="group"><div class="label"><span>نعومة الحركة</span><span class="value" id="smoothVal">55 ms</span></div><input id="smooth" type="range" min="20" max="180" step="5" value="55"></div>
 <div class="group"><div class="label"><span>زاوية الكاميرا</span><span class="value" id="tiltVal">38°</span></div><input id="tilt" type="range" min="24" max="62" step="1" value="38"></div>
@@ -138,11 +140,13 @@ function makePiece(type,material){
 const black=mat(colorChoices.black[savedAppearance.black]??0x09090b,.22,.16),ivory=mat(colorChoices.white[savedAppearance.white]??0xeee5d2,.08,.26);
 const back=['rook','knight','bishop','queen','king','bishop','knight','rook'];
 for(let x=0;x<8;x++){for(let [z,type,m] of [[0,back[x],ivory],[1,'pawn',ivory],[6,'pawn',black],[7,back[x],black]]){const p=makePiece(type,m);p.position.set(x-3.5,.26,z-3.5);if(type==='knight')p.rotation.y=(m===ivory?1:-1)*Math.PI/2;board.add(p)}}
-// Optional production GLB: when the approved asset is added at this path it replaces
-// the procedural preview automatically; until then the current preview remains visible.
+// Preserve both full-quality GLB sets. The new set is selected by default;
+// the classic set remains available as an alternative. No mesh or texture compression.
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-const approvedModelUrl='./chess.glb?v=20261121-2';
-new GLTFLoader().load(approvedModelUrl,(gltf)=>{
+const gltfLoader=new GLTFLoader();
+const modelRoots={};
+let activeSet='new';
+function prepareModel(gltf){
  const imported=gltf.scene;
  imported.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(imported);
@@ -150,11 +154,42 @@ new GLTFLoader().load(approvedModelUrl,(gltf)=>{
  const center=bounds.getCenter(new THREE.Vector3());
  const maxDim=Math.max(size.x,size.y,size.z);
  if(maxDim>0){const scale=8.5/maxDim;imported.scale.setScalar(scale);imported.position.set(-center.x*scale,-bounds.min.y*scale+.02,-center.z*scale);}
- imported.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.needsUpdate=true;}}});
- scene.add(imported);board.visible=false;
- targetDist=Math.max(11,Math.min(20,Math.max(size.x,size.z)*1.75));distance=targetDist;syncCameraAfterModel();
- document.querySelector('#renderState').textContent='GLB نشط';
-},undefined,()=>{document.querySelector('#renderState').textContent='عرض احتياطي';});
+ imported.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+ return {root:imported,size};
+}
+function chooseSet(which){
+ activeSet=which;
+ for(const key of Object.keys(modelRoots))modelRoots[key].root.visible=(key===which);
+ const ready=!!modelRoots[which];
+ board.visible=!modelRoots.new&&!modelRoots.old;
+ document.querySelector('#newSet').classList.toggle('selected',which==='new');
+ document.querySelector('#newSet').classList.toggle('secondary',which!=='new');
+ document.querySelector('#oldSet').classList.toggle('selected',which==='old');
+ document.querySelector('#oldSet').classList.toggle('secondary',which!=='old');
+ document.querySelector('#modelStatus').textContent=ready?(which==='new'?'التصميم الجديد':'التصميم الكلاسيكي'):'جاري تحميل الطقم…';
+ if(ready){const {size}=modelRoots[which];targetDist=Math.max(11,Math.min(20,Math.max(size.x,size.z)*1.75));distance=targetDist;syncCameraAfterModel();}
+ try{localStorage.setItem('chessPieceSet',which)}catch{}
+}
+function loadSet(key,url){
+ gltfLoader.load(url,gltf=>{
+  const prepared=prepareModel(gltf);
+  modelRoots[key]=prepared;
+  scene.add(prepared.root);
+  prepared.root.visible=(key===activeSet);
+  if(key===activeSet){board.visible=false;chooseSet(key);}
+  else if(modelRoots[activeSet])board.visible=false;
+  if(key==='new')document.querySelector('#modelStatus').textContent='الطقم الجديد جاهز';
+ },undefined,()=>{
+  if(key==='new')document.querySelector('#modelStatus').textContent='تعذّر تحميل الطقم الجديد';
+  if(key==='old')document.querySelector('#modelStatus').textContent='تعذّر تحميل الطقم الكلاسيكي';
+ });
+}
+document.querySelector('#newSet').onclick=()=>chooseSet('new');
+document.querySelector('#oldSet').onclick=()=>chooseSet('old');
+try{activeSet=localStorage.getItem('chessPieceSet')||'new'}catch{activeSet='new'}
+chooseSet(activeSet);
+loadSet('new','./chess-set-new.glb?v=20261122-1');
+loadSet('old','./chess.glb?v=20261121-2');
 function syncCameraAfterModel(){cameraUpdate(1);}
 function cameraUpdate(dt){if(spin)targetAz+=dt*.25*speed;const a=smooth?1-Math.exp(-dt/(smoothMs/1000)):1;azimuth+=(targetAz-azimuth)*a;elevation+=(targetEl-elevation)*a;distance+=(targetDist-distance)*a;const ce=Math.cos(elevation);camera.position.set(Math.sin(azimuth)*distance*ce,Math.sin(elevation)*distance,Math.cos(azimuth)*distance*ce);camera.lookAt(0,.25,0)}
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
