@@ -427,7 +427,8 @@ class MainActivity : Activity() {
             background = rounded(Color.rgb(24, 20, 15), Color.rgb(118, 86, 43), 1)
         }
         status = gameStatus
-        gameRoot.addView(gameStatus, LinearLayout.LayoutParams(-1, dp(52)))
+        // Keep status updates available to game logic without showing the status strip.
+        gameStatus.visibility = View.GONE
         val boardArea = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -488,8 +489,9 @@ class MainActivity : Activity() {
             topMargin = dp(3)
             bottomMargin = dp(3)
         })
-        captureRail.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        // Captured black pieces at the top; captured white pieces at the bottom.
         captureRail.addView(blackCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
+        captureRail.addView(whiteCaptures, LinearLayout.LayoutParams(-1, 0, 1f))
         boardArea.addView(captureRail, LinearLayout.LayoutParams(dp(68), -1))
         gameRoot.addView(boardArea, LinearLayout.LayoutParams(-1, 0, 1f).apply {
             setMargins(0, dp(8), 0, dp(8))
