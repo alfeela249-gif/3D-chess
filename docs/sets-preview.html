@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0b0d">
+<title>3D Chess — تجربة الطقمين</title>
+<style>
+:root{color-scheme:dark;--gold:#d9ad62;--line:#66502e}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#392919,#11100f 48%,#08090b);color:#f5ead6;font-family:system-ui,Arial,sans-serif}
+header,main,footer{max-width:1000px;margin:auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand{font:800 25px Georgia,serif;letter-spacing:2px}.brand span{color:var(--gold)}
+.pill{border:1px solid var(--line);border-radius:30px;padding:7px 11px;color:#e7c98e;font-size:12px}
+h1{text-align:center;font-size:clamp(22px,5vw,32px);margin:10px 0 5px}
+.sub{text-align:center;color:#bcae96;font-size:13px;margin:0 0 16px}
+.stage{height:min(62vh,600px);min-height:350px;border:1px solid #74572e;border-radius:18px;overflow:hidden;position:relative;background:linear-gradient(145deg,#1b1915,#08090c);box-shadow:0 18px 55px #0009}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.tag{position:absolute;top:12px;right:12px;padding:7px 11px;border:1px solid #74572e;border-radius:9px;background:#090909c9;color:#f0d49d;font-size:12px;pointer-events:none}
+.hint{position:absolute;bottom:10px;right:10px;padding:7px 10px;border-radius:9px;background:#090909c9;color:#e5d7bf;font-size:11px;pointer-events:none}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+button{border:1px solid #806239;border-radius:12px;padding:13px 10px;background:linear-gradient(#3a2d1c,#211b13);color:#f5dfb7;font:inherit;font-size:14px;cursor:pointer}
+button.active{background:linear-gradient(#80602e,#4a351b);box-shadow:0 0 0 2px #d9ad6240}
+.status{margin-top:11px;padding:10px;border:1px solid #493b27;border-radius:10px;background:#151411;color:#cbb994;text-align:center;font-size:12px;line-height:1.7}
+footer{text-align:center;color:#93866e;font-size:11px}
+@media(max-width:520px){header,main,footer{padding:12px}.stage{height:52vh;min-height:320px}.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">3D <span>CHESS</span></div><div style="font-size:11px;color:#bcae96">معاينة النماذج الفعلية</div></div><div class="pill">اختبار عبر المتصفح</div></header>
+<main>
+<h1>جرّب تصميمي قطع الشطرنج</h1>
+<p class="sub">اختر الطقم الأصلي أو التصميم الجديد، ولفّ المجسم بإصبعك لمشاهدته من كل الجهات.</p>
+<section class="stage" id="stage">
+<div class="tag" id="modelName">جاري تحميل الطقم الأصلي…</div>
+<div class="hint">اسحب للتدوير • قرّب بإصبعين</div>
+</section>
+<div class="controls">
+<button id="old" class="active">الطقم الأصلي</button>
+<button id="new">التصميم الجديد</button>
+</div>
+<div class="status" id="status">جارٍ تحميل المجسم ثلاثي الأبعاد…</div>
+</main>
+<footer>صفحة اختبار مستقلة — لا تغيّر بيانات التطبيق ولا تستبدل أي تصميم محفوظ.</footer>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+const stage=document.querySelector('#stage'),status=document.querySelector('#status'),name=document.querySelector('#modelName');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x090a0c);
+const camera=new THREE.PerspectiveCamera(38,1,.01,1000);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;stage.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xe8eaff,0x332313,2.2));
+const key=new THREE.DirectionalLight(0xffd99a,3.2);key.position.set(-7,12,8);key.castShadow=true;scene.add(key);
+const rim=new THREE.DirectionalLight(0x9bb8ec,1.7);rim.position.set(7,7,-8);scene.add(rim);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x171513,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-.03;floor.receiveShadow=true;scene.add(floor);
+const loader=new GLTFLoader();let current=null,az=0,el=.72,dist=9,target=new THREE.Vector3(0,0,0),drag=false,lastX=0,lastY=0,pointers=new Map(),pinch=0;
+const models={
+old:{url:'./chess.glb',label:'الطقم الأصلي'},
+fresh:{url:'./chess-set-new.glb',label:'التصميم الجديد'}
+};
+const cache={};
+function fit(obj){
+ const box=new THREE.Box3().setFromObject(obj),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+ obj.position.sub(center);
+ const max=Math.max(size.x,size.y,size.z)||1;obj.scale.setScalar(6.5/max);
+ target.set(0,0,0);dist=10;el=.68;az=.72;updateCamera();
+}
+function updateCamera(){camera.position.set(target.x+Math.sin(az)*Math.cos(el)*dist,target.y+Math.sin(el)*dist,target.z+Math.cos(az)*Math.cos(el)*dist);camera.lookAt(target)}
+function setStatus(t){status.textContent=t}
+function selectModel(key){
+ document.querySelector('#old').classList.toggle('active',key==='old');document.querySelector('#new').classList.toggle('active',key==='fresh');
+ name.textContent=models[key].label;setStatus('جارٍ تحميل '+models[key].label+'…');
+ if(current){scene.remove(current);current=null}
+ if(cache[key]){current=cache[key];scene.add(current);fit(current);setStatus('تم تحميل النموذج. اسحب المجسم لتدويره.');return}
+ loader.load(models[key].url,g=>{
+  current=g.scene;cache[key]=current;
+  current.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide}}});
+  scene.add(current);fit(current);setStatus('تم تحميل النموذج بنجاح. اسحب المجسم لتدويره.');
+ },xhr=>{if(xhr.total)setStatus('تحميل المجسم '+Math.round(xhr.loaded/xhr.total*100)+'٪');},err=>{
+  console.error(err);setStatus('تعذّر تحميل هذا النموذج. تأكد من اتصال الإنترنت ثم أعد فتح الصفحة.');
+ });
+}
+document.querySelector('#old').addEventListener('click',()=>selectModel('old'));
+document.querySelector('#new').addEventListener('click',()=>selectModel('fresh'));
+renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});renderer.domElement.setPointerCapture(e.pointerId);if(pointers.size===1){drag=true;lastX=e.clientX;lastY=e.clientY}else if(pointers.size===2){const p=[...pointers.values()];pinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1&&drag){az-=(e.clientX-lastX)*.008;el=THREE.MathUtils.clamp(el+(e.clientY-lastY)*.006,.12,1.48);lastX=e.clientX;lastY=e.clientY;updateCamera()}else if(pointers.size===2){const p=[...pointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(pinch){dist=THREE.MathUtils.clamp(dist*pinch/d,2,35);updateCamera()}pinch=d}});
+function endPointer(e){pointers.delete(e.pointerId);drag=false;if(pointers.size<2)pinch=0}renderer.domElement.addEventListener('pointerup',endPointer);renderer.domElement.addEventListener('pointercancel',endPointer);
+renderer.domElement.addEventListener('wheel',e=>{dist=THREE.MathUtils.clamp(dist+e.deltaY*.01,2,35);updateCamera()},{passive:true});
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}animate();
+selectModel('old');
+</script>
+</body>
+</html>
