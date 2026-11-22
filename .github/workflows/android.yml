@@ -32,15 +32,15 @@ jobs:
           magic=$(od -An -tx1 -N4 app/src/main/assets/staunton-chess.glb | tr -d '[:space:]')
           test "$magic" = "676c5446"
           echo "Bundled valid GLB: $(wc -c < app/src/main/assets/staunton-chess.glb) bytes"
-      - name: Inspect and bundle optional second chess set
+      - name: Bundle the adopted chess set
         run: |
-          curl --fail --location --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/alfeela249-gif/3D-chess/main/docs/chess-set-new.glb" --output app/src/main/assets/alternate-chess-set.glb
-          test -s app/src/main/assets/alternate-chess-set.glb
-          magic=$(od -An -tx1 -N4 app/src/main/assets/alternate-chess-set.glb | tr -d '[:space:]')
+          curl --fail --location --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/alfeela249-gif/3D-chess/main/docs/chess-set-new.glb" --output app/src/main/assets/approved-chess-set.glb
+          test -s app/src/main/assets/approved-chess-set.glb
+          magic=$(od -An -tx1 -N4 app/src/main/assets/approved-chess-set.glb | tr -d '[:space:]')
           test "$magic" = "676c5446"
           python3 - <<'PY'
           import json, struct
-          path = "app/src/main/assets/alternate-chess-set.glb"
+          path = "app/src/main/assets/approved-chess-set.glb"
           data = open(path, "rb").read()
           magic, version, total = struct.unpack_from("<III", data, 0)
           assert magic == 0x46546C67 and version == 2 and total <= len(data)
