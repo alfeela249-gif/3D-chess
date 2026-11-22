@@ -652,84 +652,146 @@ class MainActivity : Activity() {
 
     private fun showSettingsDialog() {
         val prefs = getSharedPreferences("game_settings", MODE_PRIVATE)
+        val appearance = getSharedPreferences("board_appearance", MODE_PRIVATE)
+        val goldColor = Color.rgb(224, 190, 126)
+        val cream = Color.rgb(239, 220, 177)
+        val panel = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(39, 29, 19), Color.rgb(20, 17, 15), Color.rgb(13, 13, 15))).apply {
+            cornerRadius = dp(30).toFloat()
+            setStroke(dp(1), goldColor)
+        }
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(16))
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(18), dp(22), dp(18), dp(18))
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(5, 6, 8), Color.rgb(24, 19, 13), Color.rgb(5, 6, 8)))
+                intArrayOf(Color.rgb(4, 5, 7), Color.rgb(12, 10, 9), Color.BLACK))
         }
         val scroll = android.widget.ScrollView(this).apply { isFillViewport = true }
-        val content = LinearLayout(this).apply {
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(14), dp(22), dp(14), dp(18))
+            background = panel
         }
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        header.addView(makeButton("‹ رجوع", false).apply {
-            setOnClickListener { showHomeScreen() }
-        }, LinearLayout.LayoutParams(dp(92), dp(44)))
-        header.addView(TextView(this).apply {
-            text = "⚙  الإعدادات"
-            textSize = 21f
+        val title = TextView(this).apply {
+            text = "إعدادات اللعبة"
+            textSize = 27f
             gravity = Gravity.CENTER
-            setTextColor(gold)
+            setTextColor(cream)
             typeface = Typeface.create("serif", Typeface.BOLD)
-        }, LinearLayout.LayoutParams(0, dp(44), 1f))
-        content.addView(header, LinearLayout.LayoutParams(-1, dp(50)))
+        }
+        card.addView(title, LinearLayout.LayoutParams(-1, dp(54)))
+        val subtitle = TextView(this).apply {
+            text = "خصص مظهر الواجهة واحفظ اختياراتك على هذا المتصفح."
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(190, 174, 148))
+            setPadding(dp(4), dp(12), dp(4), dp(22))
+        }
+        card.addView(subtitle, LinearLayout.LayoutParams(-1, dp(66)))
 
-        fun settingButton(label: String, detail: String, action: () -> Unit) {
-            content.addView(makeButton("$label  •  $detail", false).apply {
-                setOnClickListener { action() }
-            }, LinearLayout.LayoutParams(-1, dp(54)).apply {
-                topMargin = dp(7)
-                bottomMargin = dp(3)
+        fun addChoice(label: String, options: Array<String>, selected: Int, onSelected: (Int) -> Unit) {
+            val labelView = TextView(this).apply {
+                text = label
+                textSize = 17f
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                setTextColor(cream)
+                typeface = Typeface.create("serif", Typeface.BOLD)
+                setPadding(dp(4), dp(8), dp(4), dp(7))
+            }
+            card.addView(labelView, LinearLayout.LayoutParams(-1, dp(43)))
+            val spinner = android.widget.Spinner(this).apply {
+                adapter = android.widget.ArrayAdapter(this@MainActivity,
+                    android.R.layout.simple_spinner_dropdown_item, options).also { a ->
+                    a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                }
+                setSelection(selected.coerceIn(options.indices))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(12, 12, 13))
+                    cornerRadius = dp(17).toFloat()
+                    setStroke(dp(1), Color.rgb(111, 83, 45))
+                }
+                setPadding(dp(12), dp(4), dp(12), dp(4))
+            }
+            card.addView(spinner, LinearLayout.LayoutParams(-1, dp(58)).apply {
+                bottomMargin = dp(13)
             })
+            spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                    onSelected(position)
+                }
+            }
         }
 
-        settingButton("ألوان القطع والرقعة", "تخصيص الألوان") { showAppearanceDialog() }
+        val whiteNames = arrayOf("عاجي", "أبيض ناصع", "ذهبي", "أزرق جليدي")
+        val whiteColors = intArrayOf(Color.rgb(240,230,210), Color.WHITE, Color.rgb(220,178,91), Color.rgb(160,205,235))
+        val blackNames = arrayOf("أسود لامع", "كحلي", "أحمر داكن", "أخضر زمردي")
+        val blackColors = intArrayOf(Color.rgb(9,9,11), Color.rgb(22,35,62), Color.rgb(112,30,38), Color.rgb(20,92,68))
+        val lightNames = arrayOf("أبيض", "عاجي", "رمادي فاتح", "أزرق ثلجي")
+        val lightColors = intArrayOf(Color.WHITE, Color.rgb(242,232,212), Color.rgb(220,224,230), Color.rgb(220,235,245))
+        val darkNames = arrayOf("رمادي", "فحمي", "أزرق داكن", "بني خشبي")
+        val darkColors = intArrayOf(Color.rgb(133,139,149), Color.rgb(65,70,78), Color.rgb(42,65,92), Color.rgb(112,78,52))
+        fun colorIndex(key: String, colors: IntArray): Int = colors.indexOf(appearance.getInt(key, colors[0])).coerceAtLeast(0)
+
+        addChoice("لون القطع البيضاء", whiteNames, colorIndex("white_piece", whiteColors)) {
+            appearance.edit().putInt("white_piece", whiteColors[it]).apply()
+            board.setAppearance(whiteColors[it], appearance.getInt("black_piece", blackColors[0]),
+                appearance.getInt("light_square", lightColors[0]), appearance.getInt("dark_square", darkColors[0]))
+        }
+        addChoice("لون القطع السوداء", blackNames, colorIndex("black_piece", blackColors)) {
+            appearance.edit().putInt("black_piece", blackColors[it]).apply()
+            board.setAppearance(appearance.getInt("white_piece", whiteColors[0]), blackColors[it],
+                appearance.getInt("light_square", lightColors[0]), appearance.getInt("dark_square", darkColors[0]))
+        }
+        addChoice("المربعات الفاتحة", lightNames, colorIndex("light_square", lightColors)) {
+            appearance.edit().putInt("light_square", lightColors[it]).apply()
+            board.setAppearance(appearance.getInt("white_piece", whiteColors[0]), appearance.getInt("black_piece", blackColors[0]),
+                lightColors[it], appearance.getInt("dark_square", darkColors[0]))
+        }
+        addChoice("المربعات الداكنة", darkNames, colorIndex("dark_square", darkColors)) {
+            appearance.edit().putInt("dark_square", darkColors[it]).apply()
+            board.setAppearance(appearance.getInt("white_piece", whiteColors[0]), appearance.getInt("black_piece", blackColors[0]),
+                appearance.getInt("light_square", lightColors[0]), darkColors[it])
+        }
 
         val levels = arrayOf("سهل", "متوسط", "صعب", "خبير")
         val depths = intArrayOf(1, 3, 4, 5)
-        val currentDepth = prefs.getInt("computer_depth", 3)
-        val levelName = levels[depths.indexOf(currentDepth).takeIf { it >= 0 } ?: 1]
-        settingButton("مستوى الصعوبة", levelName) {
-            AlertDialog.Builder(this).setTitle("مستوى صعوبة الكمبيوتر")
-                .setSingleChoiceItems(levels, depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)) { dialog, selected ->
-                    prefs.edit().putInt("computer_depth", depths[selected]).apply()
-                    dialog.dismiss()
-                    showSettingsDialog()
-                }.setNegativeButton("إغلاق", null).show()
+        addChoice("مستوى الكمبيوتر", levels, depths.indexOf(prefs.getInt("computer_depth", 3)).coerceAtLeast(0)) {
+            prefs.edit().putInt("computer_depth", depths[it]).apply()
         }
-
         val sensitivities = arrayOf("هادئ", "متوازن", "سريع")
         val sensitivityValues = floatArrayOf(0.65f, 1f, 1.4f)
         val currentSensitivity = prefs.getFloat("camera_sensitivity", 1f)
-        val sensitivityName = sensitivities.indices.minByOrNull {
-            kotlin.math.abs(sensitivityValues[it] - currentSensitivity)
-        }?.let { sensitivities[it] } ?: "متوازن"
-        settingButton("حساسية الكاميرا", sensitivityName) {
-            val selectedIndex = sensitivityValues.indices.minByOrNull {
-                kotlin.math.abs(sensitivityValues[it] - prefs.getFloat("camera_sensitivity", 1f))
-            } ?: 1
-            AlertDialog.Builder(this).setTitle("حساسية الكاميرا")
-                .setSingleChoiceItems(sensitivities, selectedIndex) { dialog, selected ->
-                    prefs.edit().putFloat("camera_sensitivity", sensitivityValues[selected]).apply()
-                    board.cameraTouchSensitivity = sensitivityValues[selected]
-                    dialog.dismiss()
-                    showSettingsDialog()
-                }.setNegativeButton("إغلاق", null).show()
+        val sensitivityIndex = sensitivityValues.indices.minByOrNull { kotlin.math.abs(sensitivityValues[it] - currentSensitivity) } ?: 1
+        addChoice("حساسية الكاميرا", sensitivities, sensitivityIndex) {
+            prefs.edit().putFloat("camera_sensitivity", sensitivityValues[it]).apply()
+            board.cameraTouchSensitivity = sensitivityValues[it]
         }
-
-        settingButton("الصوت", if (soundEnabled) "مفعّل" else "متوقف") {
-            soundEnabled = !soundEnabled
+        val soundOptions = arrayOf("تشغيل", "إيقاف")
+        addChoice("الصوت", soundOptions, if (soundEnabled) 0 else 1) {
+            soundEnabled = it == 0
             prefs.edit().putBoolean("sound_enabled", soundEnabled).apply()
-            if (soundEnabled) playGameSound("move")
-            showSettingsDialog()
         }
 
-        scroll.addView(content)
+        val save = makeButton("حفظ الإعدادات", true).apply {
+            textSize = 17f
+            typeface = Typeface.create("serif", Typeface.BOLD)
+            setTextColor(cream)
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.rgb(105, 75, 39), Color.rgb(65, 45, 25))).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), goldColor)
+            }
+            setOnClickListener {
+                Toast.makeText(this@MainActivity, "تم حفظ الإعدادات", Toast.LENGTH_SHORT).show()
+                showHomeScreen()
+            }
+        }
+        card.addView(save, LinearLayout.LayoutParams(-1, dp(58)).apply {
+            topMargin = dp(8)
+        })
+        scroll.addView(card)
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(page)
     }
