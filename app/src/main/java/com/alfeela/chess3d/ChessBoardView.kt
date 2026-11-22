@@ -200,6 +200,10 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
         queueEvent { boardRenderer.setPieceStyle(style.coerceIn(0, 2)) }
         requestRender()
     }
+    fun setPieceSet(alternate: Boolean) {
+        queueEvent { boardRenderer.setPieceSet(alternate) }
+        requestRender()
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
@@ -400,6 +404,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     @Volatile private var darkSquareColor = 0x858B95.toInt()
     @Volatile private var sceneBackgroundColor = android.graphics.Color.rgb(9, 10, 13)
     @Volatile private var pieceStyle = 0
+    @Volatile private var pieceSetAssetName = "staunton-chess.glb"
     fun setSceneBackground(color: Int) { sceneBackgroundColor = color }
     fun setAppearance(whitePiece: Int, blackPiece: Int, lightSquare: Int, darkSquare: Int) {
         whitePieceColor = whitePiece
@@ -408,6 +413,10 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         darkSquareColor = darkSquare
     }
     fun setPieceStyle(style: Int) { pieceStyle = style.coerceIn(0, 2) }
+    fun setPieceSet(alternate: Boolean) {
+        pieceSetAssetName = if (alternate) "alternate-chess-set.glb" else "staunton-chess.glb"
+        loadGlbPieces()
+    }
     fun is2DMode(): Boolean = is2D
     fun set2DMode(enabled: Boolean) {
         is2D = enabled
@@ -901,6 +910,12 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         glbPiecesReady = false
         try {
             val scene = GlbAsset.parse(assets.open("staunton-chess.glb").use { it.readBytes() })
+            val assetName = pieceSetAssetName
+            val scene = GlbAsset.parse(assets.open(assetName).use { it.readBytes() })
+            if (assetName == "alternate-chess-set.glb") {
+                loadNamedAlternateGlbPieces(scene)
+                return
+            }
             val squares = HashMap<Pair<Int, Int>, MutableList<GlbPiecePart>>()
             val backRank = listOf(PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP,
                 PieceType.QUEEN, PieceType.KING, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK)
@@ -998,6 +1013,87 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
             glbPiecesReady = false
             android.util.Log.e("3DChess", "GLB piece load failed; using procedural pieces", error)
         }
+    }
+
+    private fun loadNamedAlternateGlbPieces(scene: GlbAsset.Scene) {
+        glbPieceTemplates.clear()
+        glbPiecesReady = false
+        val pieceNodes = scene.nodes.filter { it.name.startsWith("piece_", ignoreCase = true) }
+        if (pieceNodes.isEmpty()) throw IllegalArgumentException("The alternate GLB has no named piece nodes")
+        val xPositions = pieceNodes.map { it.translation.getOrElse(0) { 0f } }.distinct().sorted()
+        val zPositions = pieceNodes.map { it.translation.getOrElse(2) { 0f } }.distinct().sorted()
+        val xStep = ((xPositions.last() - xPositions.first()) / 7f).coerceAtLeast(0.0001f)
+        val zStep = ((zPositions.last() - zPositions.first()) / 7f).coerceAtLeast(0.0001f)
+        val maxX = xPositions.last()
+        val maxZ = zPositions.last()
+        for (node in pieceNodes) {
+            val name = node.name.lowercase()
+            val side = when {
+                name.contains("_white") -> Side.WHITE
+                name.contains("_black") -> Side.BLACK
+                else -> continue
+            }
+            val type = when {
+                name.contains("pawn") -> PieceType.PAWN
+                name.contains("rook") -> PieceType.ROOK
+                name.contains("knight") -> PieceType.KNIGHT
+                name.contains("bishop") -> PieceType.BISHOP
+                name.contains("queen") -> PieceType.QUEEN
+                name.contains("king") -> PieceType.KING
+                else -> continue
+            }
+            val mesh = scene.meshes.getOrNull(node.mesh) ?: continue
+            val centerX = node.translation.getOrElse(0) { 0f }
+            val centerZ = node.translation.getOrElse(2) { 0f }
+            val file = kotlin.math.round((maxX - centerX) / xStep).toInt()
+            val rank = kotlin.math.round((maxZ - centerZ) / zStep).toInt()
+            if (file !in 0..7 || rank !in 0..7) continue
+            val parts = ArrayList<GlbPiecePart>()
+            for (primitive in mesh.primitives) {
+                val source = primitive.positions
+                if (source.size < 9 || source.size / 3 > 65535 ||
+                    primitive.indices.size < 3 || primitive.indices.any { it !in 0 until source.size / 3 || it > 65535 }) continue
+                val local = FloatArray(source.size)
+                for (i in source.indices step 3) {
+                    val p = transformGlbPoint(node, source[i], source[i + 1], source[i + 2])
+                    local[i] = (p[0] - centerX) / xStep
+                    local[i + 1] = p[1] / xStep
+                    local[i + 2] = -(p[2] - centerZ) / zStep
+                }
+                val normals = FloatArray(local.size)
+                if (primitive.normals != null && primitive.normals.size == normals.size) {
+                    for (i in primitive.normals.indices step 3) {
+                        normals[i] = primitive.normals[i]
+                        normals[i + 1] = primitive.normals[i + 1]
+                        normals[i + 2] = -primitive.normals[i + 2]
+                    }
+                } else {
+                    for (i in primitive.indices.indices step 3) {
+                        if (i + 2 >= primitive.indices.size) break
+                        val a = primitive.indices[i] * 3
+                        val b = primitive.indices[i + 1] * 3
+                        val d = primitive.indices[i + 2] * 3
+                        val ux = local[b] - local[a]; val uy = local[b + 1] - local[a + 1]; val uz = local[b + 2] - local[a + 2]
+                        val vx = local[d] - local[a]; val vy = local[d + 1] - local[a + 1]; val vz = local[d + 2] - local[a + 2]
+                        var nx = uy * vz - uz * vy
+                        var ny = uz * vx - ux * vz
+                        var nz = ux * vy - uy * vx
+                        val length = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz).coerceAtLeast(0.00001f)
+                        nx /= length; ny /= length; nz /= length
+                        for (v in intArrayOf(a, b, d)) { normals[v] = nx; normals[v + 1] = ny; normals[v + 2] = nz }
+                    }
+                }
+                val vb = ByteBuffer.allocateDirect(local.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(local); position(0) }
+                val nb = ByteBuffer.allocateDirect(normals.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(normals); position(0) }
+                val shortIndices = ShortArray(primitive.indices.size) { primitive.indices[it].toShort() }
+                val ib = ByteBuffer.allocateDirect(shortIndices.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer().apply { put(shortIndices); position(0) }
+                parts.add(GlbPiecePart(vb, nb, ib, shortIndices.size, false))
+            }
+            if (parts.isNotEmpty()) glbPieceTemplates.putIfAbsent(side to type, parts)
+        }
+        glbPiecesReady = glbPieceTemplates.size == 12
+        android.util.Log.i("3DChess", "Alternate GLB piece templates loaded: ${glbPieceTemplates.size}/12")
+        if (!glbPiecesReady) android.util.Log.e("3DChess", "Alternate chess set incomplete: ${glbPieceTemplates.keys}")
     }
 
     private fun drawGlbPiece(piece: ChessPiece, file: Int, x: Float, z: Float) {
