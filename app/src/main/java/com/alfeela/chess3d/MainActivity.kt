@@ -29,7 +29,8 @@ import android.app.AlertDialog
 import android.widget.FrameLayout
 import android.widget.Toast
 import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioFormat
+import android.media.AudioTrack
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
@@ -52,7 +53,6 @@ class MainActivity : Activity() {
     private var finishDialogShown = false
     private var activeMatchStartedAt: Long = 0L
     private var soundEnabled = true
-    private var toneGenerator: ToneGenerator? = null
     private var profileAvatarPreview: ImageView? = null
     private var selectedAvatarUri: Uri? = null
     private val profilePrefs by lazy { getSharedPreferences("player_profile", MODE_PRIVATE) }
@@ -1370,23 +1370,97 @@ class MainActivity : Activity() {
 
     private fun playGameSound(event: String) {
         if (!soundEnabled) return
-        try {
-            val generator = toneGenerator ?: ToneGenerator(AudioManager.STREAM_MUSIC, 75).also { toneGenerator = it }
-            val tone = when (event) {
-                "capture" -> ToneGenerator.TONE_PROP_ACK
-                "check" -> ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD
-                "mate" -> ToneGenerator.TONE_PROP_NACK
-                else -> ToneGenerator.TONE_PROP_BEEP
+
+        // Short synthesized effects give the board a warmer, less electronic feel
+        // without adding large audio assets or blocking chess interaction.
+        Thread({
+            var track: AudioTrack? = null
+            try {
+                val sampleRate = 44100
+                val durationMs = when (event) {
+                    "move" -> 105
+                    "capture" -> 190
+                    "check" -> 300
+                    "mate" -> 620
+                    else -> 105
+                }
+                val count = sampleRate * durationMs / 1000
+                val samples = ShortArray(count)
+                val random = java.util.Random()
+
+                fun toneAt(time: Double, frequency: Double): Double {
+                    return kotlin.math.sin(2.0 * Math.PI * frequency * time)
+                }
+
+                for (i in 0 until count) {
+                    val t = i.toDouble() / sampleRate
+                    val progress = i.toDouble() / count
+                    var value = 0.0
+
+                    when (event) {
+                        "move" -> {
+                            val decay = Math.exp(-t * 34.0)
+                            val body = toneAt(t, 185.0) * 0.42 + toneAt(t, 310.0) * 0.16
+                            val click = (random.nextDouble() * 2.0 - 1.0) * Math.exp(-t * 95.0) * 0.30
+                            value = (body + click) * decay
+                        }
+                        "capture" -> {
+                            val first = Math.exp(-t * 24.0)
+                            val secondTime = (t - 0.075).coerceAtLeast(0.0)
+                            val second = if (t >= 0.075) Math.exp(-secondTime * 30.0) else 0.0
+                            val knock = toneAt(t, 145.0) * first * 0.48 +
+                                toneAt(secondTime, 205.0) * second * 0.40
+                            val texture = (random.nextDouble() * 2.0 - 1.0) *
+                                Math.exp(-t * 70.0) * 0.22
+                            value = knock + texture
+                        }
+                        "check" -> {
+                            val fade = (1.0 - progress).coerceAtLeast(0.0)
+                            val pulse = 0.5 + 0.5 * kotlin.math.sin(2.0 * Math.PI * 5.0 * t)
+                            value = (toneAt(t, 660.0) * 0.48 +
+                                toneAt(t, 880.0) * 0.22) * pulse * fade
+                        }
+                        "mate" -> {
+                            val fadeIn = (progress / 0.06).coerceAtMost(1.0)
+                            val fadeOut = ((1.0 - progress) / 0.30).coerceAtMost(1.0)
+                            val envelope = fadeIn * fadeOut
+                            val chord = toneAt(t, 392.0) * 0.34 +
+                                toneAt(t, 494.0) * 0.30 +
+                                toneAt(t, 587.0) * 0.24
+                            value = chord * envelope
+                        }
+                    }
+
+                    // Gentle attack/release envelope prevents clicks at sample edges.
+                    val edge = (i.toDouble() / (sampleRate * 0.008)).coerceAtMost(1.0) *
+                        ((count - 1 - i).toDouble() / (sampleRate * 0.025)).coerceAtMost(1.0)
+                    val normalized = (value * edge * 0.48).coerceIn(-0.92, 0.92)
+                    samples[i] = (normalized * Short.MAX_VALUE).toInt().toShort()
+                }
+
+                track = AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    sampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    samples.size * 2,
+                    AudioTrack.MODE_STATIC
+                )
+                if (track.state == AudioTrack.STATE_INITIALIZED) {
+                    track.write(samples, 0, samples.size)
+                    track.play()
+                    Thread.sleep(durationMs.toLong() + 45L)
+                }
+            } catch (_: Exception) {
+                // Audio is optional; never interrupt a chess move if unavailable.
+            } finally {
+                try { track?.stop() } catch (_: Exception) { }
+                try { track?.release() } catch (_: Exception) { }
             }
-            generator.startTone(tone, if (event == "move") 65 else 180)
-        } catch (_: Exception) {
-            // Audio is optional; never interrupt a chess move if unavailable.
-        }
+        }, "chess-audio").start()
     }
 
     override fun onDestroy() {
-        toneGenerator?.release()
-        toneGenerator = null
         stopOnlinePolling()
         lan.close()
         super.onDestroy()
