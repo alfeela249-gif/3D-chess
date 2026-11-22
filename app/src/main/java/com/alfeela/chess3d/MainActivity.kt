@@ -693,24 +693,28 @@ class MainActivity : Activity() {
             })
         }
 
-        sectionTitle("♟  شكل وخامة القطع")
-        selector("طقم القطع", listOf("الطقم الأصلي Staunton", "الطقم الجديد"), if (prefs.getBoolean("piece_set_alternate", false)) 1 else 0) { value ->
-            prefs.edit().putBoolean("piece_set_alternate", value == 1).apply()
-            board.setPieceSet(value == 1)
-        }
-        selector("خامة القطع", listOf("رخام", "خشب"), prefs.getInt("piece_material", 0)) { value ->
-            prefs.edit().putInt("piece_material", value).apply(); applyMaterialOptions()
-        }
-        selector("لمعة القطع", listOf("لامعة", "مطفيّة"), if (prefs.getBoolean("piece_gloss", true)) 0 else 1) { value ->
-            prefs.edit().putBoolean("piece_gloss", value == 0).apply(); applyMaterialOptions()
+        sectionTitle("♟  خامة القطع ولمعانها")
+        val pieceOptions = listOf("رخام لامع", "رخام مطفي", "خشب لامع", "خشب مطفي", "بلاستيك لامع", "بلاستيك مطفي")
+        val pieceInitial = (prefs.getInt("piece_material", 0).coerceIn(0, 2) * 2) +
+            (if (prefs.getBoolean("piece_gloss", true)) 0 else 1)
+        selector("اختر خامة القطع", pieceOptions, pieceInitial) { value ->
+            prefs.edit()
+                .putInt("piece_material", value / 2)
+                .putBoolean("piece_gloss", value % 2 == 0)
+                .apply()
+            applyMaterialOptions()
         }
 
-        sectionTitle("▦  شكل الرقعة")
-        selector("خامة الرقعة", listOf("زجاج", "رخام", "خشب"), prefs.getInt("board_material", 0)) { value ->
-            prefs.edit().putInt("board_material", value).apply(); applyMaterialOptions()
-        }
-        selector("لمعة الرقعة", listOf("لامعة", "مطفيّة"), if (prefs.getBoolean("board_gloss", true)) 0 else 1) { value ->
-            prefs.edit().putBoolean("board_gloss", value == 0).apply(); applyMaterialOptions()
+        sectionTitle("▦  خامة الرقعة ولمعانها")
+        val boardOptions = listOf("رخام مطفي", "رخام لامع", "خشب مطفي", "خشب لامع", "بلاستيك مطفي", "بلاستيك لامع")
+        val oldBoardMaterial = prefs.getInt("board_material", 0).coerceIn(0, 2)
+        val boardInitial = oldBoardMaterial * 2 + (if (prefs.getBoolean("board_gloss", true)) 1 else 0)
+        selector("اختر خامة الرقعة", boardOptions, boardInitial) { value ->
+            prefs.edit()
+                .putInt("board_material", value / 2)
+                .putBoolean("board_gloss", value % 2 == 1)
+                .apply()
+            applyMaterialOptions()
         }
 
         sectionTitle("إعدادات أخرى")
