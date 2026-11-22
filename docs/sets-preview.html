@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b0b0d">
-<title>3D Chess — تجربة الطقمين</title>
+<title>3D Chess — التصميم المعتمد</title>
 <style>
 :root{color-scheme:dark;--gold:#d9ad62;--line:#66502e}
 *{box-sizing:border-box}
@@ -30,19 +30,15 @@ footer{text-align:center;color:#93866e;font-size:11px}
 <body>
 <header><div><div class="brand">3D <span>CHESS</span></div><div style="font-size:11px;color:#bcae96">معاينة النماذج الفعلية</div></div><div class="pill">اختبار عبر المتصفح</div></header>
 <main>
-<h1>جرّب تصميمي قطع الشطرنج</h1>
-<p class="sub">اختر الطقم الأصلي أو التصميم الجديد، ولفّ المجسم بإصبعك لمشاهدته من كل الجهات.</p>
+<h1>التصميم المعتمد لقطع الشطرنج</h1>
+<p class="sub">هذا هو طقم الشطرنج الجديد المستخدم في نسخة التطبيق الحالية. اسحب المجسم بإصبعك لمشاهدته من كل الجهات.</p>
 <section class="stage" id="stage">
-<div class="tag" id="modelName">جاري تحميل الطقم الأصلي…</div>
+<div class="tag" id="modelName">التصميم الجديد المعتمد</div>
 <div class="hint">اسحب للتدوير • قرّب بإصبعين</div>
 </section>
-<div class="controls">
-<button id="old" class="active">الطقم الأصلي</button>
-<button id="new">التصميم الجديد</button>
-</div>
 <div class="status" id="status">جارٍ تحميل المجسم ثلاثي الأبعاد…</div>
 </main>
-<footer>صفحة اختبار مستقلة — لا تغيّر بيانات التطبيق ولا تستبدل أي تصميم محفوظ.</footer>
+<footer>معاينة الطقم الجديد المعتمد في تطبيق 3D Chess.</footer>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
 </script>
@@ -59,10 +55,7 @@ const key=new THREE.DirectionalLight(0xffd99a,3.2);key.position.set(-7,12,8);key
 const rim=new THREE.DirectionalLight(0x9bb8ec,1.7);rim.position.set(7,7,-8);scene.add(rim);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x171513,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-.03;floor.receiveShadow=true;scene.add(floor);
 const loader=new GLTFLoader();let current=null,az=0,el=.72,dist=9,target=new THREE.Vector3(0,0,0),drag=false,lastX=0,lastY=0,pointers=new Map(),pinch=0;
-const models={
-old:{url:'./chess.glb',label:'الطقم الأصلي'},
-fresh:{url:'./chess-set-new.glb',label:'التصميم الجديد'}
-};
+const models={fresh:{url:'./chess-set-new.glb',label:'التصميم الجديد المعتمد'}};
 const cache={};
 function fit(obj){
  const box=new THREE.Box3().setFromObject(obj),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
@@ -73,7 +66,6 @@ function fit(obj){
 function updateCamera(){camera.position.set(target.x+Math.sin(az)*Math.cos(el)*dist,target.y+Math.sin(el)*dist,target.z+Math.cos(az)*Math.cos(el)*dist);camera.lookAt(target)}
 function setStatus(t){status.textContent=t}
 function selectModel(key){
- document.querySelector('#old').classList.toggle('active',key==='old');document.querySelector('#new').classList.toggle('active',key==='fresh');
  name.textContent=models[key].label;setStatus('جارٍ تحميل '+models[key].label+'…');
  if(current){scene.remove(current);current=null}
  if(cache[key]){current=cache[key];scene.add(current);fit(current);setStatus('تم تحميل النموذج. اسحب المجسم لتدويره.');return}
@@ -85,15 +77,13 @@ function selectModel(key){
   console.error(err);setStatus('تعذّر تحميل هذا النموذج. تأكد من اتصال الإنترنت ثم أعد فتح الصفحة.');
  });
 }
-document.querySelector('#old').addEventListener('click',()=>selectModel('old'));
-document.querySelector('#new').addEventListener('click',()=>selectModel('fresh'));
 renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});renderer.domElement.setPointerCapture(e.pointerId);if(pointers.size===1){drag=true;lastX=e.clientX;lastY=e.clientY}else if(pointers.size===2){const p=[...pointers.values()];pinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}});
 renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1&&drag){az-=(e.clientX-lastX)*.008;el=THREE.MathUtils.clamp(el+(e.clientY-lastY)*.006,.12,1.48);lastX=e.clientX;lastY=e.clientY;updateCamera()}else if(pointers.size===2){const p=[...pointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(pinch){dist=THREE.MathUtils.clamp(dist*pinch/d,2,35);updateCamera()}pinch=d}});
 function endPointer(e){pointers.delete(e.pointerId);drag=false;if(pointers.size<2)pinch=0}renderer.domElement.addEventListener('pointerup',endPointer);renderer.domElement.addEventListener('pointercancel',endPointer);
 renderer.domElement.addEventListener('wheel',e=>{dist=THREE.MathUtils.clamp(dist+e.deltaY*.01,2,35);updateCamera()},{passive:true});
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
 function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}animate();
-selectModel('old');
+selectModel('fresh');
 </script>
 </body>
 </html>
