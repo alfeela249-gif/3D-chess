@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ChessTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#E0B45E</item>
+        <item name="android:windowBackground">#0B0908</item>
+        <item name="android:statusBarColor">#09090B</item>
+        <item name="android:navigationBarColor">#09090B</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorControlActivated">#E0B45E</item>
+        <item name="android:colorControlHighlight">#55E0B45E</item>
+        <item name="android:textColorPrimary">#F7EFDF</item>
+        <item name="android:textColorSecondary">#C6B28D</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
