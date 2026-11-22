@@ -1162,6 +1162,9 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         val gold = floatArrayOf(0.78f, 0.58f, 0.25f, 1f)
         Matrix.setIdentityM(model, 0)
         Matrix.translateM(model, 0, x, activePieceLift, z)
+        // Slightly reduce imported Staunton pieces while keeping their bases
+        // centered on the same squares and preserving animation scaling.
+        Matrix.scaleM(model, 0, 0.86f, 0.86f, 0.86f)
         Matrix.scaleM(model, 0, activePieceScaleX, activePieceScaleY, activePieceScaleZ)
         Matrix.multiplyMM(mvp, 0, vp, 0, model, 0)
         GLES20.glUseProgram(program)
