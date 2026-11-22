@@ -144,7 +144,9 @@ class ChessBoardView(context: Context) : GLSurfaceView(context) {
                     return if (egl.eglChooseConfig(display, attrs, configs, 1, count) && count[0] > 0)
                         configs[0] else null
                 }
-                return choose(4) ?: choose(0)
+                // Prefer 8x MSAA on capable GPUs, then 4x, then a compatible
+                // non-MSAA config so older Android devices still start normally.
+                return choose(8) ?: choose(4) ?: choose(0)
                     ?: throw IllegalArgumentException("No compatible OpenGL ES 2.0 EGL config")
             }
         })
@@ -571,7 +573,7 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
         }
     """
     private val fragmentShader = """
-        precision mediump float;
+        precision highp float;
         uniform vec4 uColor;
         uniform float uGlow;
         uniform float uGloss;
@@ -628,6 +630,8 @@ private class BoardRenderer(private val game: ChessGame, private val assets: Ass
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(red(sceneBackgroundColor), green(sceneBackgroundColor), blue(sceneBackgroundColor), 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
+        // Keep subtle material gradients and edge coverage stable on mobile GPUs.
+        GLES20.glEnable(GLES20.GL_DITHER)
         val vs = compile(GLES20.GL_VERTEX_SHADER, vertexShader)
         val fs = compile(GLES20.GL_FRAGMENT_SHADER, fragmentShader)
         program = GLES20.glCreateProgram().also {
