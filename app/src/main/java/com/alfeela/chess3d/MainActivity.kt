@@ -1006,9 +1006,9 @@ class MainActivity : Activity() {
         board.localSide = Side.WHITE
         board.resetBoard()
         board.isEnabled = false
-        lan.host()
-        showGameScreen()
         val address = localWifiAddress()
+        lan.host(address)
+        showGameScreen()
         status.text = if (address != null)
             "نقطة الاتصال جاهزة • أنت الأبيض • سيعثر عليك صديقك تلقائياً عند البحث"
         else
