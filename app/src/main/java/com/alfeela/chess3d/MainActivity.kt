@@ -382,7 +382,14 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showHomeScreen() {
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        setContentView(homeRoot)
+        status = homeStatus
+    }
+
     private fun showGameScreen() {
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         val gameRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -395,8 +402,7 @@ class MainActivity : Activity() {
                 saveActiveMatch()
                 stopOnlinePolling()
                 lan.close()
-                setContentView(homeRoot)
-                status = homeStatus
+                showHomeScreen()
             }
         }
         topBar.addView(back, LinearLayout.LayoutParams(0, dp(46), 1.15f))
@@ -646,7 +652,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val back = makeButton("‹ رجوع", false).apply {
-            setOnClickListener { setContentView(homeRoot); status = homeStatus }
+            setOnClickListener { showHomeScreen() }
         }
         header.addView(back, LinearLayout.LayoutParams(dp(92), dp(44)))
         header.addView(TextView(this).apply {
@@ -921,7 +927,7 @@ class MainActivity : Activity() {
         }
         val back = makeButton("‹  القائمة الرئيسية", false).apply {
             textSize = 13f
-            setOnClickListener { setContentView(homeRoot); status = homeStatus }
+            setOnClickListener { showHomeScreen() }
         }
         root.addView(back, LinearLayout.LayoutParams(-1, dp(46)))
         val emblem = TextView(this).apply {
@@ -1539,8 +1545,7 @@ class MainActivity : Activity() {
                 dialog.dismiss()
                 onlinePoll?.let { mainHandler.removeCallbacks(it) }
                 lan.close()
-                setContentView(homeRoot)
-                status = homeStatus
+                showHomeScreen()
             }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener {
                 dialog.dismiss()
