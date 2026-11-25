@@ -461,6 +461,7 @@ class MainActivity : Activity() {
         val clocksRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+            visibility = if (activeMatchMode == "wifi" || activeMatchMode == "online") View.VISIBLE else View.GONE
         }
         whiteClockView = makeClockView("الأبيض", whiteRemainingMs)
         blackClockView = makeClockView("الأسود", blackRemainingMs)
@@ -1703,6 +1704,7 @@ class MainActivity : Activity() {
                 playVsComputer = false
                 onlineMode = false
                 lan.send("RESET")
+                startChessClock()
                 status.text = "مباراة جديدة • دور الأبيض"
             }
             "online" -> {
