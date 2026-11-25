@@ -9,6 +9,7 @@ import java.net.Inet4Address
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 import android.graphics.Color
@@ -52,6 +53,38 @@ class MainActivity : Activity() {
     private var lastMatchMode: String? = null
     private var finishDialogShown = false
     private var activeMatchStartedAt: Long = 0L
+    private val initialClockMillis = 10 * 60 * 1000L
+    private var whiteRemainingMs = initialClockMillis
+    private var blackRemainingMs = initialClockMillis
+    private var clockRunningSide: Side? = null
+    private var clockLastTick = 0L
+    private var clockActive = false
+    private var whiteClockView: TextView? = null
+    private var blackClockView: TextView? = null
+    private val clockTick = object : Runnable {
+        override fun run() {
+            if (!clockActive) return
+            val now = SystemClock.elapsedRealtime()
+            val side = clockRunningSide
+            if (side != null) {
+                val elapsed = (now - clockLastTick).coerceAtLeast(0L)
+                if (side == Side.WHITE) whiteRemainingMs = (whiteRemainingMs - elapsed).coerceAtLeast(0L)
+                else blackRemainingMs = (blackRemainingMs - elapsed).coerceAtLeast(0L)
+                clockLastTick = now
+                val remaining = if (side == Side.WHITE) whiteRemainingMs else blackRemainingMs
+                refreshClockViews()
+                if (remaining <= 0L) {
+                    clockActive = false
+                    clockRunningSide = null
+                    refreshClockViews()
+                    if (!finishDialogShown) showMatchFinishedDialog(side.opposite(), false)
+                    return
+                }
+            }
+            refreshClockViews()
+            mainHandler.postDelayed(this, 250L)
+        }
+    }
     private var soundEnabled = true
     private var profileAvatarPreview: ImageView? = null
     private var selectedAvatarUri: Uri? = null
@@ -76,6 +109,9 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     if (::board.isInitialized) {
                         board.isEnabled = message == "Opponent connected" || message.startsWith("Connected to ")
+                    }
+                    if (message == "Opponent connected" || message.startsWith("Connected to ")) {
+                        startChessClock()
                     }
                     status.text = when {
                         message.startsWith("Waiting for opponent") ->
@@ -117,8 +153,10 @@ class MainActivity : Activity() {
         }
         board.onMove = { move ->
             if (onlineMode) {
+                completeClockMove()
                 val moveJson = JSONObject().put("ff", move.fromFile).put("fr", move.fromRank)
                     .put("tf", move.toFile).put("tr", move.toRank).put("p", move.promotion?.name ?: "-")
+                    .put("cw", whiteRemainingMs).put("cb", blackRemainingMs)
                 onlineMoves.put(moveJson)
                 val roomId = onlineRoomId
                 if (roomId != null) Thread {
@@ -133,7 +171,8 @@ class MainActivity : Activity() {
                     runOnUiThread { if (computerMove != null && board.applyComputerMove(computerMove)) updateGameStatus() }
                 }.start()
             } else {
-                lan.send("MOVE|${move.fromFile}|${move.fromRank}|${move.toFile}|${move.toRank}|${move.promotion?.name ?: "-"}")
+                completeClockMove()
+                lan.send("MOVE|${move.fromFile}|${move.fromRank}|${move.toFile}|${move.toRank}|${move.promotion?.name ?: "-"}|${whiteRemainingMs}|${blackRemainingMs}")
                 updateGameStatus()
             }
         }
@@ -401,6 +440,7 @@ class MainActivity : Activity() {
             setOnClickListener {
                 saveActiveMatch()
                 stopOnlinePolling()
+                stopChessClock()
                 lan.close()
                 showHomeScreen()
             }
@@ -418,6 +458,19 @@ class MainActivity : Activity() {
         gameRoot.addView(topBar, LinearLayout.LayoutParams(-1, dp(56)).apply {
             bottomMargin = dp(5)
         })
+        val clocksRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        whiteClockView = makeClockView("الأبيض", whiteRemainingMs)
+        blackClockView = makeClockView("الأسود", blackRemainingMs)
+        clocksRow.addView(whiteClockView, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+            setMargins(dp(4), dp(2), dp(4), dp(2))
+        })
+        clocksRow.addView(blackClockView, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+            setMargins(dp(4), dp(2), dp(4), dp(2))
+        })
+        gameRoot.addView(clocksRow, LinearLayout.LayoutParams(-1, dp(64)))
         val gameStatus = TextView(this).apply {
             setTextColor(Color.rgb(255, 224, 164))
             textSize = 14f
@@ -537,6 +590,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(2), dp(6), dp(2))
         }, LinearLayout.LayoutParams(-1, dp(24)))
         setContentView(gameRoot)
+        refreshClockViews()
     }
     private fun showHowToPlay() {
         val pieces = arrayOf("♟ الجندي", "♜ القلعة", "♞ الحصان", "♝ الفيل", "♛ الملكة", "♚ الملك", "قواعد عامة ونهاية المباراة")
@@ -565,6 +619,8 @@ class MainActivity : Activity() {
 
     private fun beginMatch(mode: String) {
         saveActiveMatch()
+        stopChessClock()
+        resetChessClock()
         activeMatchMode = mode
         lastMatchMode = mode
         finishDialogShown = false
@@ -600,6 +656,95 @@ class MainActivity : Activity() {
         prefs.edit().putString("entries", trimmed.toString()).apply()
         activeMatchMode = null
         activeMatchStartedAt = 0L
+    }
+
+    private fun makeClockView(label: String, remaining: Long): TextView = TextView(this).apply {
+        text = label + "  " + formatClock(remaining)
+        gravity = Gravity.CENTER
+        textSize = 20f
+        typeface = Typeface.create("monospace", Typeface.BOLD)
+        setTextColor(cream)
+        background = rounded(Color.rgb(27, 23, 17), Color.rgb(118, 86, 43), 1)
+        setPadding(dp(6), dp(4), dp(6), dp(4))
+    }
+
+    private fun formatClock(milliseconds: Long): String {
+        val totalSeconds = (milliseconds.coerceAtLeast(0L) + 999L) / 1000L
+        return String.format(java.util.Locale.US, "%02d:%02d", totalSeconds / 60L, totalSeconds % 60L)
+    }
+
+    private fun refreshClockViews() {
+        val running = clockRunningSide
+        whiteClockView?.apply {
+            text = "الأبيض  " + formatClock(whiteRemainingMs)
+            background = rounded(
+                if (running == Side.WHITE) Color.rgb(93, 66, 28) else Color.rgb(27, 23, 17),
+                if (running == Side.WHITE) gold else Color.rgb(118, 86, 43), 2
+            )
+        }
+        blackClockView?.apply {
+            text = "الأسود  " + formatClock(blackRemainingMs)
+            background = rounded(
+                if (running == Side.BLACK) Color.rgb(93, 66, 28) else Color.rgb(27, 23, 17),
+                if (running == Side.BLACK) gold else Color.rgb(118, 86, 43), 2
+            )
+        }
+    }
+
+    private fun resetChessClock() {
+        mainHandler.removeCallbacks(clockTick)
+        whiteRemainingMs = initialClockMillis
+        blackRemainingMs = initialClockMillis
+        clockRunningSide = Side.WHITE
+        clockLastTick = 0L
+        clockActive = false
+        refreshClockViews()
+    }
+
+    private fun startChessClock() {
+        if (clockActive || finishDialogShown) return
+        if (clockRunningSide == null) clockRunningSide = board.game.sideToMove
+        clockLastTick = SystemClock.elapsedRealtime()
+        clockActive = true
+        mainHandler.removeCallbacks(clockTick)
+        mainHandler.post(clockTick)
+        refreshClockViews()
+    }
+
+    private fun stopChessClock() {
+        clockActive = false
+        mainHandler.removeCallbacks(clockTick)
+        refreshClockViews()
+    }
+
+    private fun completeClockMove() {
+        if (!clockActive) startChessClock()
+        val now = SystemClock.elapsedRealtime()
+        val movedSide = board.game.sideToMove.opposite()
+        if (clockRunningSide == movedSide) {
+            val elapsed = (now - clockLastTick).coerceAtLeast(0L)
+            if (movedSide == Side.WHITE) whiteRemainingMs = (whiteRemainingMs - elapsed).coerceAtLeast(0L)
+            else blackRemainingMs = (blackRemainingMs - elapsed).coerceAtLeast(0L)
+        }
+        clockRunningSide = board.game.sideToMove
+        clockLastTick = now
+        if ((if (movedSide == Side.WHITE) whiteRemainingMs else blackRemainingMs) <= 0L) {
+            stopChessClock()
+            if (!finishDialogShown) showMatchFinishedDialog(movedSide.opposite(), false)
+        } else refreshClockViews()
+    }
+
+    private fun applyClockSnapshot(whiteMs: Long, blackMs: Long) {
+        whiteRemainingMs = whiteMs.coerceIn(0L, initialClockMillis)
+        blackRemainingMs = blackMs.coerceIn(0L, initialClockMillis)
+        clockRunningSide = board.game.sideToMove
+        clockLastTick = SystemClock.elapsedRealtime()
+        if (!clockActive && !finishDialogShown) {
+            clockActive = true
+            mainHandler.removeCallbacks(clockTick)
+            mainHandler.post(clockTick)
+        }
+        refreshClockViews()
     }
 
     private fun showMatchHistory() {
@@ -1083,7 +1228,10 @@ class MainActivity : Activity() {
                     val result = auth.fetchOnlineRoom(id)
                     runOnUiThread {
                         if (result.ok) {
-                            if (result.status == "playing") board.isEnabled = true
+                            if (result.status == "playing") {
+                                board.isEnabled = true
+                                startChessClock()
+                            }
                             result.gameState?.optJSONArray("moves")?.let { applyRoomMoves(it) }
                         }
                     }
@@ -1103,6 +1251,13 @@ class MainActivity : Activity() {
             val move = ChessMove(item.optInt("ff"), item.optInt("fr"), item.optInt("tf"), item.optInt("tr"), promotion)
             if (!board.applySyncedMove(move)) { status.text = "تعذرت مزامنة حركة المباراة"; return }
             onlineMoves.put(item)
+            if (item.has("cw") && item.has("cb")) {
+                applyClockSnapshot(item.optLong("cw", initialClockMillis), item.optLong("cb", initialClockMillis))
+            } else {
+                clockRunningSide = board.game.sideToMove
+                clockLastTick = SystemClock.elapsedRealtime()
+                startChessClock()
+            }
         }
         updateGameStatus()
     }
@@ -1407,11 +1562,13 @@ class MainActivity : Activity() {
     private fun handleNetworkMessage(message: String) {
         if (message == "RESET") {
             board.resetBoard()
+            resetChessClock()
+            startChessClock()
             status.text = "بدأ الخصم مباراة جديدة • دور الأبيض"
             return
         }
         val parts = message.split("|")
-        if (parts.size == 6 && parts[0] == "MOVE") {
+        if ((parts.size == 6 || parts.size == 8) && parts[0] == "MOVE") {
             val fromFile = parts[1].toIntOrNull() ?: return
             val fromRank = parts[2].toIntOrNull() ?: return
             val toFile = parts[3].toIntOrNull() ?: return
@@ -1421,7 +1578,18 @@ class MainActivity : Activity() {
             val move = ChessMove(fromFile, fromRank, toFile, toRank, promotion)
             if (!board.applyRemoteMove(move)) {
                 status.text = "حركة غير صالحة • تحقق من الاتصال أو أعد المباراة"
-            } else updateGameStatus()
+            } else {
+                if (parts.size == 8) {
+                    val whiteMs = parts[6].toLongOrNull()
+                    val blackMs = parts[7].toLongOrNull()
+                    if (whiteMs != null && blackMs != null) applyClockSnapshot(whiteMs, blackMs)
+                } else {
+                    clockRunningSide = board.game.sideToMove
+                    clockLastTick = SystemClock.elapsedRealtime()
+                    startChessClock()
+                }
+                updateGameStatus()
+            }
         }
     }
 
@@ -1432,11 +1600,13 @@ class MainActivity : Activity() {
         val game = board.game
         when {
             game.isCheckmate() -> {
+                stopChessClock()
                 val winner = game.sideToMove.opposite()
                 status.text = "كش مات • الفائز: ${sideName(winner)}"
                 if (!finishDialogShown) showMatchFinishedDialog(winner, false)
             }
             game.isStalemate() -> {
+                stopChessClock()
                 status.text = "تعادل • لا توجد نقلات قانونية"
                 if (!finishDialogShown) showMatchFinishedDialog(null, true)
             }
@@ -1446,6 +1616,7 @@ class MainActivity : Activity() {
     }
 
     private fun showMatchFinishedDialog(winner: Side?, draw: Boolean) {
+        stopChessClock()
         finishDialogShown = true
         saveActiveMatch()
         val localWon = winner != null && winner == board.localSide
@@ -1656,6 +1827,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         stopOnlinePolling()
+        stopChessClock()
         lan.close()
         super.onDestroy()
     }
